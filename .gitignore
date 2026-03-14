@@ -69,3 +69,6 @@ Thumbs.db
 # Trae & Jupyter artifacts
 .trae/
 .ipynb_checkpoints/
+
+# local planning (do not commit)
+PLAN_LOCAL.md

@@ -154,17 +154,57 @@ medical-consulting-system/
 └── README.md                   # Tài liệu hướng dẫn
 ```
 
+## 🧭 Tổng quan kỹ thuật (để tiếp tục phát triển)
+
+### 1) Kiến trúc Hybrid (GPU-first + CPU fallback)
+- **Frontend (Next.js)**: giao diện chat, tra cứu, sàng lọc tâm lý, voice/vision.
+- **Gateway (Next.js API Routes)**: đóng vai trò “API Gateway”, quyết định gọi **GPU server** hay **Local backend** dựa trên `runtime-mode.json`.
+- **Local Backend (FastAPI - `server.py`)**: cung cấp API `/v1/*`, vừa xử lý CPU (llama-cpp GGUF) vừa proxy sang GPU (Colab/Ngrok).
+- **GPU Server (Colab/Ngrok)**: chạy các tác vụ nặng (LLM lớn/Vision/TTS-STT/RAG) và expose `/v1/*` + `/gpu/metrics`.
+
+Luồng phổ biến:
+- UI → `POST /api/llm-chat` → (GPU `/v1/chat/completions`) → nếu lỗi → fallback CPU `http://127.0.0.1:8000/v1/chat/completions`.
+- UI nhận `metadata.mode` và phát event `runtime_mode_changed` để cập nhật indicator CPU/GPU.
+
+### 2) Nguồn cấu hình & “Single Source of Truth”
+- `medical-consultation-app/data/runtime-mode.json`
+  - `target`: `"gpu"` hoặc `"cpu"`
+  - `gpu_url`: base URL của GPU server (Ngrok)
+  - `updated_at`: thời điểm cập nhật
+- `medical-consultation-app/data/server-registry.json`: danh sách GPU URLs (dùng khi chưa set `gpu_url`).
+
+### 3) Các điểm chạm quan trọng khi sửa/điều tra lỗi
+- UI Chat (offline-first title + đồng bộ mode):
+  - `medical-consultation-app/components/chat-interface.tsx`
+  - Khi **không có token/offline**, title tạm thời lấy **6 từ đầu** của tin nhắn và lưu `localStorage` (`conv_title_<id>`).
+- Nút chuyển CPU/GPU (event-driven + đọc runtime state/metrics):
+  - `medical-consultation-app/components/compute-toggle.tsx`
+- Gateway Chat (đọc runtime-mode/registry + fallback + log metrics/events):
+  - `medical-consultation-app/app/api/llm-chat/route.ts`
+- Local Backend endpoints (FastAPI):
+  - `server.py` (các endpoint chính: `/v1/chat/completions`, `/v1/friend-chat/completions`, `/v1/health-lookup`, `/v1/vision-chat`, `/v1/document-chat`, TTS/STT, runtime mode/state, auth, conversations…)
+- GPU Server (Colab):
+  - `colab server/demo/server_ai_mcs.py` và các script trong `colab server/server_ai_mcs/`
+
+### 4) Log/Quan sát (phục vụ debug fallback & hiệu năng)
+- `medical-consultation-app/data/runtime-events.jsonl`: ghi sự kiện (fallback, mode_change, gpu_metrics, frontend_call…)
+- `medical-consultation-app/data/runtime-metrics.jsonl`: thời gian phản hồi theo mode (cpu/gpu) và endpoint
+
+### 5) Tài liệu kỹ thuật trong repo
+- Kiến trúc (Mermaid + mô tả): `docs/system-architecture.md`
+- Memory Bank (tài liệu “để tiếp tục phát triển”): `memory-bank/` (systemOverview, systemPatterns, techContext, progress, activeContext…)
+- Inference scripts (fine-tuned/LoRA): `README_INFERENCE.md`
+
 ## ⚠️ Lưu Ý Quan Trọng
 - **Dữ liệu Y tế**: Các câu trả lời của AI chỉ mang tính chất tham khảo, **không thay thế lời khuyên của bác sĩ chuyên khoa**.
 - **Bảo mật**: Không chia sẻ file `.env` hoặc URL Ngrok công khai.
 
 ## 👥 Tác Giả
-Tiểu Luận Chuyên Ngành - Hệ thống Tư vấn Y tế AI
+KHÓA LUẬN TỐT NGHIỆP 2026 - Hệ thống Trợ lý Y tế và Tâm lý Đa tác tử (Multi-Agent) ứng dụng GraphRAG và Function Calling trên nền tảng Llama
 - **GVHD** - TS. PHAN THỊ HUYỀN TRANG
 
 - **21110116** - Cao Nguyễn Thành An (Leader)
 - **21144449** - Cao Thọ Phú Thịnh
-- **21110860** - Trịnh Ngọc Anh Tuyên
 
 ---
 *© 2024 Medical Consulting System. All rights reserved.*
