@@ -207,4 +207,4 @@ KHÓA LUẬN TỐT NGHIỆP 2026 - Hệ thống Trợ lý Y tế và Tâm lý Đ
 - **21144449** - Cao Thọ Phú Thịnh
 
 ---
-*© 2024 Medical Consulting System. All rights reserved.*
+*© 2026 Medical Consulting System. All rights reserved.*
