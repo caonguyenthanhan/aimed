@@ -24,9 +24,23 @@ export default function KeHoachPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [hasConflict, setHasConflict] = useState(false)
   const [doc, setDoc] = useState<DocState | null>(null)
   const [draft, setDraft] = useState("")
   const [dirty, setDirty] = useState(false)
+
+  const toggleTaskAtLine = (lineNumber: number, nextChecked: boolean) => {
+    if (!lineNumber || lineNumber < 1) return
+    const lines = draft.split("\n")
+    const idx = lineNumber - 1
+    if (idx < 0 || idx >= lines.length) return
+    const line = lines[idx]
+    const m = line.match(/\[\s*[xX]?\s*\]/)
+    if (!m) return
+    const replaced = line.replace(/\[\s*[xX]?\s*\]/, nextChecked ? "[x]" : "[ ]")
+    lines[idx] = replaced
+    setDraft(lines.join("\n"))
+  }
 
   const effectivePw = useMemo(() => {
     try {
@@ -61,6 +75,7 @@ export default function KeHoachPage() {
 
   const loadDoc = async (password: string) => {
     setError("")
+    setHasConflict(false)
     setLoading(true)
     try {
       const resp = await fetch("/api/team-todo", {
@@ -93,6 +108,7 @@ export default function KeHoachPage() {
     const password = effectivePw.trim()
     if (!password) return
     setError("")
+    setHasConflict(false)
     setSaving(true)
     try {
       const resp = await fetch("/api/team-todo", {
@@ -113,6 +129,7 @@ export default function KeHoachPage() {
         if (latest?.content) {
           setDoc(latest)
         }
+        setHasConflict(true)
         throw new Error("Có người vừa cập nhật. Bấm Tải lại để lấy bản mới nhất.")
       }
       if (!resp.ok) {
@@ -123,6 +140,41 @@ export default function KeHoachPage() {
       setDoc(data)
       setDraft(data.content || "")
       setDirty(false)
+      persistPw(password)
+    } catch (e: any) {
+      setError(e?.message || "Không lưu được")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const forceSaveDoc = async () => {
+    if (!doc) return
+    const password = effectivePw.trim()
+    if (!password) return
+    setError("")
+    setSaving(true)
+    try {
+      const resp = await fetch("/api/team-todo", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-team-todo-pass": password,
+        },
+        body: JSON.stringify({
+          content: draft,
+          updated_by: name.trim(),
+        }),
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as DocState
+      setDoc(data)
+      setDraft(data.content || "")
+      setDirty(false)
+      setHasConflict(false)
       persistPw(password)
     } catch (e: any) {
       setError(e?.message || "Không lưu được")
@@ -163,9 +215,28 @@ export default function KeHoachPage() {
     if (doc && draft === doc.content) setDirty(false)
   }, [draft, doc])
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
+        e.preventDefault()
+        if (authed && !saving && dirty && draft.trim()) {
+          void saveDoc()
+        }
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", onKeyDown)
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("keydown", onKeyDown)
+      }
+    }
+  }, [authed, saving, dirty, draft])
+
   return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-4">
+    <div className="h-[calc(100dvh-4rem)] overflow-y-auto p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-4 pb-10">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <div className="text-xl font-semibold">Kế hoạch & TODO Team</div>
@@ -211,7 +282,21 @@ export default function KeHoachPage() {
           </div>
         )}
 
-        {error && <div className="text-sm text-red-600">{error}</div>}
+        {error && (
+          <div className="rounded-xl border bg-background p-3">
+            <div className="text-sm text-red-600">{error}</div>
+            {hasConflict && authed ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => loadDoc(effectivePw)} disabled={loading || saving}>
+                  Tải lại
+                </Button>
+                <Button onClick={forceSaveDoc} disabled={saving || loading || !draft.trim()}>
+                  Ghi đè
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        )}
 
         {authed && (
           <div className="rounded-xl border bg-background p-4 flex flex-col md:flex-row gap-3">
@@ -233,19 +318,45 @@ export default function KeHoachPage() {
 
         {authed && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-xl border bg-background p-4 space-y-2">
+            <div className="rounded-xl border bg-background p-4 space-y-2 flex flex-col min-h-[70vh]">
               <div className="text-sm font-medium">Markdown</div>
               <Textarea
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                className="min-h-[70vh] font-mono text-sm"
+                className="flex-1 font-mono text-sm"
                 placeholder="Nội dung markdown..."
               />
             </div>
-            <div className="rounded-xl border bg-background p-4 space-y-2 overflow-hidden">
+            <div className="rounded-xl border bg-background p-4 space-y-2 overflow-hidden flex flex-col min-h-[70vh]">
               <div className="text-sm font-medium">Preview</div>
-              <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto min-h-[70vh]">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{draft}</ReactMarkdown>
+              <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto flex-1">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    input: ({ node, ...props }) => {
+                      const isCheckbox = props.type === "checkbox"
+                      if (!isCheckbox) return <input {...props} />
+                      const checked = !!props.checked
+                      const line = (node as any)?.position?.start?.line as number | undefined
+                      return (
+                        <input
+                          {...props}
+                          type="checkbox"
+                          checked={checked}
+                          disabled={false}
+                          onChange={(e) => {
+                            const next = e.target.checked
+                            if (typeof line === "number") {
+                              toggleTaskAtLine(line, next)
+                            }
+                          }}
+                        />
+                      )
+                    },
+                  }}
+                >
+                  {draft}
+                </ReactMarkdown>
               </div>
             </div>
           </div>
@@ -254,4 +365,3 @@ export default function KeHoachPage() {
     </div>
   )
 }
-

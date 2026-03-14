@@ -90,7 +90,7 @@ export async function PUT(req: NextRequest) {
         `
         UPDATE team_todo_docs
         SET content = $1, updated_at = now(), updated_by = $2
-        WHERE id = $3 AND updated_at::text = $4
+        WHERE id = $3 AND updated_at = $4::timestamptz
         RETURNING id, content, updated_at, updated_by
       `,
         [content, updatedBy || null, DOC_ID, baseUpdatedAt]
@@ -115,4 +115,3 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 })
   }
 }
-
