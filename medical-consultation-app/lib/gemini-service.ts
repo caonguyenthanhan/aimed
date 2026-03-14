@@ -1,6 +1,9 @@
 // Gemini API Service for Medical Consultation
 // Tích hợp API Gemini cho hệ thống tư vấn y tế
 
+import fs from 'fs'
+import path from 'path'
+
 interface GeminiRequest {
   contents: Array<{
     parts: Array<{
@@ -52,6 +55,100 @@ export class GeminiService {
     if (process.env.GEMINI_MODEL && String(process.env.GEMINI_MODEL).trim()) {
       this.model = String(process.env.GEMINI_MODEL).trim()
     }
+  }
+
+  private loadPromptConfig(): any | null {
+    try {
+      const p = process.env.PROMPT_CONFIG_PATH && String(process.env.PROMPT_CONFIG_PATH).trim()
+        ? String(process.env.PROMPT_CONFIG_PATH).trim()
+        : path.join(process.cwd(), 'data', 'prompt-config.json')
+      if (!fs.existsSync(p)) return null
+      const raw = fs.readFileSync(p, 'utf-8')
+      return JSON.parse(raw)
+    } catch {
+      return null
+    }
+  }
+
+  private renderTemplate(template: string, vars: Record<string, string>): string {
+    let out = String(template || '')
+    for (const [k, v] of Object.entries(vars)) {
+      out = out.replaceAll(`{{${k}}}`, String(v ?? ''))
+    }
+    out = out.replace(/\{\{[a-zA-Z0-9_]+\}\}/g, '')
+    return out
+  }
+
+  private buildHistoryBlock(messages?: Array<{ role?: string; content?: string }>): string {
+    if (!Array.isArray(messages) || !messages.length) return ''
+    const lines = messages
+      .slice(-12)
+      .map(m => {
+        const role = String(m?.role || '').toLowerCase() === 'assistant' ? 'Assistant' : 'User'
+        const content = String(m?.content || '').trim()
+        if (!content) return ''
+        return `${role}: ${content}`
+      })
+      .filter(Boolean)
+    if (!lines.length) return ''
+    return `Lịch sử:\n${lines.join('\n')}\n`
+  }
+
+  async generateFromConfig(opts: {
+    category: 'consultation' | 'friend' | 'lookup' | 'speech_stream'
+    tier?: 'flash' | 'pro'
+    question: string
+    persona?: string
+    messages?: Array<{ role?: string; content?: string }>
+  }): Promise<{ text: string; model: string }> {
+    const cfg = this.loadPromptConfig()
+    const tier = opts?.tier === 'pro' ? 'pro' : 'flash'
+    const providerCfg = cfg?.providers?.gemini
+    const modelFromCfg = providerCfg?.models?.[tier]
+    const modelToUse = (process.env.GEMINI_MODEL && String(process.env.GEMINI_MODEL).trim())
+      ? String(process.env.GEMINI_MODEL).trim()
+      : (modelFromCfg && String(modelFromCfg).trim()) ? String(modelFromCfg).trim() : this.model
+
+    const prompts = cfg?.prompts || {}
+    const categoryBlock = prompts?.[opts.category] || {}
+    const template =
+      (typeof categoryBlock?.[tier] === 'string' ? categoryBlock[tier] : null) ||
+      (typeof categoryBlock?.default === 'string' ? categoryBlock.default : null) ||
+      ''
+
+    const personaText = String(opts.persona || '').trim()
+    const personaBlock = personaText ? `VAI TRÒ: ${personaText}` : ''
+    const historyBlock = this.buildHistoryBlock(opts.messages)
+    const prompt = this.renderTemplate(template, {
+      question: String(opts.question || ''),
+      persona_block: personaBlock,
+      history_block: historyBlock
+    }).trim()
+
+    const requestBody: GeminiRequest = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: this.getGenerationConfig(),
+      safetySettings: this.getSafetySettings()
+    }
+
+    const url = `${this.baseUrl}/${modelToUse}:generateContent`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': this.apiKey
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '')
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText} ${errorText}`)
+    }
+
+    const data = (await response.json()) as GeminiResponse
+    const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || ''
+    return { text: String(text || '').trim(), model: modelToUse }
   }
 
   // Prompt templates cho từng context

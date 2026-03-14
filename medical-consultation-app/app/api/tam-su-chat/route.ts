@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { geminiService } from '@/lib/gemini-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,9 +14,42 @@ export async function POST(request: NextRequest) {
     const user_id: string | null = typeof bodyIn?.user_id === 'string' ? bodyIn.user_id : null
     const selectedModel = (typeof bodyIn?.model === 'string' ? String(bodyIn.model).toLowerCase() : 'flash')
     const modeHeader = selectedModel === 'pro' ? 'pro' : 'flash'
+    const provider = (typeof bodyIn?.provider === 'string' ? String(bodyIn.provider).trim().toLowerCase() : '') || (process.env.LLM_PROVIDER || '').trim().toLowerCase()
+    const useGemini = provider === 'gemini' || selectedModel === 'gemini'
 
     if (!userMessage) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+    }
+
+    if (useGemini) {
+      if (!process.env.GEMINI_API_KEY) {
+        return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 })
+      }
+      const startGemini = Date.now()
+      const out = await geminiService.generateFromConfig({
+        category: 'friend',
+        tier: modeHeader,
+        question: userMessage,
+        persona: '',
+        messages: conversationHistory
+      })
+      const durationGemini = Date.now() - startGemini
+      const content = String(out?.text || '').trim()
+      if (!content) {
+        return NextResponse.json({ error: 'No content in response' }, { status: 502 })
+      }
+      return NextResponse.json({
+        response: content,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          mode: 'gpu',
+          fallback: false,
+          provider: 'gemini',
+          duration_ms: durationGemini,
+          model: out?.model || process.env.GEMINI_MODEL || 'gemini'
+        },
+        conversation_id: conversation_id || null
+      })
     }
 
     const dataDir = path.join(process.cwd(), 'data')
@@ -136,7 +170,8 @@ export async function POST(request: NextRequest) {
       metadata: {
         timestamp: new Date().toISOString(),
         mode: modeUsed,
-        fallback: originalTarget === 'gpu' && modeUsed === 'cpu'
+        fallback: originalTarget === 'gpu' && modeUsed === 'cpu',
+        provider: 'server'
       },
       conversation_id: newConversationId
     })

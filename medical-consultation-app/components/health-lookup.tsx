@@ -100,10 +100,15 @@ export function HealthLookup() {
       }
 
       const queryToSend = sanitized.length ? sanitized : searchQuery
+      let provider: string = 'server'
+      try {
+        const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
+        if (p === 'gemini' || p === 'server') provider = p
+      } catch {}
       const resp = await fetch('/api/health-lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryToSend, mode })
+        body: JSON.stringify({ query: queryToSend, mode, provider })
       })
 
       const data = await resp.json()

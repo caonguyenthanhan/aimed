@@ -129,6 +129,12 @@ export default function SpeechChatPage() {
         content: msg.content
       }))))
       formData.append('use_optimized', 'true')
+      try {
+        const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
+        formData.append('provider', (p === 'gemini' || p === 'server') ? p : 'server')
+      } catch {
+        formData.append('provider', 'server')
+      }
 
       const response = await fetch('/api/speech-chat', {
         method: 'POST',

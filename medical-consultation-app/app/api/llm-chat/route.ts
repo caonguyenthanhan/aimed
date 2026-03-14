@@ -107,9 +107,17 @@ NGUYÊN TẮC QUAN TRỌNG:
       }
 
       const startGemini = Date.now()
-      const text = await geminiService.generateResponse(String(userMessage), String(determinedContext))
+      const personaForGemini = (typeof persona === 'string' && persona.trim()) ? persona.trim() : (typeof role === 'string' && role.trim() ? role.trim() : '')
+      const category = String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation'
+      const out = await geminiService.generateFromConfig({
+        category: category as any,
+        tier: modeHeader,
+        question: String(userMessage),
+        persona: personaForGemini,
+        messages: Array.isArray(conversationHistory) ? conversationHistory : []
+      })
       const durationGemini = Date.now() - startGemini
-      const content = String(text || '').trim()
+      const content = String(out?.text || '').trim()
       if (!content) {
         return NextResponse.json({ error: 'No content in response' }, { status: 502 })
       }
@@ -118,7 +126,7 @@ NGUYÊN TẮC QUAN TRỌNG:
         response: content,
         context: determinedContext,
         model_info: {
-          model_name: process.env.GEMINI_MODEL || 'gemini',
+          model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
           provider: 'Gemini'
         },
         metadata: {

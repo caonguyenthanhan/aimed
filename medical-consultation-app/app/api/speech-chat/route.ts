@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
     const audioFile = formData.get('audio_file') as File
     const context = formData.get('context') as string || 'health consultation'
     const conversationHistory = formData.get('conversation_history') as string
+    const provider = formData.get('provider') as string
     const useOptimized = true
 
     if (!audioFile) {
@@ -56,8 +57,9 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         message: userText,
-        context: context,
-        conversationHistory: parsedHistory
+        context: 'speech_stream',
+        conversationHistory: parsedHistory,
+        provider: (typeof provider === 'string' && (provider === 'gemini' || provider === 'server')) ? provider : undefined
       }),
     })
 

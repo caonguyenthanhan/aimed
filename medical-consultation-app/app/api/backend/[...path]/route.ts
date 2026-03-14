@@ -52,26 +52,32 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
   })
 }
 
-export async function GET(req: NextRequest, ctx: { params: { path?: string[] } }) {
-  return proxy(req, ctx.params)
+export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  const p = await ctx.params
+  return proxy(req, { path: p?.path })
 }
 
-export async function POST(req: NextRequest, ctx: { params: { path?: string[] } }) {
-  return proxy(req, ctx.params)
+export async function POST(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  const p = await ctx.params
+  return proxy(req, { path: p?.path })
 }
 
-export async function PUT(req: NextRequest, ctx: { params: { path?: string[] } }) {
-  return proxy(req, ctx.params)
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  const p = await ctx.params
+  return proxy(req, { path: p?.path })
 }
 
-export async function PATCH(req: NextRequest, ctx: { params: { path?: string[] } }) {
-  return proxy(req, ctx.params)
+export async function PATCH(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  const p = await ctx.params
+  return proxy(req, { path: p?.path })
 }
 
-export async function DELETE(req: NextRequest, ctx: { params: { path?: string[] } }) {
-  return proxy(req, ctx.params)
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  const p = await ctx.params
+  return proxy(req, { path: p?.path })
 }
 
-export async function OPTIONS(req: NextRequest, ctx: { params: { path?: string[] } }) {
-  return proxy(req, ctx.params)
+export async function OPTIONS(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {
+  const p = await ctx.params
+  return proxy(req, { path: p?.path })
 }

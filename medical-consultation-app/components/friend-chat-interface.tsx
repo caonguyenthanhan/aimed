@@ -318,6 +318,11 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
         role: m.isUser ? "user" : "assistant",
         content: m.content,
       }))
+      let provider: string = 'server'
+      try {
+        const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
+        if (p === 'gemini' || p === 'server') provider = p
+      } catch {}
       const payload = {
         model: selectedModel,
         message: messageText,
@@ -325,6 +330,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
         user_id: null,
         conversationHistory,
         messages: conversationHistory,
+        provider,
       }
       const url = "/api/tam-su-chat"
       const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -346,7 +352,8 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
       const md = (data as any)?.metadata
       if (md && typeof window !== "undefined") {
         try {
-          const detail = { target: md.mode === "gpu" ? "gpu" : "cpu" }
+          const detail: any = { target: md.mode === "gpu" ? "gpu" : "cpu" }
+          if (md.provider) detail.provider = md.provider
           window.dispatchEvent(new CustomEvent("runtime_mode_changed", { detail }))
         } catch {}
       }
