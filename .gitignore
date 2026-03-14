@@ -72,3 +72,6 @@ Thumbs.db
 
 # local planning (do not commit)
 PLAN_LOCAL.md
+
+# cpu server launcher output
+.cpu_server_url.txt
