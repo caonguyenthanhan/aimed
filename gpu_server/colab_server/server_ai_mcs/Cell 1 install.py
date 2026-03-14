@@ -1,0 +1,15 @@
+# @title 1. Cài đặt Thư viện (Optimized)
+import sys
+import subprocess
+subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "transformers", "sentence-transformers", "tokenizers"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "transformers==4.44.2", "tokenizers==0.15.2"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "accelerate==0.34.2", "bitsandbytes==0.43.1", "sentencepiece"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "fastapi", "uvicorn", "python-multipart", "pyngrok", "nest_asyncio"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "gTTS", "librosa", "soundfile", "edge-tts"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "faster-whisper"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "triton==2.1.0"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "chromadb", "llama-index", "llama-index-vector-stores-chroma", "llama-index-embeddings-langchain", "langchain-community", "sentence-transformers==2.7.0", "Pillow"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "paddlepaddle==2.6.1", "paddleocr==2.7.0.3"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "shapely==2.0.1", "pyclipper", "opencv-python"])
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "torchvision"])
+print("✅ Đã cài đặt xong thư viện (Phiên bản tối ưu VRAM).")

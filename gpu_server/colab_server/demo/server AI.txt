@@ -1,0 +1,254 @@
+Tôi đã đọc các file bạn đính kèm (đặc biệt `colab_ai_server.py`, `cell E ALL for One.py` và `server.py`) và soạn sẵn **chuỗi cells** để chèn vào `server.ipynb`. Các cell này tạo một **AI server chạy trong Colab** (hoặc môi trường có GPU) với **ngrok** và thay thế logic `GET/POST` chat hiện có trong `server.py` bằng endpoint `/v1/chat/completions` tương thích OpenAI-style. Mã dùng Hugging Face (GPU) nếu có, và sẽ fallback sang llama.cpp/GGUF (CPU) nếu GPU/kết nối HF không khả dụng — theo mẫu từ file `colab_ai_server.py` và cấu trúc server trong `server.py` / `cell E`.   
+
+Dán trực tiếp các cell sau vào `server.ipynb` (mỗi cell là một ô code). Tôi giữ ngắn gọn, thực dụng và dễ dán-chạy.
+
+---
+
+# Cell 1 — Cài thư viện cần thiết (Colab)
+
+```python
+# Cell 1: install dependencies (chạy 1 lần)
+import sys, subprocess
+
+def pip_install(pkg):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", pkg])
+
+# FastAPI + uvicorn + ngrok + transformers/hf
+pip_install("fastapi")
+pip_install("uvicorn[standard]")
+pip_install("pyngrok")
+pip_install("huggingface_hub")
+pip_install("transformers>=4.30.0")
+pip_install("accelerate")
+pip_install("safetensors")
+# Optional fallback llama.cpp (nếu muốn dùng GGUF local)
+pip_install("llama-cpp-python")
+```
+
+---
+
+# Cell 2 — Cấu hình môi trường (token, model, options)
+
+```python
+# Cell 2: cấu hình (chỉnh theo nhu cầu)
+import os
+
+# Hugging Face model id (text-generation / causal). Thay bằng model bạn muốn.
+# Ví dụ: "gpt2" (test), hoặc một model lớn hơn: "meta-llama/Llama-2-13b-chat-hf" (cần token + VRAM)
+HF_MODEL = os.environ.get("HF_MODEL", "gpt2")
+HF_TOKEN = os.environ.get("HF_HUB_TOKEN", "")  # recommended: set trong Colab runtime env
+PORT = int(os.environ.get("PORT", 8000))
+USE_NGROK = True
+NGROK_TOKEN = os.environ.get("NGROK_TOKEN", "")  # đặt token nếu có
+# Fallback GGUF path (local) nếu HF không khả dụng
+GGUF_PATH = os.environ.get("GGUF_PATH", "/content/models/model.gguf")
+```
+
+---
+
+# Cell 3 — Khởi tạo model (ưu tiên GPU HF, fallback GGUF)
+
+```python
+# Cell 3: load model (HF GPU nếu có, ngược lại fallback llama-cpp với GGUF trên CPU)
+import torch
+from huggingface_hub import login
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+
+device = 0 if torch.cuda.is_available() else -1
+print("Torch CUDA available:", torch.cuda.is_available(), "device:", device)
+
+tokenizer = None
+text_gen = None
+llama_llm = None
+
+# Try HF (GPU if available)
+try:
+    if HF_TOKEN:
+        login(HF_TOKEN)
+    print("Loading HF model:", HF_MODEL)
+    tokenizer = AutoTokenizer.from_pretrained(HF_MODEL, use_fast=True)
+    # Use device_map automatic if large model, otherwise to("cuda")
+    model = AutoModelForCausalLM.from_pretrained(
+        HF_MODEL,
+        torch_dtype=torch.float16 if torch.cuda.is_available() else None,
+        device_map="auto" if torch.cuda.is_available() else None,
+        low_cpu_mem_usage=True,
+        trust_remote_code=True
+    )
+    if torch.cuda.is_available() and not isinstance(model.device, list):
+        # if model loaded single-device, ensure on cuda
+        model = model.to("cuda")
+    text_gen = pipeline("text-generation", model=model, tokenizer=tokenizer, device=device, return_full_text=False)
+    print("✅ Loaded HF model (pipeline)")
+except Exception as e:
+    print("⚠️ HF model load failed or no GPU. Falling back to llama-cpp (GGUF). Error:", e)
+    try:
+        from llama_cpp import Llama
+        if os.path.exists(GGUF_PATH):
+            llama_llm = Llama(model_path=GGUF_PATH, n_ctx=2048)
+            print("✅ Loaded GGUF via llama_cpp:", GGUF_PATH)
+        else:
+            print("❌ GGUF path not found:", GGUF_PATH)
+    except Exception as e2:
+        print("❌ Failed to load llama_cpp:", e2)
+
+if text_gen is None and llama_llm is None:
+    raise RuntimeError("No model available: configure HF_MODEL + HF_HUB_TOKEN or provide GGUF_PATH.")
+```
+
+---
+
+# Cell 4 — FastAPI server + endpoint chat (thay thế GET/POST chat trong `server.py`)
+
+```python
+# Cell 4: FastAPI server với endpoint /v1/chat/completions
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+import asyncio
+import json
+
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+def messages_to_prompt(messages):
+    """
+    Chuyển danh sách messages [{'role':'system'/'user'/'assistant','content':...}]
+    thành prompt text dạng đơn giản. Bạn có thể thay đổi policy prompt ở đây.
+    """
+    if not messages:
+        return ""
+    parts = []
+    for m in messages:
+        role = m.get("role","user")
+        content = m.get("content","")
+        if role == "system":
+            parts.append(f"[SYSTEM]\n{content}\n")
+        elif role == "user":
+            parts.append(f"User: {content}\n")
+        else:
+            parts.append(f"Assistant: {content}\n")
+    # kết hợp và thêm instruction cho assistant
+    return "\n".join(parts) + "\nAssistant:"
+
+@app.get("/health")
+async def health():
+    return {"status":"ok", "model_loaded": bool(text_gen or llama_llm)}
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: Request):
+    payload = await request.json()
+    # Hỗ trợ cả 'messages' (OpenAI style) và 'prompt' (simple)
+    messages = payload.get("messages")
+    prompt = payload.get("prompt") or payload.get("question") or payload.get("message")
+    system = payload.get("system", "")
+    temperature = float(payload.get("temperature", 0.2))
+    max_tokens = int(payload.get("max_tokens", 256))
+
+    if messages:
+        # ensure system message first if provided separately
+        if system:
+            messages = [{"role":"system","content":system}] + messages
+        text_prompt = messages_to_prompt(messages)
+    else:
+        # build minimal prompt
+        text_prompt = (("[SYSTEM]\n" + system + "\n") if system else "") + str(prompt or "")
+
+    # HF pipeline generation
+    try:
+        if text_gen:
+            gen = text_gen(
+                text_prompt,
+                do_sample=temperature>0,
+                temperature=temperature,
+                max_new_tokens=max_tokens,
+                top_p=0.9,
+                eos_token_id=tokenizer.eos_token_id if tokenizer is not None else None,
+            )
+            out_text = gen[0]["generated_text"]
+            # If pipeline returns full prompt + generation, we can strip prompt prefix
+            if out_text.startswith(text_prompt):
+                out_text = out_text[len(text_prompt):].strip()
+            return {"choices":[{"message":{"role":"assistant","content":out_text}}]}
+        elif llama_llm:
+            # llama_cpp style: either create_chat_completion or call
+            try:
+                r = llama_llm.create_chat_completion(messages=[m for m in (messages or [{"role":"user","content":text_prompt}])], temperature=temperature, max_tokens=max_tokens)
+                out_text = r["choices"][0]["message"]["content"]
+            except Exception:
+                # fallback: simple call
+                r = llama_llm(text_prompt, max_tokens=max_tokens, temperature=temperature)
+                out_text = r.get("choices", [{}])[0].get("text","")
+            return {"choices":[{"message":{"role":"assistant","content":out_text}}]}
+        else:
+            return {"error":"No model available"}, 503
+    except Exception as e:
+        return {"error": f"Generation failed: {str(e)}"}, 500
+
+# Run uvicorn server in background (so notebook doesn't block)
+def _run_server():
+    uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="info")
+
+import threading
+t = threading.Thread(target=_run_server, daemon=True)
+t.start()
+print("FastAPI server started on port", PORT)
+```
+
+---
+
+# Cell 5 — Expose with ngrok và in public URL (theo mẫu `colab_ai_server.py` / `cell E`)
+
+```python
+# Cell 5: expose ngrok (in ra public url)
+from pyngrok import ngrok, conf
+if NGROK_TOKEN:
+    conf.get_default().auth_token = NGROK_TOKEN
+
+tunnel = ngrok.connect(PORT)
+print("Ngrok public url:", tunnel.public_url)
+print("Health check:", f"{tunnel.public_url}/health")
+print("Chat endpoint:", f"{tunnel.public_url}/v1/chat/completions")
+```
+
+---
+
+# Cell 6 — Test nhanh (client request)
+
+```python
+# Cell 6: test quick request to the server (local/public)
+import requests, json, time
+
+base = f"http://127.0.0.1:{PORT}"
+try:
+    # if ngrok used, replace base with public url printed above
+    r = requests.post(f"{base}/v1/chat/completions", json={
+        "messages": [
+            {"role":"system","content":"Bạn là trợ lý hữu ích, trả lời ngắn gọn bằng tiếng Việt."},
+            {"role":"user","content":"Xin chào, hôm nay trời thế nào?"}
+        ],
+        "temperature":0.2,
+        "max_tokens":80
+    }, timeout=60)
+    print("Status:", r.status_code, "Response:", r.json())
+except Exception as e:
+    print("Local test failed:", e)
+```
+
+---
+
+# Ghi chú quan trọng & cách tích hợp với `server.py` hiện có
+
+1. Endpoint `/v1/chat/completions` ở **Cell 4** tương thích kiểu OpenAI (dùng `messages`). Bạn có thể cắt-nối đoạn này để thay thế hoàn toàn các route chat hiện tại trong `server.py`. (Đoạn mẫu server và logic chat trong `server.py` tôi đã đọc tham khảo). 
+2. Nếu muốn giữ toàn bộ API logic khác (conversations, TTS, STT, RAG...), chỉ cần import/merge endpoint chat ở trên và chỉnh `LLAMA_SERVER_URL`/proxy logic để chuyển tới Colab server (ngrok URL). Mẫu proxy logic có sẵn trong `server.py` (nếu không load model local) bạn có thể reuse. 
+3. Mô hình HF lớn cần token + VRAM; nếu thiếu VRAM, dùng `device_map="auto"` hoặc model nhỏ hơn. Nếu bạn muốn chạy GGUF (CPU) hiện tại trên server local, giữ `llama_cpp` code (đã có trong `colab_ai_server.py` & `server.py`) làm fallback. 
+
+---
+
+Nếu bạn muốn, tôi có thể **tiếp tục** và:
+
+* (A) Tạo file `.py` hoàn chỉnh (kết hợp mọi endpoint chat) sẵn để upload vào `server.ipynb` (hoặc chuyển thành một ô code duy nhất).
+* (B) Chỉnh prompt-building (messages_to_prompt) theo format Llama-chat (giữ system/user/assistant vào JSON thay vì prompt text).
+* (C) Thêm bảo mật (API key header) hoặc streaming trả về token-by-token (nếu model/pipeline hỗ trợ).
+
+Bạn muốn tôi thực hiện (A), (B) hay (C) tiếp theo?

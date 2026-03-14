@@ -37,16 +37,23 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# memory bank (giữ lại nếu muốn push docs, bỏ comment nếu muốn ẩn)
-#/memory-bank/
+# memory bank & internal docs (không push)
+/memory-bank/
+/docs/
+/plan/
+/todo/
 
 # tài liệu & model
 /doc/
 /models/
 /model/
+/data/
+/module/
 /DB_ALL/
 /RAG/DB_ALL/
+/Archived/RAG/DB_ALL/
 /RAG/results.zip
+/Archived/RAG/results.zip
 *.zip
 
 # môi trường ảo
@@ -75,3 +82,6 @@ PLAN_LOCAL.md
 
 # cpu server launcher output
 .cpu_server_url.txt
+
+# misc local artifacts
+Neo4j-*.txt

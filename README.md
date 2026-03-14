@@ -144,13 +144,11 @@ npm run dev
 
 ```
 medical-consulting-system/
-├── medical-consultation-app/   # Mã nguồn Frontend (Next.js)
-├── server.py                   # Backend chính (FastAPI Local)
-├── colab server/               # Script chạy trên Google Colab
-├── RAG/                        # Logic xử lý RAG & Vector DB
-├── data/                       # Dữ liệu mẫu (JSON, CSV)
-├── models/                     # Chứa các file model GGUF (nếu chạy offline hoàn toàn)
-├── requirements.txt            # Danh sách thư viện Python
+├── medical-consultation-app/   # Frontend (Next.js) + Gemini API key mode
+├── cpu_server/                 # CPU server + backend (FastAPI) + launcher ngrok
+├── gpu_server/                 # Script triển khai GPU server (Colab/Ngrok)
+├── Archived/                   # Bản lưu trữ cũ (RAG/notebook/đóng góp trước đây)
+├── test/                       # Test cases + script kiểm thử + báo cáo test
 └── README.md                   # Tài liệu hướng dẫn
 ```
 
@@ -159,7 +157,7 @@ medical-consulting-system/
 ### 1) Kiến trúc Hybrid (GPU-first + CPU fallback)
 - **Frontend (Next.js)**: giao diện chat, tra cứu, sàng lọc tâm lý, voice/vision.
 - **Gateway (Next.js API Routes)**: đóng vai trò “API Gateway”, quyết định gọi **GPU server** hay **Local backend** dựa trên `runtime-mode.json`.
-- **Local Backend (FastAPI - `server.py`)**: cung cấp API `/v1/*`, vừa xử lý CPU (llama-cpp GGUF) vừa proxy sang GPU (Colab/Ngrok).
+- **Local Backend (FastAPI - `cpu_server/server.py`)**: cung cấp API `/v1/*`, vừa xử lý CPU (llama-cpp GGUF) vừa proxy sang GPU (Colab/Ngrok).
 - **GPU Server (Colab/Ngrok)**: chạy các tác vụ nặng (LLM lớn/Vision/TTS-STT/RAG) và expose `/v1/*` + `/gpu/metrics`.
 
 Luồng phổ biến:
@@ -182,18 +180,17 @@ Luồng phổ biến:
 - Gateway Chat (đọc runtime-mode/registry + fallback + log metrics/events):
   - `medical-consultation-app/app/api/llm-chat/route.ts`
 - Local Backend endpoints (FastAPI):
-  - `server.py` (các endpoint chính: `/v1/chat/completions`, `/v1/friend-chat/completions`, `/v1/health-lookup`, `/v1/vision-chat`, `/v1/document-chat`, TTS/STT, runtime mode/state, auth, conversations…)
+  - `cpu_server/server.py` (các endpoint chính: `/v1/chat/completions`, `/v1/friend-chat/completions`, `/v1/health-lookup`, `/v1/vision-chat`, `/v1/document-chat`, TTS/STT, runtime mode/state, auth, conversations…)
 - GPU Server (Colab):
-  - `colab server/demo/server_ai_mcs.py` và các script trong `colab server/server_ai_mcs/`
+  - `gpu_server/colab_server/demo/server_ai_mcs.py` và các script trong `gpu_server/colab_server/server_ai_mcs/`
 
 ### 4) Log/Quan sát (phục vụ debug fallback & hiệu năng)
 - `medical-consultation-app/data/runtime-events.jsonl`: ghi sự kiện (fallback, mode_change, gpu_metrics, frontend_call…)
 - `medical-consultation-app/data/runtime-metrics.jsonl`: thời gian phản hồi theo mode (cpu/gpu) và endpoint
 
 ### 5) Tài liệu kỹ thuật trong repo
-- Kiến trúc (Mermaid + mô tả): `docs/system-architecture.md`
-- Memory Bank (tài liệu “để tiếp tục phát triển”): `memory-bank/` (systemOverview, systemPatterns, techContext, progress, activeContext…)
 - Inference scripts (fine-tuned/LoRA): `README_INFERENCE.md`
+- Tài liệu nội bộ (không public) và dữ liệu lớn được để local và không theo dõi bởi git.
 
 ## ⚠️ Lưu Ý Quan Trọng
 - **Dữ liệu Y tế**: Các câu trả lời của AI chỉ mang tính chất tham khảo, **không thay thế lời khuyên của bác sĩ chuyên khoa**.

@@ -1,0 +1,10 @@
+fastapi==0.115.6
+uvicorn==0.34.0
+python-multipart==0.0.20
+requests==2.32.3
+PyJWT==2.10.1
+Pillow==11.0.0
+gTTS==2.5.4
+SpeechRecognition==3.11.0
+pydub==0.25.1
+llama-cpp-python
