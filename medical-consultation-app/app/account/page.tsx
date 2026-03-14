@@ -51,7 +51,7 @@ export default function AccountPage() {
       try {
         let data: any = null
         if (token) {
-          const resp = await fetch("http://127.0.0.1:8000/v1/user", { headers: { Authorization: `Bearer ${token}` } })
+          const resp = await fetch("/api/backend/v1/user", { headers: { Authorization: `Bearer ${token}` } })
           if (resp.ok) data = await resp.json()
         }
         if (!data && typeof window !== "undefined") {
@@ -152,14 +152,14 @@ export default function AccountPage() {
         if (profile.nickname) fd.append("nickname", profile.nickname)
         if (profile.bio) fd.append("bio", profile.bio)
         fd.append("avatar", avatarFile)
-        resp = await fetch("http://127.0.0.1:8000/v1/user", {
+        resp = await fetch("/api/backend/v1/user", {
           method: "PUT",
           headers: token ? { "Authorization": `Bearer ${token}` } : undefined,
           body: fd,
         })
       } else {
         const body: any = { full_name: profile.full_name, nickname: profile.nickname, bio: profile.bio }
-        resp = await fetch("http://127.0.0.1:8000/v1/user", {
+        resp = await fetch("/api/backend/v1/user", {
           method: "PUT",
           headers: token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" },
           body: JSON.stringify(body),
@@ -190,7 +190,7 @@ export default function AccountPage() {
     setError(null)
     setSuccess(null)
     try {
-      const resp = await fetch("http://127.0.0.1:8000/v1/user/password", {
+      const resp = await fetch("/api/backend/v1/user/password", {
         method: "PUT",
         headers: token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
@@ -221,7 +221,7 @@ export default function AccountPage() {
     setError(null)
     setSuccess(null)
     try {
-      const resp = await fetch("http://127.0.0.1:8000/v1/user/sessions/logout-all", {
+      const resp = await fetch("/api/backend/v1/user/sessions/logout-all", {
         method: "POST",
         headers: token ? { "Authorization": `Bearer ${token}` } : undefined,
       })

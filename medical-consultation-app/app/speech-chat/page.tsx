@@ -545,7 +545,7 @@ export default function SpeechChatPage() {
 
   const sendImageWithText = async (text: string, imageBase64: string) => {
     try {
-      const response = await fetch('http://localhost:8000/v1/vision-chat', {
+      const response = await fetch('/api/backend/v1/vision-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

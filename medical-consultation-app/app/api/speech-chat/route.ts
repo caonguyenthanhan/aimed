@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:8000'
+    const backendUrl = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || 'http://127.0.0.1:8000').trim().replace(/\/$/, '')
     const sttForm = new FormData()
     sttForm.append('file', audioFile)
     const sttResp = await fetch(`${backendUrl}/v1/stt/stream`, { method: 'POST', body: sttForm })

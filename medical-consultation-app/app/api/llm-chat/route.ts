@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
+import { geminiService } from '@/lib/gemini-service'
 
 // Determine context based on the conversation or user input
 function determineContext(userMessage: string, conversationHistory?: any[]): string {
@@ -23,7 +24,7 @@ function determineContext(userMessage: string, conversationHistory?: any[]): str
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role } = await request.json()
+    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider } = await request.json()
     const auth = request.headers.get('authorization') || ''
     const referer = request.headers.get('referer') || ''
     
@@ -38,8 +39,11 @@ export async function POST(request: NextRequest) {
     // Determine context based on user message
     const determinedContext = context || determineContext(userMessage, conversationHistory)
     
-    const cpuFallback = process.env.INTERNAL_LLM_URL || 'http://127.0.0.1:8000/v1/chat/completions'
-    let fastApiUrl = `${String(defaultGpuUrl).replace(/\/$/, '')}/v1/chat/completions`
+    const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || '').trim().replace(/\/$/, '')
+    const cpuFallback = (process.env.INTERNAL_LLM_URL || (cpuBase ? `${cpuBase}/v1/chat/completions` : '') || 'http://127.0.0.1:8000/v1/chat/completions').trim()
+
+    const envGpuBase = (process.env.GPU_SERVER_URL || process.env.DEFAULT_GPU_URL || '').trim().replace(/\/$/, '')
+    let fastApiUrl = `${String(envGpuBase || defaultGpuUrl).replace(/\/$/, '')}/v1/chat/completions`
     let originalTarget: 'cpu' | 'gpu' = 'gpu'
     try {
       const dataDir = path.join(process.cwd(), 'data')
@@ -94,6 +98,44 @@ NGUYÊN TẮC QUAN TRỌNG:
     const systemPrompt = personaText
     const selectedModel = (typeof model === 'string' ? model.toLowerCase() : 'flash')
     const modeHeader = selectedModel === 'pro' ? 'pro' : 'flash'
+
+    const configuredProvider = (typeof provider === 'string' ? provider.trim().toLowerCase() : '') || (process.env.LLM_PROVIDER || '').trim().toLowerCase()
+    const useGemini = configuredProvider === 'gemini' || selectedModel === 'gemini'
+    if (useGemini) {
+      if (!process.env.GEMINI_API_KEY) {
+        return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 })
+      }
+
+      const startGemini = Date.now()
+      const text = await geminiService.generateResponse(String(userMessage), String(determinedContext))
+      const durationGemini = Date.now() - startGemini
+      const content = String(text || '').trim()
+      if (!content) {
+        return NextResponse.json({ error: 'No content in response' }, { status: 502 })
+      }
+
+      return NextResponse.json({
+        response: content,
+        context: determinedContext,
+        model_info: {
+          model_name: process.env.GEMINI_MODEL || 'gemini',
+          provider: 'Gemini'
+        },
+        metadata: {
+          context: determinedContext,
+          prompt_length: String(userMessage).length,
+          response_length: content.length,
+          timestamp: new Date().toISOString(),
+          mode: 'gpu',
+          tier: modeHeader,
+          fallback: false,
+          provider: 'gemini',
+          duration_ms: durationGemini
+        },
+        conversation_id: conversation_id || null
+      })
+    }
+
     const body = {
       model: selectedModel,
       mode: modeHeader,
@@ -217,7 +259,8 @@ NGUYÊN TẮC QUAN TRỌNG:
         tier: modeHeader,
         fallback: originalTarget === 'gpu' && modeUsed === 'cpu',
         model_init: !!(data && (data as any).model_init),
-        rag: (data && (data as any).rag) ? (data as any).rag : undefined
+        rag: (data && (data as any).rag) ? (data as any).rag : undefined,
+        provider: 'server'
       },
       conversation_id: newConversationId
     })

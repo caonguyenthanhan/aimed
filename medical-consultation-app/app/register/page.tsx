@@ -18,7 +18,7 @@ export default function RegisterPage() {
     setError(null)
     setSuccess(null)
     try {
-      const resp = await fetch('http://127.0.0.1:8000/v1/register', {
+      const resp = await fetch('/api/backend/v1/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

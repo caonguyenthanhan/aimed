@@ -9,7 +9,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Thiếu tham số query' }, { status: 400 })
     }
 
-    const fastApiUrl = process.env.INTERNAL_HEALTH_LOOKUP_URL || 'http://127.0.0.1:8000/v1/health-lookup'
+    const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || '').trim().replace(/\/$/, '')
+    const fastApiUrl = (process.env.INTERNAL_HEALTH_LOOKUP_URL || (cpuBase ? `${cpuBase}/v1/health-lookup` : '') || 'http://127.0.0.1:8000/v1/health-lookup').trim()
     const resp = await fetch(fastApiUrl, {
       method: 'POST',
       headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth } : { 'Content-Type': 'application/json' },

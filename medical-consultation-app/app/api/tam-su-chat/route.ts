@@ -19,8 +19,11 @@ export async function POST(request: NextRequest) {
     }
 
     const dataDir = path.join(process.cwd(), 'data')
-    const cpuFallback = process.env.INTERNAL_FRIEND_CHAT_URL || 'http://127.0.0.1:8000/v1/friend-chat/completions'
-    let targetUrl = `${String(defaultGpuUrl).replace(/\/$/, '')}/v1/friend-chat/completions`
+    const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || '').trim().replace(/\/$/, '')
+    const cpuFallback = (process.env.INTERNAL_FRIEND_CHAT_URL || (cpuBase ? `${cpuBase}/v1/friend-chat/completions` : '') || 'http://127.0.0.1:8000/v1/friend-chat/completions').trim()
+
+    const envGpuBase = (process.env.GPU_SERVER_URL || process.env.DEFAULT_GPU_URL || '').trim().replace(/\/$/, '')
+    let targetUrl = `${String(envGpuBase || defaultGpuUrl).replace(/\/$/, '')}/v1/friend-chat/completions`
     let originalTarget: 'cpu' | 'gpu' = 'gpu'
     try {
       try {

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     const sanitized = String(text).replace(/\*\*/g, '')
-    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:8000'
+    const backendUrl = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || 'http://127.0.0.1:8000').trim().replace(/\/$/, '')
     const target = `${backendUrl}/v1/text-to-speech-stream?text=${encodeURIComponent(sanitized)}&lang=${encodeURIComponent(lang)}`
 
     const controller = new AbortController()

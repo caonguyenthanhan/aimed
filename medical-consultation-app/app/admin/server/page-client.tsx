@@ -99,10 +99,10 @@ export default function AdminServerPage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
       if (token) {
-        const list = await fetch('http://127.0.0.1:8000/v1/conversations', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
+        const list = await fetch('/api/backend/v1/conversations', { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
         const ids = (list?.conversations || []).map((c: any) => c.id)
         for (const id of ids) {
-          await fetch(`http://127.0.0.1:8000/v1/conversations/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
+          await fetch(`/api/backend/v1/conversations/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
         }
       }
       if (typeof window !== 'undefined') {

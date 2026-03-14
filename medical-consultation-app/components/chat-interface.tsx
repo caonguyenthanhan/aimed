@@ -172,7 +172,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       }
     }
     try {
-      const resp = await fetch('http://127.0.0.1:8000/v1/conversations/start', {
+      const resp = await fetch('/api/backend/v1/conversations/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
         body: JSON.stringify({ title: '' })
@@ -226,7 +226,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         messages: conversationHistory
       }
 
-      const response = await fetch(authToken ? 'http://127.0.0.1:8000/v1/chat/completions' : '/api/llm-chat', {
+      const response = await fetch('/api/llm-chat', {
         method: 'POST',
         headers: authToken ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -239,7 +239,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       }
 
       const data = await response.json()
-      const aiResponse = authToken ? ((data as any)?.choices?.[0]?.message?.content || "Không nhận được phản hồi từ máy trả lời") : ((data as any)?.response || "Không nhận được phản hồi từ máy trả lời")
+      const aiResponse = (data as any)?.response || (data as any)?.choices?.[0]?.message?.content || "Không nhận được phản hồi từ máy trả lời"
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -345,7 +345,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
         setMessages((prev) => [...prev, userMessage])
 
-        const resp = await fetch('http://127.0.0.1:8000/v1/vision-chat', {
+        const resp = await fetch('/api/backend/v1/vision-chat', {
           method: 'POST',
           headers: authToken ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: currentInput, image_base64: selectedImageBase64 })
@@ -380,7 +380,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
         setMessages((prev) => [...prev, userMessage])
 
-        const resp = await fetch('http://127.0.0.1:8000/v1/document-chat', {
+        const resp = await fetch('/api/backend/v1/document-chat', {
           method: 'POST',
           headers: authToken ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: currentInput, doc_base64: selectedDocContent, doc_name: selectedDocName })
@@ -516,7 +516,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const beginNewConversation = async () => {
     if (authToken) {
       try {
-        const resp = await fetch('http://127.0.0.1:8000/v1/conversations/new', {
+        const resp = await fetch('/api/backend/v1/conversations/new', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
           body: JSON.stringify({ title: '' })
@@ -707,7 +707,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     ;(async () => {
       try {
         const headers = authToken ? { 'Authorization': `Bearer ${authToken}` } : undefined
-        const resp = await fetch('http://127.0.0.1:8000/v1/runtime/state', { headers })
+        const resp = await fetch('/api/backend/v1/runtime/state', { headers })
         if (resp.ok) {
           const data = await resp.json()
           const m = String(data?.model || '').toLowerCase()
@@ -721,7 +721,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       try {
         const headers: Record<string, string> = { 'Content-Type': 'application/json' }
         if (authToken) headers['Authorization'] = `Bearer ${authToken}`
-        await fetch('http://127.0.0.1:8000/v1/runtime/state', { method: 'POST', headers, body: JSON.stringify({ model: selectedModel }) })
+        await fetch('/api/backend/v1/runtime/state', { method: 'POST', headers, body: JSON.stringify({ model: selectedModel }) })
       } catch {}
     })()
   }, [selectedModel, authToken])
@@ -819,7 +819,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
     setIsLoadingConversations(true)
     try {
-      const resp = await fetch('http://127.0.0.1:8000/v1/conversations', {
+      const resp = await fetch('/api/backend/v1/conversations', {
         headers: { 'Authorization': `Bearer ${authToken}` }
       })
       const data = await resp.json()
@@ -863,7 +863,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       return
     }
     try {
-      const resp = await fetch(`http://127.0.0.1:8000/v1/conversations/${id}`, {
+      const resp = await fetch(`/api/backend/v1/conversations/${id}`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
       })
       if (!resp.ok) {
@@ -988,7 +988,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       return
     }
     try {
-      const resp = await fetch(`http://127.0.0.1:8000/v1/conversations/${id}/title`, {
+      const resp = await fetch(`/api/backend/v1/conversations/${id}/title`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
         body: JSON.stringify({ title })
@@ -1025,7 +1025,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       return
     }
     try {
-      const resp = await fetch(`http://127.0.0.1:8000/v1/conversations/${id}`, {
+      const resp = await fetch(`/api/backend/v1/conversations/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${authToken}` }
       })

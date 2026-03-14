@@ -15,7 +15,7 @@ export default function ComputeToggle() {
       if (typeof window !== 'undefined') auth = localStorage.getItem('authToken')
       let m: any = null
       try {
-        const url = 'http://127.0.0.1:8000/v1/runtime/state'
+        const url = '/api/backend/v1/runtime/state'
         const resp = await fetch(url, { headers: auth ? { 'Authorization': `Bearer ${auth}` } : undefined })
         if (resp.ok) m = await resp.json()
       } catch {}
@@ -68,14 +68,14 @@ export default function ComputeToggle() {
         setGpuUrl(url)
         try {
           const auth = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
-          await fetch('http://127.0.0.1:8000/v1/runtime/state', { method: 'POST', headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'gpu', gpu_url: url }) })
+          await fetch('/api/backend/v1/runtime/state', { method: 'POST', headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'gpu', gpu_url: url }) })
         } catch {}
       } else {
         await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cpu' }) })
         setMode('cpu')
         try {
           const auth = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
-          await fetch('http://127.0.0.1:8000/v1/runtime/state', { method: 'POST', headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cpu' }) })
+          await fetch('/api/backend/v1/runtime/state', { method: 'POST', headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cpu' }) })
         } catch {}
       }
       await load()

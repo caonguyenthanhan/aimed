@@ -49,6 +49,9 @@ export class GeminiService {
 
   constructor(apiKey: string) {
     this.apiKey = apiKey
+    if (process.env.GEMINI_MODEL && String(process.env.GEMINI_MODEL).trim()) {
+      this.model = String(process.env.GEMINI_MODEL).trim()
+    }
   }
 
   // Prompt templates cho từng context

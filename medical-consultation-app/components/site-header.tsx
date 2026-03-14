@@ -30,7 +30,7 @@ export default function SiteHeader() {
       }
       if (t && !base) {
         try {
-          fetch('http://127.0.0.1:8000/v1/user', { headers: { 'Authorization': `Bearer ${t}` } })
+          fetch('/api/backend/v1/user', { headers: { 'Authorization': `Bearer ${t}` } })
             .then(r => r.ok ? r.json() : null)
             .then(d => {
               const nm = String(d?.full_name || d?.username || "").trim()

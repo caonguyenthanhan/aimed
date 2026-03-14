@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const sanitized = String(text).replace(/\*\*/g, '')
     const payload = { ...body, text: sanitized }
     
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000'
+    const backendUrl = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || 'http://localhost:8000').trim().replace(/\/$/, '')
     
     const response = await fetch(`${backendUrl}/v1/text-to-speech`, {
       method: 'POST',

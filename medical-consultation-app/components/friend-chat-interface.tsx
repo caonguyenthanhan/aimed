@@ -326,7 +326,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
         conversationHistory,
         messages: conversationHistory,
       }
-      const url = authToken ? "http://127.0.0.1:8000/v1/friend-chat/completions" : "/api/tam-su-chat"
+      const url = "/api/tam-su-chat"
       const headers: Record<string, string> = { "Content-Type": "application/json" }
       if (authToken) headers["Authorization"] = `Bearer ${authToken}`
       const response = await fetch(url, { method: "POST", headers, body: JSON.stringify(payload) })
@@ -448,15 +448,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
           const blob = new Blob(audioChunksRef.current, { type: "audio/webm" })
           const formData = new FormData()
           formData.append("file", blob, "voice.webm")
-          let sttUrl = ""
-          if (authToken) {
-            sttUrl = "http://127.0.0.1:8000/v1/stt/stream"
-          } else {
-            const r = await fetch("/api/servers/latest")
-            const j = await r.json()
-            const base = String((j?.url || "")).replace(/\/$/, "")
-            sttUrl = `${base}/v1/stt/stream`
-          }
+          const sttUrl = "/api/backend/v1/stt/stream"
           const resp = await fetch(sttUrl, { method: "POST", body: formData })
           let transcript = ""
           if (resp.body) {
@@ -478,16 +470,8 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
           const finalText = transcript.trim()
           if (finalText) {
             await sendMessageToAI(finalText)
-            let ttsUrl = ""
             const reqBody = { text: finalText, lang: "vi" }
-            if (authToken) {
-              ttsUrl = "http://127.0.0.1:8000/v1/tts/stream"
-            } else {
-              const r2 = await fetch("/api/servers/latest")
-              const j2 = await r2.json()
-              const base2 = String((j2?.url || "")).replace(/\/$/, "")
-              ttsUrl = `${base2}/v1/tts/stream`
-            }
+            const ttsUrl = "/api/backend/v1/tts/stream"
             const ttsResp = await fetch(ttsUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reqBody) })
             if (ttsResp.ok) {
               const allText = await ttsResp.text()
