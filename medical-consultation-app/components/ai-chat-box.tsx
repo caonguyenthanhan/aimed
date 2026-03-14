@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Textarea } from "./ui/textarea"
+import { LlmChatResponseSchema } from "@/lib/llm-schema"
+import type { LlmMessage } from "@/types/llm"
 
 interface Message {
   id: string
@@ -56,7 +58,7 @@ export function AiChatBox({
       const conversationHistory = messages.map(msg => ({
         role: msg.isUser ? 'user' : 'assistant',
         content: msg.content,
-      }))
+      })) as LlmMessage[]
 
       const chatMessages = [
         ...(context ? [{ role: 'system', content: context }] : []),
@@ -80,7 +82,9 @@ export function AiChatBox({
         throw new Error("Failed to get AI response")
       }
 
-      const data = await response.json()
+      const raw = await response.json()
+      const parsed = LlmChatResponseSchema.safeParse(raw)
+      const data = parsed.success ? parsed.data : raw
       const aiResponse = (data as any)?.response || ""
       const md = (data as any)?.metadata
       if (md && typeof window !== 'undefined') {

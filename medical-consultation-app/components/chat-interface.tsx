@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Send, AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, Mic, Image as ImageIcon, X, Plus, RefreshCcw, ChevronLeft, Search } from "lucide-react"
+import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,6 +13,10 @@ import { useToast } from "@/hooks/use-toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { sanitizeTtsText } from "@/lib/tts-text"
+import { UnifiedComposer } from "@/components/unified-composer"
+import { LlmChatResponseSchema } from "@/lib/llm-schema"
+import type { LlmMessage } from "@/types/llm"
 
 interface Message {
   id: string
@@ -209,7 +213,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const conversationHistory = [...messages, userMessage].map(m => ({
         role: m.isUser ? 'user' : 'assistant',
         content: m.content
-      }))
+      })) as LlmMessage[]
       try {
         const idToUse = ensuredId || conversationId
         if (idToUse && typeof window !== 'undefined') {
@@ -244,7 +248,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         throw new Error(`Failed to get AI response: ${response.status} ${response.statusText}`)
       }
 
-      const data = await response.json()
+      const raw = await response.json()
+      const parsed = LlmChatResponseSchema.safeParse(raw)
+      const data = parsed.success ? parsed.data : raw
       const aiResponse = (data as any)?.response || (data as any)?.choices?.[0]?.message?.content || "Không nhận được phản hồi từ máy trả lời"
 
       const aiMessage: Message = {
@@ -437,7 +443,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setIsPlayingAudio(messageId)
 
       // Ưu tiên phát theo luồng để bắt đầu nghe sớm
-      const sanitized = String(text).replace(/\*\*/g, '')
+      const sanitized = sanitizeTtsText(String(text))
       const streamUrl = `/api/text-to-speech-stream?text=${encodeURIComponent(sanitized)}&lang=vi`
       const audio = new Audio(streamUrl)
       audioRef.current = audio
@@ -1381,150 +1387,37 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Bottom input and actions (anchored inside chat container) */}
-      <div className="flex-shrink-0 p-4 glass-panel border-t border-slate-200 relative z-10" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }} onDragOver={handleDragOver} onDrop={handleDrop}>
-        <div className="max-w-3xl mx-auto px-2">
-        <div className="mb-2 flex flex-wrap gap-2">
-          {suggestedQuestions.slice(0, 4).map((q, i) => (
-            <button
-              key={i}
-              onClick={() => handleSuggestedQuestion(q)}
-              className="px-3 py-1.5 rounded-2xl bg-gray-100 text-gray-700 text-xs hover:bg-blue-100 border border-gray-200 hover:border-blue-200 transition-all duration-200"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-        {selectedImageBase64 && (
-          <div className="mb-3">
-            <div className="relative inline-block">
-              <img
-                src={`data:${selectedImageMime || 'image/*'};base64,${selectedImageBase64}`}
-                alt={selectedImageName || 'Ảnh xem trước'}
-                className="h-24 w-24 md:h-28 md:w-28 rounded-xl object-cover shadow border border-gray-200"
-              />
-              <button
-                onClick={handleRemoveImage}
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-gray-800 text-white flex items-center justify-center shadow hover:bg-red-600"
-                title="Xóa ảnh"
-                aria-label="Xóa ảnh"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
-        {selectedDocName && (
-          <div className="mb-3">
-            <div className="relative inline-block bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 pr-8 shadow-sm">
-              <div className="flex items-center space-x-2">
-                <div className="p-1.5 bg-blue-100 rounded-lg">
-                  <span className="text-xs font-bold text-blue-600">DOC</span>
-                </div>
-                <span className="text-sm text-blue-800 font-medium truncate max-w-[150px]">{selectedDocName}</span>
-              </div>
-              <button
-                onClick={handleRemoveDoc}
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-gray-800 text-white flex items-center justify-center shadow hover:bg-red-600"
-                title="Xóa tài liệu"
-                aria-label="Xóa tài liệu"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
-        <div className="rounded-[24px] bg-white shadow-[0px_4px_12px_rgba(0,0,0,0.1)] px-4 py-2 flex items-center gap-2 hover:scale-[1.02] transition-transform">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            placeholder="Nhập câu hỏi của bạn..."
-            className="flex-1 border-0 focus:ring-0 focus:outline-none text-sm bg-transparent resize-none py-2 max-h-32 overflow-y-auto"
-            style={{ WebkitTapHighlightColor: 'transparent', minHeight: '40px' }}
-            disabled={isLoading}
-            rows={1}
-          />
-          <button
-            onClick={handleSubmit}
-            disabled={( !input.trim() && !selectedImageBase64 && !selectedDocContent) || isLoading}
-            className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm active:scale-95"
-            style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowTools(!showTools)}
-              className="px-3 py-2 rounded-2xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all duration-200 shadow-sm"
-            >
-              +
-            </button>
-            {showTools && (
-              <div className="flex items-center space-x-2">
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-2 rounded-2xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
-                >
-                  Thêm ảnh
-                </button>
-                <input ref={docInputRef} type="file" accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleDocChange} />
-                <button
-                  onClick={() => docInputRef.current?.click()}
-                  className="px-3 py-2 rounded-2xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
-                >
-                  Thêm PDF/DOC
-                </button>
-                {selectedImageName && <span className="text-xs text-gray-600">Ảnh: {selectedImageName}</span>}
-                {selectedDocName && <span className="text-xs text-gray-600">Tài liệu: {selectedDocName}</span>}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center space-x-2">
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value as 'flash' | 'pro')}
-              className="px-3 py-2 border border-gray-200 rounded-2xl text-sm bg-white"
-            >
-              <option value="flash">flash</option>
-              <option value="pro">pro</option>
-            </select>
-            <button
-              onClick={startNewConversation}
-              className="px-3 py-2 rounded-2xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
-            >
-              new
-            </button>
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={isLoading}
-              className={`px-3 py-2 rounded-2xl transition-all duration-200 shadow-md active:scale-95 ${
-                isRecording ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-              title={isRecording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm'}
-            >
-              <Mic className={`h-4 w-4 ${isRecording ? 'animate-pulse' : ''}`} />
-            </button>
-            <button
-              onClick={() => router.push('/speech-chat')}
-              className="px-3 py-2 rounded-2xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all duration-200 shadow-sm"
-              title="Chuyển sang Speech-to-Speech"
-            >
-              <img src="/icon-speech-to-speech.png" alt="Speech-to-Speech" className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
+      <UnifiedComposer
+        value={input}
+        onValueChange={setInput}
+        onSubmit={handleSubmit}
+        isLoading={isLoading}
+        suggestedQuestions={suggestedQuestions}
+        onSuggestedQuestion={handleSuggestedQuestion}
+        showTools={showTools}
+        onToggleTools={() => setShowTools(!showTools)}
+        fileInputRef={fileInputRef}
+        docInputRef={docInputRef}
+        onImageChange={handleImageChange}
+        onDocChange={handleDocChange}
+        selectedImage={
+          selectedImageBase64
+            ? { base64: selectedImageBase64, name: selectedImageName, mime: selectedImageMime }
+            : null
+        }
+        onRemoveImage={handleRemoveImage}
+        selectedDocName={selectedDocName}
+        onRemoveDoc={handleRemoveDoc}
+        selectedModel={selectedModel}
+        onSelectedModelChange={setSelectedModel}
+        onStartNewConversation={startNewConversation}
+        isRecording={isRecording}
+        onToggleRecording={() => (isRecording ? stopRecording() : startRecording())}
+        onGotoSpeechChat={() => router.push("/speech-chat")}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      />
       </div>
     </div>
-  </div>
-</div>
   )
 }

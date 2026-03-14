@@ -30,3 +30,4 @@ next-env.d.ts
 ../memory-bank/
 
 models/
+.neonctl/

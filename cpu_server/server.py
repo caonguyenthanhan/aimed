@@ -197,6 +197,49 @@ async def _setup_event_loop_handler():
     except Exception:
         pass
 
+def _gemini_generate_text(messages: List[dict], tier: str, temperature: float, max_tokens: int) -> str:
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Missing GEMINI_API_KEY")
+    model_name = os.environ.get("GEMINI_MODEL", "").strip() or "gemini-2.5-flash"
+    system_text = ""
+    contents = []
+    for m in messages:
+        role = str(m.get("role") or "").strip().lower()
+        content = str(m.get("content") or "")
+        if role == "system":
+            if content:
+                system_text = (system_text + "\n" + content).strip() if system_text else content
+            continue
+        g_role = "model" if role == "assistant" else "user"
+        if content:
+            contents.append({"role": g_role, "parts": [{"text": content}]})
+    payload = {
+        "contents": contents or [{"role": "user", "parts": [{"text": ""}]}],
+        "generationConfig": {
+            "temperature": float(temperature if temperature is not None else 0.7),
+            "maxOutputTokens": int(max_tokens if max_tokens is not None else 512),
+        },
+    }
+    if system_text:
+        payload["systemInstruction"] = {"parts": [{"text": system_text}]}
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+    r = requests.post(url, params={"key": api_key}, json=payload, timeout=60)
+    if not r.ok:
+        raise HTTPException(status_code=502, detail=f"Gemini API error: {r.status_code} {r.text[:200]}")
+    data = r.json()
+    try:
+        cand = (data.get("candidates") or [])[0] or {}
+        content = (cand.get("content") or {}).get("parts") or []
+        text = ""
+        for p in content:
+            t = p.get("text")
+            if isinstance(t, str) and t.strip():
+                text += t
+        return text.strip()
+    except Exception:
+        raise HTTPException(status_code=502, detail="Gemini API returned no text")
+
 class ChatMessage(BaseModel):
     role: str  # 'system' | 'user' | 'assistant'
     content: str
@@ -212,6 +255,7 @@ class ChatRequest(BaseModel):
     question: Optional[str] = None
     message: Optional[str] = None
     system: Optional[str] = None
+    provider: Optional[str] = None
 
 class ChatChoice(BaseModel):
     index: int
@@ -752,6 +796,32 @@ Lưu ý: Luôn khuyến cáo người dùng đi khám bác sĩ nếu có dấu h
             print(f"[USER] { _log_user }")
     except Exception:
         pass
+    provider = (req.provider or os.environ.get("LLM_PROVIDER", "") or "").strip().lower()
+    if provider == "gemini":
+        content = _gemini_generate_text(full_messages, selected, req.temperature or 0.7, req.max_tokens or 512)
+        last_user = None
+        for m in reversed(base_messages):
+            if m.get("role") == "user":
+                last_user = {"role": "user", "content": m.get("content", "")}
+                break
+        to_save = []
+        if last_user:
+            to_save.append(last_user)
+        to_save.append({"role": "assistant", "content": content})
+        save_chat_history(user_id, conversation_id, to_save)
+        conv = MOCK_CHAT_DB.get(user_id, {}).get("conversations", {}).get(conversation_id)
+        if conv and not conv.get("title"):
+            title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
+            conv["title"] = title
+        response = ChatResponse(
+            id="gemini",
+            choices=[ChatChoice(index=0, message=ChatMessage(role="assistant", content=content))],
+            conversation_id=conversation_id,
+        )
+        data = response.dict()
+        data["mode_used"] = "gpu"
+        data["provider"] = "gemini"
+        return data
     target = _current_target()
     if target == "gpu":
         try:
@@ -911,6 +981,31 @@ async def friend_chat_completions(req: ChatRequest, request: Request):
     else:
         base_messages = [{"role": "system", "content": friend_prompt}] + base_messages
     full_messages = history + base_messages
+    provider = (req.provider or os.environ.get("LLM_PROVIDER", "") or "").strip().lower()
+    if provider == "gemini":
+        content = _gemini_generate_text(full_messages, selected, req.temperature or 0.7, req.max_tokens or 512)
+        last_user = None
+        for m in reversed(base_messages):
+            if m.get("role") == "user":
+                last_user = {"role": "user", "content": m.get("content", "")}
+                break
+        to_save = []
+        if last_user:
+            to_save.append(last_user)
+        to_save.append({"role": "assistant", "content": content})
+        save_social_history(user_id, conversation_id, to_save)
+        conv = MOCK_SOCIAL_DB.get(user_id, {}).get("conversations", {}).get(conversation_id)
+        if conv and not conv.get("title"):
+            title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
+            conv["title"] = title
+        return {
+            "id": "gemini",
+            "object": "chat.completion",
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
+            "conversation_id": conversation_id,
+            "mode_used": "gpu",
+            "provider": "gemini"
+        }
     target = _current_target()
     if target == "gpu":
         try:

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sanitizeTtsText } from '@/lib/tts-text'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const text = typeof body?.text === 'string' ? body.text : ''
-    const sanitized = String(text).replace(/\*\*/g, '')
+    const sanitized = sanitizeTtsText(String(text))
     const payload = { ...body, text: sanitized }
     
     const backendUrl = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || 'http://localhost:8000').trim().replace(/\/$/, '')
