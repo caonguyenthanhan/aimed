@@ -49,6 +49,31 @@ async function ensureSeed() {
   await pool.query("INSERT INTO team_todo_docs (id, content) VALUES ($1, $2)", [DOC_ID, content])
 }
 
+export async function POST(req: NextRequest) {
+  try {
+    if (!requireAuth(req)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    await ensureSchema()
+    const seedPath = path.join(process.cwd(), "data", "team-todo.md")
+    const content = fs.readFileSync(seedPath, "utf-8")
+    const pool = getNeonPool()
+    const upd = await pool.query(
+      `
+      INSERT INTO team_todo_docs (id, content, updated_at, updated_by)
+      VALUES ($1, $2, now(), $3)
+      ON CONFLICT (id)
+      DO UPDATE SET content = EXCLUDED.content, updated_at = now(), updated_by = EXCLUDED.updated_by
+      RETURNING id, content, updated_at, updated_by
+    `,
+      [DOC_ID, content, "seed"]
+    )
+    return NextResponse.json(upd.rows[0])
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 })
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     if (!requireAuth(req)) {

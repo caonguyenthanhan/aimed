@@ -4,72 +4,72 @@
 
 **Bảng chú giải:**
 
-- 🤖 **\[AI IDE]**: Dùng AI (Cursor, Windsurf, Copilot) để sinh code tự động (80-100%).
-- 🧑‍💻 **\[Manual]**: Cấu hình hệ thống, click chuột, hoặc công việc bắt buộc con người tự làm.
-- 🤝 **\[Hybrid]**: AI làm nháp, Con người (bạn) review, tinh chỉnh logic/kiến thức chuyên môn.
+* 🤖 **\[AI IDE]**: Dùng AI (Cursor, Windsurf, Copilot) để sinh code tự động (80-100%).  
+* 🧑‍💻 **\[Manual]**: Cấu hình hệ thống, click chuột, thiết kế kiến trúc.  
+* 🤝 **\[Hybrid]**: AI làm nháp, Con người (bạn) review, tinh chỉnh logic.
 
-## **SPRINT 1: Tái cấu trúc & Chuẩn bị Môi trường (Tuần 1-2)**
+**Thời gian dự kiến:** 16 Tuần
 
-*Mục tiêu: Setup base project và cấu hình Gemini API làm bộ não tạm thời.*
+**Team:** - Thành An (AI/Data/Prompt/GraphRAG)
 
-- \[ x] 🧑‍💻 **\[Manual]**  Tạo repo Github mới, clone code từ dự án tiền thân Medical-Consulting-System.
-- \[ x] 🤖 **\[AI IDE]**  Thiết kế & Code Unified Composer trên Next.js (gom Text/Voice/Image vào 1 input duy nhất). *(Prompt AI: "Tạo một React component chat input có nút upload file và voice record giống ChatGPT")*
-- \[ x] 🤖 **\[AI IDE]**  Chuẩn hóa Result Schema và Message Schema để UI Next.js render thống nhất. *(Dùng AI sinh TypeScript Interfaces/Zod schemas).*
-- \[ x] 🤖 **\[AI IDE]**  Refactor FastAPI: Tích hợp thư viện google-generativeai hoặc dùng LangChain/LangGraph với ChatGoogleGenerativeAI. Cấu hình .env chứa GEMINI\_API\_KEY.
-- \[ ] 🧑‍💻 **\[Manual]**  Dùng **Neon Postgres (Cloud)** (phù hợp Vercel) và cấu hình biến môi trường trên Vercel: `DATABASE_URL` (pooler). *(Nếu dùng migration/ORM cần direct connection thì thêm `DIRECT_URL`.)*
-- \[ ] 🤝 **\[Hybrid]**  Định nghĩa Ontology (Cấu trúc đồ thị) cho Y tế: (Triệu chứng) - \[Báo hiệu] -> (Bệnh) - \[Điều trị] -> (Thuốc). *(Bạn chốt cấu trúc, nhờ AI kiểm tra tính hợp lý).*
-- \[ ] 🧑‍💻 **\[Manual]**  Cài đặt Zep (Long-term memory) qua command Docker.
+* Phú Thịnh (System/LangGraph/NextJS/FastAPI)
 
-## **SPRINT 2: Xây dựng Não bộ Y khoa - GraphRAG (Tuần 3-5)**
+## **SPRINT 1: Tái cấu trúc, Phân quyền (RBAC) & Chuẩn bị Môi trường (Tuần 1-2)**
 
-*Mục tiêu: Dùng khả năng xử lý context dài của Gemini để bóc tách Graph và truy xuất.*
+*Mục tiêu: Setup base project, cấu hình Gemini API và tạo ranh giới Bác sĩ - Bệnh nhân.*
 
-- \[ ] 🤝 **\[Hybrid]**  Thu thập & Làm sạch dữ liệu Y tế (từ điển bệnh, thuốc nội địa Việt Nam). *(Dùng AI viết script cào dữ liệu, nhưng bạn phải duyệt xem nguồn có uy tín không).*
-- \[ ] 🤖 **\[AI IDE]**  Viết script Python dùng **Gemini API** để trích xuất Thực thể (Entities) và Mối quan hệ (Relationships) từ text -> Import vào Neo4j.
-- \[ ] 🤖 **\[AI IDE]**  Viết các câu lệnh Cypher Query mẫu để truy xuất chéo.
-- \[ ] 🤖 **\[AI IDE]**  Tích hợp Vector Search (ChromaDB) + Graph Search (Neo4j) -> Tạo thành Tool Python search\_medical\_graph.
-- \[ ] 🤖 **\[AI IDE]**  Viết Node "Agent Y khoa" trong LangGraph (sử dụng model LLM là Gemini), cấp quyền gọi tool search\_medical\_graph.
+* [ ] 🧑‍💻 **\[Manual]** Tạo repo Github mới, clone code từ dự án tiền thân.  
+* [ ] 🤖 **\[AI IDE]** Tích hợp Auth & Phân quyền (Role-Based Access Control): Tạo 2 role Patient và Doctor. Bệnh nhân vào /chat, Bác sĩ vào /doctor-workspace.  
+* [ ] 🤖 **\[AI IDE]** Thiết kế & Code Unified Composer trên Next.js (cho Bệnh nhân).  
+* [ ] 🤖 **\[AI IDE]** Refactor FastAPI: Tích hợp google-generativeai. Cấu hình .env chứa GEMINI_API_KEY.  
+* [ ] 🧑‍💻 **\[Manual]** Cài đặt và cấu hình Neo4j (AuraDB) và Zep (Long-term memory).  
+* [ ] 🤝 **\[Hybrid]** Định nghĩa Ontology (Cấu trúc đồ thị) cho Y tế.
 
-## **SPRINT 3: Tác tử Tâm lý & Đánh giá Ẩn (Tuần 6-8)**
+## **SPRINT 2: Doctor Workspace & Xây dựng Não bộ Y khoa (Tuần 3-5)**
 
-*Mục tiêu: Xây dựng "Bạn tâm giao" và cơ chế Stealth Assessment bằng Gemini.*
+*Mục tiêu: Bác sĩ có chỗ làm việc, AI có khả năng truy xuất đồ thị.*
 
-- \[ ] 🤝 **\[Hybrid]**  Viết System Prompt cho Tác tử Tâm lý: Định hình Persona hài hước, áp dụng kỹ thuật khơi gợi (CurioScope). *(Nhờ AI viết nháp, nhưng bạn phải mài giũa văn phong tiếng Việt cho tự nhiên, giống GenZ).*
-- \[ ] 🤖 **\[AI IDE]**  Xây dựng luồng Logic "Đánh giá ẩn": Dùng 1 LLM chain (Gemini 1.5 Flash cho nhanh/rẻ) chạy ngầm để chấm điểm PHQ-9/GAD-7 dựa trên log chat.
-- \[ ] 🤖 **\[AI IDE]**  Tích hợp Zep API để lưu trữ Điểm số Tâm lý này theo thời gian.
-- \[ ] 🤖 **\[AI IDE]**  Cập nhật UI Next.js: Render câu đùa, hiệu ứng "đang gõ" (streaming) từ API Gemini trả về.
-- \[ ] 🤖 **\[AI IDE]**  Code Node "Agent Tâm lý" và "Node Chấm điểm ngầm" vào luồng Python LangGraph.
+* [ ] 🤖 **\[AI IDE]** Code UI Doctor Workspace - Phần 1: Màn hình **Patient List** và **Emotion Dashboard** (Hiển thị biểu đồ điểm số PHQ-9 mock data).  
+* [ ] 🤝 **\[Hybrid]** Thu thập & Làm sạch dữ liệu Y tế (bệnh, thuốc).  
+* [ ] 🤖 **\[AI IDE]** Viết script dùng Gemini API trích xuất Thực thể/Quan hệ từ text -> Import vào Neo4j.  
+* [ ] 🤖 **\[AI IDE]** Tích hợp Vector Search + Graph Search -> Tạo Tool Python search_medical_graph.  
+* [ ] 🤖 **\[AI IDE]** Viết Node "Agent Y khoa" trong LangGraph (Gemini model), cấp quyền gọi tool.
 
-## **SPRINT 4: Lộ trình Can thiệp (Stepped Care) & Function Calling (Tuần 9-11)**
+## **SPRINT 3: Tác tử Tâm lý & Luồng Setup Level Điều trị (Tuần 6-8)**
 
-*Mục tiêu: Tận dụng khả năng Function Calling native rất mạnh của Gemini.*
+*Mục tiêu: Đánh giá ẩn và cung cấp công cụ "Lập trình AI" cho Bác sĩ.*
 
-- \[ ] 🤖 **\[AI IDE]**  Thêm Tool Function Calling: search\_youtube\_video(query) và thiết lập UI Next.js render iframe video (Cấp độ can thiệp 1/2).
-- \[ ] 🤖 **\[AI IDE]**  Cấu hình Google Calendar API và Email (SMTP) để làm Tool book\_appointment và send\_report.
-- \[ ] 🤖 **\[AI IDE]**  Viết Cronjob/Background Task kích hoạt Tác tử Tâm lý chủ động nhắn tin hỏi thăm (Follow-up - Cấp độ 3).
-- \[ ] 🤖 **\[AI IDE]**  Viết logic rẽ nhánh (Conditional Edges/State Routing) trong LangGraph: Nếu điểm > Ngưỡng -> Kích hoạt Tác tử Điều phối (Cấp độ 4).
-- \[ ] 🤝 **\[Hybrid]**  Thiết kế Prompt sinh "Báo cáo Tóm tắt Lâm sàng" (Clinical Summary) từ lịch sử chat. *(Bạn phải canh chuẩn form báo cáo y khoa).*
+* [ ] 🤖 **\[AI IDE]** Code UI Doctor Workspace - Phần 2: Màn hình **Stepped Care Setup**. Form cho phép Bác sĩ nhập: Ngưỡng điểm cảnh báo, Link Video YouTube xả stress, Thông điệp dặn dò.  
+* [ ] 🤖 **\[AI IDE]** Viết API FastAPI lưu cấu hình Level Điều trị này vào Database theo từng ID Bệnh nhân.  
+* [ ] 🤖 **\[AI IDE]** Xây dựng luồng Logic "Đánh giá ẩn": LLM chain chạy ngầm chấm điểm PHQ-9/GAD-7 từ log chat, lưu vào Zep.  
+* [ ] 🤝 **\[Hybrid]** Viết System Prompt động cho Agent Tâm lý: *Prompt phải tự động fetch (kéo) Cấu hình Level Điều trị của Bác sĩ từ Database để quyết định có nên gửi link Video hay đổi giọng điệu hay không.*  
+* [ ] 🤖 **\[AI IDE]** Code Node "Agent Tâm lý" và "Node Chấm điểm ngầm" vào LangGraph.
+
+## **SPRINT 4: Tác tử Thư ký & Function Calling B2B (Tuần 9-11)**
+
+*Mục tiêu: Kết nối hành động giữa Bệnh nhân và Bác sĩ.*
+
+* [ ] 🤖 **\[AI IDE]** Cấu hình Google Calendar API làm Tool book_appointment.  
+* [ ] 🤖 **\[AI IDE]** Code UI Doctor Workspace - Phần 3: Màn hình **Appointment & Alerts**. Nhận thông báo "Cờ đỏ" khi điểm Tâm lý bệnh nhân vượt ngưỡng. Có nút \[Duyệt lịch hẹn].  
+* [ ] 🤖 **\[AI IDE]** Viết Cronjob kích hoạt Tác tử Tâm lý chủ động nhắn tin hỏi thăm bệnh nhân.  
+* [ ] 🤖 **\[AI IDE]** Viết logic rẽ nhánh LangGraph: Nếu điểm > Ngưỡng -> Agent Thư ký bắn Notification/Email khẩn cấp cho Bác sĩ.
 
 ## **SPRINT 5: Tích hợp Fine-Tuned GPU LLM & Hybrid Routing (Tuần 12-13)**
 
-*Mục tiêu: Ráp mô hình "nhà làm" (Llama 3.1 fine-tuned) vào hệ thống đã chạy trơn tru.*
+*Mục tiêu: Ráp mô hình "nhà làm" và hoàn thiện cơ chế Fallback.*
 
-- \[ ] 🧑‍💻 **\[Manual]**  Xuất mô hình LLM đã fine-tuning cá nhân (ví dụ: định dạng GGUF chạy trên Llama.cpp hoặc deploy lên vLLM/Colab).
-- \[ ] 🤖 **\[AI IDE]**  Cập nhật LangGraph: Đổi module LLM gọi từ API Gemini sang gọi API của Local GPU Server.
-- \[ ] 🤖 **\[AI IDE]**  Thêm Giao diện Quản lý Đồng ý (Consent Management) trên UI: Thêm 2 nút \[Cho phép Bác sĩ xem dữ liệu] và \[Dừng theo dõi tâm lý].
-- \[ ] 🤖 **\[AI IDE]**  Cài đặt luồng Clinical Offboarding: Viết hàm Python xóa lịch sử trong Zep khi User ngắt kết nối.
-- \[ ] 🧑‍💻 **\[Manual]**  Kiểm thử & Hoàn thiện thuật toán Smart Routing: Chuyển đổi mượt mà giữa **GPU Server (Mô hình fine-tuned)** và **Gemini API / Local CPU** khi có sự cố. *(Phải tự ngắt mạng/tắt ngrok để test).*
+* [ ] 🧑‍💻 **\[Manual]** Xuất và Deploy mô hình Llama 3.1 fine-tuned (GGUF/vLLM).  
+* [ ] 🤖 **\[AI IDE]** Cập nhật LangGraph: Đổi LLM từ Gemini sang Local GPU Server.  
+* [ ] 🤖 **\[AI IDE]** Thêm Giao diện Quản lý Đồng ý (Consent) bên phía Bệnh nhân: Nút \[Cho phép Bác sĩ xem dữ liệu biểu đồ cảm xúc]. *(Nếu không cho phép, Doctor Dashboard sẽ bị che data bệnh nhân này).*  
+* [ ] 🤖 **\[AI IDE]** Cài đặt luồng Offboarding: Viết hàm Python xóa lịch sử trong Zep khi User ngắt kết nối.  
+* [ ] 🧑‍💻 **\[Manual]** Kiểm thử thuật toán Smart Routing: Chuyển đổi mượt mà giữa **GPU Server** và **Gemini API / Local CPU**.
 
 ## **SPRINT 6: Testing, Đo lường & Viết Báo cáo KLTN (Tuần 14-16)**
 
-*Mục tiêu: Đóng gói dự án, so sánh hiệu năng và hoàn thiện luận văn.*
+*Mục tiêu: Đóng gói dự án, đánh giá và viết luận văn.*
 
-- \[ ] 🧑‍💻 **\[Manual]** **\[Joint]** A/B Testing: Gọi bạn bè vào chat thử để so sánh chất lượng câu trả lời, độ thấu cảm giữa **Gemini API** và **LLM Fine-tuned cá nhân**.
-- \[ ] 🤝 **\[Hybrid]** **\[Joint]** Đo lường các chỉ số: TTFB, Tỷ lệ Fallback thành công, Độ trễ của GraphRAG. *(Dùng AI viết script đo, bạn thống kê số liệu).*
-- \[ ] 🤝 **\[Hybrid]** **\[Joint]** Chia nhau viết Báo cáo KLTN theo Đề cương chi tiết:
-  - *An viết Chương 1, Chương 2 (phần AI, Tâm lý, Neo4j, Fine-tuning LLM).*
-  - *Thịnh viết Chương 2 (phần System, Hybrid), Chương 3, Chương 4.*
-  - *(Dùng AI để trau chuốt câu từ (Proofread), nhưng nội dung lõi phải do các bạn tự viết).*
-- \[ ] 🤖 **\[AI IDE]**  Đóng gói dự án (Docker Compose): *(Đưa toàn bộ project cho Cursor/Copilot bảo nó viết file docker-compose.yml chạy 1 click là xong).*
-- \[ ] 🧑‍💻 **\[Manual]** **\[Joint]** Làm Slide thuyết trình và Quay sẵn 1 Video Demo 5 phút.
-
+* [ ] 🧑‍💻 **\[Manual]** Đóng vai (Role-play) Testing: Đóng vai Bác sĩ setup level -> Đóng vai bệnh nhân chat để xem AI phản ứng có đúng theo cấu hình của Bác sĩ không.  
+* [ ] 🤝 **\[Hybrid]** Đo lường các chỉ số: TTFB, Tỷ lệ Fallback, Độ trễ của GraphRAG.  
+* [ ] 🤝 **\[Hybrid]** Viết Báo cáo KLTN theo Đề cương. Nhấn mạnh "Không gian Bác sĩ" và "Luồng Setup Level" ở Chương 2 & 3.  
+* [ ] 🤖 **\[AI IDE]** Đóng gói dự án (Docker Compose).  
+* [ ] 🧑‍💻 **\[Manual]** Làm Slide thuyết trình và Quay sẵn Video Demo (1 video đóng vai bệnh nhân, 1 video đóng vai bác sĩ).

@@ -148,6 +148,37 @@ export default function KeHoachPage() {
     }
   }
 
+  const syncFromSeed = async () => {
+    const password = effectivePw.trim()
+    if (!password) return
+    const ok = typeof window !== "undefined" ? window.confirm("Đồng bộ nội dung theo file kế hoạch mới? Thao tác này sẽ ghi đè bản đang lưu trong DB.") : false
+    if (!ok) return
+    setError("")
+    setHasConflict(false)
+    setSaving(true)
+    try {
+      const resp = await fetch("/api/team-todo", {
+        method: "POST",
+        headers: {
+          "x-team-todo-pass": password,
+        },
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as DocState
+      setDoc(data)
+      setDraft(data.content || "")
+      setDirty(false)
+      persistPw(password)
+    } catch (e: any) {
+      setError(e?.message || "Không đồng bộ được")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const forceSaveDoc = async () => {
     if (!doc) return
     const password = effectivePw.trim()
@@ -250,6 +281,9 @@ export default function KeHoachPage() {
               <>
                 <Button variant="outline" onClick={() => loadDoc(effectivePw)} disabled={loading || saving}>
                   Tải lại
+                </Button>
+                <Button variant="outline" onClick={syncFromSeed} disabled={loading || saving}>
+                  Đồng bộ
                 </Button>
                 <Button onClick={saveDoc} disabled={saving || loading || !dirty || !draft.trim()}>
                   {saving ? "Đang lưu..." : "Lưu"}
