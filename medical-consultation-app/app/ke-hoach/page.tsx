@@ -236,7 +236,7 @@ export default function KeHoachPage() {
   const [filterSection, setFilterSection] = useState("Tất cả")
   const [filterAssignee, setFilterAssignee] = useState("Tất cả")
   const [filterShowDone, setFilterShowDone] = useState(false)
-  const [activeTab, setActiveTab] = useState("progress")
+  const [activeTab, setActiveTab] = useState("todo")
 
   const toggleTaskAtLine = (lineNumber: number, nextChecked: boolean) => {
     setDraft((prev) => setTaskCheckedInMarkdown(prev, lineNumber, nextChecked))
@@ -664,6 +664,35 @@ export default function KeHoachPage() {
       })
   }, [derived.tasks, filterQuery, filterSection, filterAssignee, filterShowDone])
 
+  const sprintCards = useMemo(() => {
+    const sprintSections = parsed.sections.filter((s) => /^SPRINT\s*\d+/i.test(s.title))
+    const base = sprintSections.length ? sprintSections : parsed.sections.filter((s) => s.title !== "Chung")
+    const items = base
+      .map((s) => {
+        const tasks = derived.tasks.filter((t) => t.section === s.title)
+        const total = tasks.length
+        const done = tasks.filter((t) => t.checked).length
+        const pct = total ? Math.round((done / total) * 100) : 0
+        return { title: s.title, total, done, pct, tasks }
+      })
+      .filter((x) => x.total > 0)
+    return items
+  }, [parsed.sections, derived.tasks])
+
+  const getTaskKind = (text: string) => {
+    if (/\[AI IDE\]/i.test(text)) return "AI IDE"
+    if (/\[Manual\]/i.test(text)) return "Manual"
+    if (/\[Hybrid\]/i.test(text)) return "Hybrid"
+    return null
+  }
+
+  const getTaskKindStyle = (kind: string | null) => {
+    if (kind === "AI IDE") return "bg-blue-50 text-blue-700 border-blue-200"
+    if (kind === "Manual") return "bg-orange-50 text-orange-700 border-orange-200"
+    if (kind === "Hybrid") return "bg-green-50 text-green-700 border-green-200"
+    return "bg-slate-50 text-slate-700 border-slate-200"
+  }
+
   useEffect(() => {
     if (!authed) return
     const titles = parsed.sections.map((s) => s.title)
@@ -787,46 +816,159 @@ export default function KeHoachPage() {
         )}
 
         {authed && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-xl border bg-background p-4 space-y-2 flex flex-col min-h-[70vh]">
-              <div className="text-sm font-medium">Markdown</div>
-              <Textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                className="flex-1 font-mono text-sm"
-                placeholder="Nội dung markdown..."
-              />
-            </div>
-            <div className="rounded-xl border bg-background p-4 space-y-2 overflow-hidden flex flex-col min-h-[70vh]">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-                <div className="flex items-center justify-between gap-2">
-                  <TabsList>
-                    <TabsTrigger value="progress">Tiến độ</TabsTrigger>
-                    <TabsTrigger value="preview">Preview</TabsTrigger>
-                    <TabsTrigger value="board">Bảng</TabsTrigger>
-                    <TabsTrigger value="json">JSON</TabsTrigger>
-                    <TabsTrigger value="history">Lịch sử</TabsTrigger>
-                    <TabsTrigger value="comments">Bình luận</TabsTrigger>
-                  </TabsList>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const password = effectivePw.trim()
-                        if (password) {
-                          void loadRevisions(password)
-                          void loadComments(password)
-                        }
-                      }}
-                      disabled={revLoading || commentLoading || saving || loading}
-                    >
-                      Làm mới
-                    </Button>
+          <div className="rounded-xl border bg-background p-4 space-y-2 overflow-hidden flex flex-col min-h-[70vh]">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
+              <div className="flex items-center justify-between gap-2">
+                <TabsList>
+                  <TabsTrigger value="todo">Todo</TabsTrigger>
+                  <TabsTrigger value="progress">Tiến độ</TabsTrigger>
+                  <TabsTrigger value="board">Bảng</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                  <TabsTrigger value="markdown">Markdown</TabsTrigger>
+                  <TabsTrigger value="json">JSON</TabsTrigger>
+                  <TabsTrigger value="history">Lịch sử</TabsTrigger>
+                  <TabsTrigger value="comments">Bình luận</TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const password = effectivePw.trim()
+                      if (password) {
+                        void loadRevisions(password)
+                        void loadComments(password)
+                      }
+                    }}
+                    disabled={revLoading || commentLoading || saving || loading}
+                  >
+                    Làm mới
+                  </Button>
+                </div>
+              </div>
+
+              <TabsContent value="todo" className="overflow-hidden">
+                <div className="overflow-auto flex-1 space-y-4 pr-1">
+                  {!sprintCards.length ? (
+                    <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                      Không tìm thấy SPRINT trong markdown. Hãy thêm heading dạng <span className="font-mono">SPRINT 1: ...</span> để hệ thống nhóm theo sprint.
+                    </div>
+                  ) : null}
+                  <div className="space-y-4">
+                    {sprintCards.map((s) => {
+                      const isAllDone = s.pct === 100
+                      return (
+                        <div key={s.title} className={`rounded-xl border overflow-hidden ${isAllDone ? "border-green-300 bg-green-50/10" : ""}`}>
+                          <div className={`p-4 border-b ${isAllDone ? "bg-green-50/50 border-green-100" : ""}`}>
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                              <div className="space-y-1">
+                                <div className="text-sm font-semibold">{s.title}</div>
+                                <div className="text-xs text-muted-foreground">{s.done}/{s.total} hoàn thành</div>
+                              </div>
+                              <div className="flex items-center gap-3 min-w-[140px]">
+                                <div className="flex-1">
+                                  <Progress value={clampPct(s.pct)} />
+                                </div>
+                                <div className={`text-sm font-semibold ${isAllDone ? "text-green-600" : "text-slate-600"}`}>{s.pct}%</div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="divide-y">
+                            {s.tasks.map((t) => {
+                              const kind = getTaskKind(t.text)
+                              const kindStyle = getTaskKindStyle(kind)
+                              return (
+                                <div key={t.lineNumber} className={`group flex items-start gap-3 p-3 hover:bg-slate-50 transition-colors ${t.checked ? "bg-slate-50/50" : ""}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={t.checked}
+                                    onChange={(e) => toggleTaskAtLine(t.lineNumber, e.target.checked)}
+                                    className="mt-1.5"
+                                  />
+                                  <div className="flex flex-col md:flex-row md:items-start gap-2 flex-1 min-w-0">
+                                    <span className={`shrink-0 inline-flex items-center px-2 py-1 rounded border text-xs font-semibold whitespace-nowrap w-fit ${kindStyle}`}>
+                                      {kind ? `[${kind}]` : "Task"}
+                                    </span>
+                                    <div className="min-w-0 space-y-1">
+                                      {editingLine === t.lineNumber ? (
+                                        <div className="space-y-2">
+                                          <Input value={editingText} onChange={(e) => setEditingText(e.target.value)} />
+                                          <div className="flex items-center gap-2">
+                                            <Button
+                                              size="sm"
+                                              onClick={() => {
+                                                const next = editingText.trim()
+                                                if (!next) return
+                                                setDraft((prev) => setTaskTextInMarkdown(prev, t.lineNumber, next))
+                                                setEditingLine(null)
+                                                setEditingText("")
+                                              }}
+                                              disabled={!editingText.trim()}
+                                            >
+                                              Lưu
+                                            </Button>
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => {
+                                                setEditingLine(null)
+                                                setEditingText("")
+                                              }}
+                                            >
+                                              Hủy
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <p className={`text-sm break-words ${t.checked ? "text-slate-400 line-through" : "text-slate-700"}`}>{t.text}</p>
+                                      )}
+                                      <div className="flex flex-wrap gap-2">
+                                        {t.meta.priority ? <Badge variant={t.meta.priority === "P1" ? "destructive" : t.meta.priority === "P2" ? "secondary" : "outline"}>{t.meta.priority}</Badge> : null}
+                                        {t.meta.assignee ? <Badge variant="secondary">@{t.meta.assignee}</Badge> : null}
+                                        {t.meta.due ? <Badge variant="outline">due:{t.meta.due}</Badge> : null}
+                                        {t.meta.tags.slice(0, 3).map((x) => <Badge key={x} variant="outline">#{x}</Badge>)}
+                                        <Badge variant="outline">Dòng {t.lineNumber}</Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    {editingLine !== t.lineNumber ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setEditingLine(t.lineNumber)
+                                          setEditingText(t.text)
+                                        }}
+                                      >
+                                        Sửa
+                                      </Button>
+                                    ) : null}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const ok = typeof window !== "undefined" ? window.confirm("Xóa mục này?") : false
+                                        if (!ok) return
+                                        setDraft((prev) => deleteTaskLineInMarkdown(prev, t.lineNumber))
+                                      }}
+                                    >
+                                      Xóa
+                                    </Button>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
-                <TabsContent value="progress" className="overflow-hidden">
-                  <div className="overflow-auto flex-1 space-y-3 pr-1">
+              </TabsContent>
+
+              <TabsContent value="progress" className="overflow-hidden">
+                <div className="overflow-auto flex-1 space-y-3 pr-1">
                     <div className="rounded-lg border p-3 space-y-3">
                       <div className="text-sm font-medium">Bộ lọc</div>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
@@ -959,8 +1101,9 @@ export default function KeHoachPage() {
                       </div>
                     </div>
                   </div>
-                </TabsContent>
-                <TabsContent value="preview" className="overflow-hidden">
+              </TabsContent>
+
+              <TabsContent value="preview" className="overflow-hidden">
                   <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto flex-1">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
@@ -991,6 +1134,32 @@ export default function KeHoachPage() {
                     </ReactMarkdown>
                   </div>
                 </TabsContent>
+              <TabsContent value="markdown" className="overflow-hidden">
+                <div className="overflow-auto flex-1 space-y-3 pr-1">
+                  <div className="rounded-lg border p-3 text-sm text-muted-foreground">
+                    Markdown chỉ là tùy chọn để chỉnh sâu. Mặc định bạn thao tác ở tab Todo/Bảng.
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="rounded-lg border p-3 space-y-2 flex flex-col min-h-[60vh]">
+                      <div className="text-sm font-medium">Markdown</div>
+                      <Textarea
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        className="flex-1 font-mono text-sm"
+                        placeholder="Nội dung markdown..."
+                      />
+                    </div>
+                    <div className="rounded-lg border p-3 space-y-2 overflow-hidden flex flex-col min-h-[60vh]">
+                      <div className="text-sm font-medium">Preview</div>
+                      <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto flex-1">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {draft}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
                 <TabsContent value="board" className="overflow-hidden">
                   <div className="overflow-auto flex-1 space-y-3 pr-1">
                     <div className="rounded-lg border p-3 space-y-3">
@@ -1130,7 +1299,7 @@ export default function KeHoachPage() {
                           size="sm"
                           onClick={async () => {
                             try {
-                              await navigator.clipboard.writeText(JSON.stringify(parsed.json, null, 2))
+                              await navigator.clipboard.writeText(JSON.stringify({ ...parsed.json, progress: { total: derived.total, done: derived.done, open: derived.open, percent: derived.pct } }, null, 2))
                               setJsonCopied(true)
                               setTimeout(() => setJsonCopied(false), 1500)
                             } catch {}
@@ -1214,8 +1383,7 @@ export default function KeHoachPage() {
                     </div>
                   </div>
                 </TabsContent>
-              </Tabs>
-            </div>
+            </Tabs>
           </div>
         )}
       </div>
