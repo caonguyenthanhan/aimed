@@ -52,7 +52,7 @@ export default function SiteHeader() {
   if (!mounted || pathname === '/') return null
 
   const items = [
-    { href: '/', label: 'Trang chủ', icon: Home },
+    { href: '/trang-chu', label: 'Trang chủ', icon: Home },
     { href: '/tu-van', label: 'Tư vấn', icon: MessageSquare },
     { href: '/tra-cuu', label: 'Tra cứu', icon: Search },
     { href: '/sang-loc', label: 'Sàng lọc', icon: Activity },
@@ -65,7 +65,7 @@ export default function SiteHeader() {
       <div data-site-header className="w-full max-w-4xl bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-full px-4 h-14 flex items-center justify-between transition-all duration-300 hover:shadow-2xl hover:bg-white/90">
         
         {/* Logo Section */}
-        <Link href="/" className="flex items-center gap-2 pl-2 group">
+        <Link href="/trang-chu" className="flex items-center gap-2 pl-2 group">
           <div className="bg-blue-500/10 p-1.5 rounded-full group-hover:bg-blue-500/20 transition-colors">
             <BrainCircuit className="text-blue-600" size={20} />
           </div>
