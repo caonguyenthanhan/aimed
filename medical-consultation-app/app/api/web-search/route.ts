@@ -7,6 +7,77 @@ type WebSearchItem = {
   displayLink?: string
 }
 
+function stripTags(input: string) {
+  return input
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function decodeHtmlEntities(input: string) {
+  return input
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+}
+
+function normalizeDdqLink(rawHref: string) {
+  const href = rawHref.trim()
+  try {
+    const u = new URL(href, "https://duckduckgo.com")
+    const uddg = u.searchParams.get("uddg")
+    if (uddg) return decodeURIComponent(uddg)
+    return u.toString()
+  } catch {
+    return href
+  }
+}
+
+async function searchDuckDuckGo(q: string, num: number): Promise<WebSearchItem[]> {
+  const target = new URL("https://duckduckgo.com/html/")
+  target.searchParams.set("q", q)
+  target.searchParams.set("kl", "vn-vi")
+
+  const resp = await fetch(target.toString(), {
+    method: "GET",
+    headers: {
+      "user-agent": "Mozilla/5.0",
+      "accept": "text/html",
+    },
+  })
+  if (!resp.ok) return []
+  const html = await resp.text()
+
+  const results: WebSearchItem[] = []
+  const blocks = html.split(/<div[^>]+class="[^"]*result[^"]*"[^>]*>/i)
+  for (const block of blocks) {
+    if (results.length >= num) break
+    const a = block.match(/<a[^>]+class="[^"]*result__a[^"]*"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i)
+    if (!a) continue
+    const link = normalizeDdqLink(decodeHtmlEntities(a[1] || ""))
+    const title = stripTags(decodeHtmlEntities(a[2] || ""))
+    if (!title || !link) continue
+
+    const snippetMatch =
+      block.match(/<a[^>]+class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/i) ||
+      block.match(/<div[^>]+class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+      block.match(/<span[^>]+class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/span>/i)
+
+    const snippet = snippetMatch ? stripTags(decodeHtmlEntities(snippetMatch[1] || "")) : ""
+    let displayLink: string | undefined
+    try {
+      displayLink = new URL(link).hostname
+    } catch {}
+    results.push({ title, link, snippet, displayLink })
+  }
+
+  return results.slice(0, num)
+}
+
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url)
@@ -20,7 +91,12 @@ export async function GET(req: NextRequest) {
     const apiKey = (process.env.GOOGLE_CSE_API_KEY || "").trim()
     const cx = (process.env.GOOGLE_CSE_CX || "").trim()
     if (!apiKey || !cx) {
-      return NextResponse.json({ error: "Missing GOOGLE_CSE_API_KEY or GOOGLE_CSE_CX" }, { status: 500 })
+      const items = await searchDuckDuckGo(q, num)
+      return NextResponse.json({
+        query: q,
+        items,
+        metadata: { provider: "duckduckgo", ts: new Date().toISOString() },
+      })
     }
 
     const googleUrl = new URL("https://www.googleapis.com/customsearch/v1")
@@ -56,4 +132,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 })
   }
 }
-
