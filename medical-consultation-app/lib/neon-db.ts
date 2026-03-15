@@ -17,6 +17,7 @@ function normalizeDatabaseUrl(raw: string) {
     return s
   } catch {
     return s
+      .replace(/([?&])sslmode=(prefer|require|verify-ca)(?=(&|$))/gi, "$1sslmode=verify-full")
   }
 }
 

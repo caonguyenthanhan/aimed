@@ -62,6 +62,7 @@ function parseChecklist(md: string) {
   const tasks: ChecklistTask[] = []
   const sections: { title: string; firstLine: number | null }[] = [{ title: "Chung", firstLine: null }]
   let currentSection = "Chung"
+  const seen = new Set<string>(["Chung"])
 
   for (let i = 0; i < lines.length; i++) {
     const lineNumber = i + 1
@@ -72,6 +73,20 @@ function parseChecklist(md: string) {
       const title = (h[2] || "").trim()
       if (title) {
         currentSection = title
+        if (!seen.has(title)) {
+          seen.add(title)
+          sections.push({ title, firstLine: lineNumber })
+        }
+      }
+      continue
+    }
+
+    const sprintLine = line.replace(/[*_`]/g, "").trim()
+    if (/^SPRINT\s*\d+\b/i.test(sprintLine)) {
+      const title = sprintLine
+      currentSection = title
+      if (!seen.has(title)) {
+        seen.add(title)
         sections.push({ title, firstLine: lineNumber })
       }
       continue
