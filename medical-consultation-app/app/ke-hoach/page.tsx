@@ -16,6 +16,14 @@ type DocState = {
   updated_by: string | null
 }
 
+type ChecklistTask = {
+  lineNumber: number
+  checked: boolean
+  text: string
+  indent: number
+  section: string
+}
+
 type RevisionItem = {
   rev_id: number
   op: string
@@ -40,6 +48,139 @@ type CommentItem = {
   resolved: boolean
 }
 
+function parseChecklist(md: string) {
+  const lines = md.split("\n")
+  const tasks: ChecklistTask[] = []
+  const sections: { title: string; firstLine: number | null }[] = [{ title: "Chung", firstLine: null }]
+  let currentSection = "Chung"
+
+  for (let i = 0; i < lines.length; i++) {
+    const lineNumber = i + 1
+    const line = lines[i] || ""
+
+    const h = line.match(/^(#{1,6})\s+(.*)$/)
+    if (h) {
+      const title = (h[2] || "").trim()
+      if (title) {
+        currentSection = title
+        sections.push({ title, firstLine: lineNumber })
+      }
+      continue
+    }
+
+    const m = line.match(/^(\s*)[-*+]\s+\[\s*([xX]?)\s*\]\s+(.*)$/)
+    if (!m) continue
+    const indent = (m[1] || "").length
+    const checked = !!(m[2] || "").trim()
+    const text = (m[3] || "").trim()
+    tasks.push({ lineNumber, checked, text, indent, section: currentSection })
+  }
+
+  const bySection = new Map<string, ChecklistTask[]>()
+  for (const t of tasks) {
+    const arr = bySection.get(t.section) || []
+    arr.push(t)
+    bySection.set(t.section, arr)
+  }
+
+  const sectionItems = sections
+    .filter((s, idx) => idx === 0 || bySection.has(s.title))
+    .map((s) => ({ title: s.title, firstLine: s.firstLine, tasks: bySection.get(s.title) || [] }))
+
+  const json = {
+    sections: sectionItems.map((s) => ({
+      title: s.title,
+      items: s.tasks.map((t) => ({
+        text: t.text,
+        checked: t.checked,
+      })),
+    })),
+  }
+
+  return { tasks, sections: sectionItems, json }
+}
+
+function setTaskCheckedInMarkdown(md: string, lineNumber: number, nextChecked: boolean) {
+  if (!lineNumber || lineNumber < 1) return md
+  const lines = md.split("\n")
+  const idx = lineNumber - 1
+  if (idx < 0 || idx >= lines.length) return md
+  const line = lines[idx] || ""
+  if (!/\[\s*[xX]?\s*\]/.test(line)) return md
+  lines[idx] = line.replace(/\[\s*[xX]?\s*\]/, nextChecked ? "[x]" : "[ ]")
+  return lines.join("\n")
+}
+
+function setTaskTextInMarkdown(md: string, lineNumber: number, nextText: string) {
+  if (!lineNumber || lineNumber < 1) return md
+  const lines = md.split("\n")
+  const idx = lineNumber - 1
+  if (idx < 0 || idx >= lines.length) return md
+  const line = lines[idx] || ""
+  const m = line.match(/^(\s*)[-*+]\s+\[\s*([xX]?)\s*\]\s+(.*)$/)
+  if (!m) return md
+  const indent = m[1] || ""
+  const checked = (m[2] || "").trim()
+  const marker = checked ? "[x]" : "[ ]"
+  lines[idx] = `${indent}- ${marker} ${nextText.trim()}`
+  return lines.join("\n")
+}
+
+function deleteTaskLineInMarkdown(md: string, lineNumber: number) {
+  if (!lineNumber || lineNumber < 1) return md
+  const lines = md.split("\n")
+  const idx = lineNumber - 1
+  if (idx < 0 || idx >= lines.length) return md
+  lines.splice(idx, 1)
+  return lines.join("\n")
+}
+
+function insertTaskInMarkdown(md: string, sectionTitle: string, text: string) {
+  const lines = md.split("\n")
+  const cleanText = text.trim()
+  if (!cleanText) return md
+
+  if (!sectionTitle || sectionTitle === "Chung") {
+    const next = [...lines]
+    if (next.length && next[next.length - 1].trim()) next.push("")
+    next.push(`- [ ] ${cleanText}`)
+    return next.join("\n")
+  }
+
+  let insertIdx = lines.length
+  let sectionLineIdx: number | null = null
+  for (let i = 0; i < lines.length; i++) {
+    const h = (lines[i] || "").match(/^(#{1,6})\s+(.*)$/)
+    if (h && (h[2] || "").trim() === sectionTitle) {
+      sectionLineIdx = i
+      insertIdx = i + 1
+      break
+    }
+  }
+
+  if (sectionLineIdx === null) {
+    const next = [...lines]
+    if (next.length && next[next.length - 1].trim()) next.push("")
+    next.push(`## ${sectionTitle}`)
+    next.push(`- [ ] ${cleanText}`)
+    return next.join("\n")
+  }
+
+  for (let i = sectionLineIdx + 1; i < lines.length; i++) {
+    const line = lines[i] || ""
+    if (/^(#{1,6})\s+/.test(line)) break
+    if (/^(\s*)[-*+]\s+\[\s*([xX]?)\s*\]\s+/.test(line)) insertIdx = i + 1
+  }
+
+  const next = [...lines]
+  if (insertIdx > 0 && insertIdx <= next.length && next[insertIdx - 1].trim() && next[insertIdx]?.trim()) {
+    next.splice(insertIdx, 0, "")
+    insertIdx += 1
+  }
+  next.splice(insertIdx, 0, `- [ ] ${cleanText}`)
+  return next.join("\n")
+}
+
 export default function KeHoachPage() {
   const router = useRouter()
   const params = useSearchParams()
@@ -61,18 +202,14 @@ export default function KeHoachPage() {
   const [commentDraft, setCommentDraft] = useState("")
   const [commentLoading, setCommentLoading] = useState(false)
   const [commentError, setCommentError] = useState("")
+  const [boardSection, setBoardSection] = useState("Chung")
+  const [newTaskText, setNewTaskText] = useState("")
+  const [editingLine, setEditingLine] = useState<number | null>(null)
+  const [editingText, setEditingText] = useState("")
+  const [jsonCopied, setJsonCopied] = useState(false)
 
   const toggleTaskAtLine = (lineNumber: number, nextChecked: boolean) => {
-    if (!lineNumber || lineNumber < 1) return
-    const lines = draft.split("\n")
-    const idx = lineNumber - 1
-    if (idx < 0 || idx >= lines.length) return
-    const line = lines[idx]
-    const m = line.match(/\[\s*[xX]?\s*\]/)
-    if (!m) return
-    const replaced = line.replace(/\[\s*[xX]?\s*\]/, nextChecked ? "[x]" : "[ ]")
-    lines[idx] = replaced
-    setDraft(lines.join("\n"))
+    setDraft((prev) => setTaskCheckedInMarkdown(prev, lineNumber, nextChecked))
   }
 
   const effectivePw = useMemo(() => {
@@ -447,6 +584,14 @@ export default function KeHoachPage() {
     }
   }, [authed, saving, dirty, draft])
 
+  const parsed = useMemo(() => parseChecklist(draft), [draft])
+
+  useEffect(() => {
+    if (!authed) return
+    const titles = parsed.sections.map((s) => s.title)
+    if (!titles.includes(boardSection)) setBoardSection("Chung")
+  }, [authed, parsed.sections, boardSection])
+
   return (
     <div className="h-[calc(100dvh-4rem)] overflow-y-auto p-4 md:p-8">
       <div className="max-w-6xl mx-auto space-y-4 pb-10">
@@ -548,6 +693,8 @@ export default function KeHoachPage() {
                 <div className="flex items-center justify-between gap-2">
                   <TabsList>
                     <TabsTrigger value="preview">Preview</TabsTrigger>
+                    <TabsTrigger value="board">Bảng</TabsTrigger>
+                    <TabsTrigger value="json">JSON</TabsTrigger>
                     <TabsTrigger value="history">Lịch sử</TabsTrigger>
                     <TabsTrigger value="comments">Bình luận</TabsTrigger>
                   </TabsList>
@@ -597,6 +744,160 @@ export default function KeHoachPage() {
                     >
                       {draft}
                     </ReactMarkdown>
+                  </div>
+                </TabsContent>
+                <TabsContent value="board" className="overflow-hidden">
+                  <div className="overflow-auto flex-1 space-y-3 pr-1">
+                    <div className="rounded-lg border p-3 space-y-3">
+                      <div className="text-sm font-medium">Thêm việc</div>
+                      <div className="flex flex-col md:flex-row gap-2">
+                        <select
+                          className="h-10 rounded-md border bg-background px-3 text-sm"
+                          value={boardSection}
+                          onChange={(e) => setBoardSection(e.target.value)}
+                        >
+                          {parsed.sections.map((s) => (
+                            <option key={s.title} value={s.title}>
+                              {s.title}
+                            </option>
+                          ))}
+                        </select>
+                        <Input
+                          value={newTaskText}
+                          onChange={(e) => setNewTaskText(e.target.value)}
+                          placeholder="Nội dung việc cần làm..."
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && newTaskText.trim()) {
+                              e.preventDefault()
+                              setDraft((prev) => insertTaskInMarkdown(prev, boardSection, newTaskText))
+                              setNewTaskText("")
+                            }
+                          }}
+                        />
+                        <Button
+                          onClick={() => {
+                            if (!newTaskText.trim()) return
+                            setDraft((prev) => insertTaskInMarkdown(prev, boardSection, newTaskText))
+                            setNewTaskText("")
+                          }}
+                          disabled={!newTaskText.trim()}
+                        >
+                          Thêm
+                        </Button>
+                      </div>
+                    </div>
+
+                    {parsed.sections.map((sec) => (
+                      <div key={sec.title} className="rounded-lg border p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm font-medium">{sec.title}</div>
+                          <div className="text-xs text-muted-foreground">{sec.tasks.filter(t => t.checked).length}/{sec.tasks.length}</div>
+                        </div>
+                        {!sec.tasks.length ? (
+                          <div className="text-sm text-muted-foreground">Chưa có mục nào.</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {sec.tasks.map((t) => (
+                              <div key={t.lineNumber} className="rounded-md border px-3 py-2 flex items-start justify-between gap-2">
+                                <div className="flex items-start gap-2 min-w-0">
+                                  <input
+                                    type="checkbox"
+                                    checked={t.checked}
+                                    onChange={(e) => toggleTaskAtLine(t.lineNumber, e.target.checked)}
+                                    className="mt-1"
+                                  />
+                                  <div className="min-w-0">
+                                    {editingLine === t.lineNumber ? (
+                                      <div className="space-y-2">
+                                        <Input value={editingText} onChange={(e) => setEditingText(e.target.value)} />
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            size="sm"
+                                            onClick={() => {
+                                              const next = editingText.trim()
+                                              if (!next) return
+                                              setDraft((prev) => setTaskTextInMarkdown(prev, t.lineNumber, next))
+                                              setEditingLine(null)
+                                              setEditingText("")
+                                            }}
+                                            disabled={!editingText.trim()}
+                                          >
+                                            Lưu
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setEditingLine(null)
+                                              setEditingText("")
+                                            }}
+                                          >
+                                            Hủy
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className={`text-sm break-words ${t.checked ? "line-through text-muted-foreground" : ""}`}>{t.text}</div>
+                                    )}
+                                    <div className="text-xs text-muted-foreground">Dòng {t.lineNumber}</div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {editingLine !== t.lineNumber ? (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingLine(t.lineNumber)
+                                        setEditingText(t.text)
+                                      }}
+                                    >
+                                      Sửa
+                                    </Button>
+                                  ) : null}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const ok = typeof window !== "undefined" ? window.confirm("Xóa mục này?") : false
+                                      if (!ok) return
+                                      setDraft((prev) => deleteTaskLineInMarkdown(prev, t.lineNumber))
+                                    }}
+                                  >
+                                    Xóa
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+                <TabsContent value="json" className="overflow-hidden">
+                  <div className="overflow-auto flex-1 space-y-3 pr-1">
+                    <div className="rounded-lg border p-3 flex items-center justify-between gap-2">
+                      <div className="text-sm font-medium">JSON</div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(JSON.stringify(parsed.json, null, 2))
+                              setJsonCopied(true)
+                              setTimeout(() => setJsonCopied(false), 1500)
+                            } catch {}
+                          }}
+                        >
+                          {jsonCopied ? "Đã copy" : "Copy JSON"}
+                        </Button>
+                      </div>
+                    </div>
+                    <pre className="rounded-lg border bg-background p-3 text-xs overflow-auto">
+                      {JSON.stringify(parsed.json, null, 2)}
+                    </pre>
                   </div>
                 </TabsContent>
                 <TabsContent value="history" className="overflow-hidden">
