@@ -96,10 +96,6 @@ export async function ensureTeamTodoSeed() {
   )
 }
 
-function escapeMdBrackets(s: string) {
-  return s.replace(/\[/g, "\\[").replace(/\]/g, "\\]")
-}
-
 function renderTeamTodoMarkdown(seed: TeamTodoSeed) {
   const title = String(seed?.title || "").trim() || "TODO LIST"
   const strategy = typeof seed?.strategy === "string" ? seed.strategy.trim() : ""
@@ -120,33 +116,33 @@ function renderTeamTodoMarkdown(seed: TeamTodoSeed) {
   }
 
   const lines: string[] = []
-  lines.push(`# **${title}**`)
+  lines.push(`# ${title}`)
   lines.push("")
   if (strategy) {
-    lines.push(`*(Chiến lược: ${strategy})*`)
+    lines.push(`Chiến lược: ${strategy}`)
     lines.push("")
   }
   if (legend.length) {
-    lines.push("**Bảng chú giải:**")
+    lines.push("Bảng chú giải:")
     lines.push("")
     for (const l of legend) {
       const emoji = String(l?.emoji || "").trim()
       const label = String(l?.label || "").trim()
       const desc = String(l?.desc || "").trim()
-      const labelPart = label ? ` **${escapeMdBrackets(label)}**` : ""
+      const labelPart = label ? ` ${label}` : ""
       const descPart = desc ? `: ${desc}` : ""
-      lines.push(`* ${emoji}${labelPart}${descPart}`.trimEnd())
+      lines.push(`- ${emoji}${labelPart}${descPart}`.trimEnd())
     }
     lines.push("")
   }
   if (duration) {
-    lines.push(`**Thời gian dự kiến:** ${duration}`)
+    lines.push(`Thời gian dự kiến: ${duration}`)
     lines.push("")
   }
   if (team.length) {
-    lines.push("**Team:**")
+    lines.push("Team:")
     lines.push("")
-    for (const m of team) lines.push(`* ${m}`)
+    for (const m of team) lines.push(`- ${m}`)
     lines.push("")
   }
 
@@ -157,10 +153,10 @@ function renderTeamTodoMarkdown(seed: TeamTodoSeed) {
     const goal = typeof s?.goal === "string" ? s.goal.trim() : ""
     const headingHasTime = /\(.*tuần/i.test(name)
     const heading = time && !headingHasTime ? `${name} (${time})` : name
-    lines.push(`## **${heading}**`)
+    lines.push(`## ${heading}`)
     lines.push("")
     if (goal) {
-      lines.push(`*Mục tiêu: ${goal}*`)
+      lines.push(`Mục tiêu: ${goal}`)
       lines.push("")
     }
     const tasks = Array.isArray(s?.tasks) ? s.tasks : []
@@ -172,8 +168,9 @@ function renderTeamTodoMarkdown(seed: TeamTodoSeed) {
       if (!text) continue
       const legendItem = legendByType.get(type)
       const emoji = legendItem?.emoji ? `${legendItem.emoji} ` : ""
-      const label = legendItem?.label ? ` **${escapeMdBrackets(legendItem.label)}**` : type ? ` **${escapeMdBrackets(`[${type}]`)}**` : ""
-      lines.push(`* ${box} ${emoji}${label} ${text}`.replace(/\s+/g, " ").trimEnd())
+      const label = legendItem?.label ? `${legendItem.label}` : type ? `[${type}]` : ""
+      const labelPart = label ? `${label} ` : ""
+      lines.push(`- ${box} ${emoji}${labelPart}${text}`.replace(/\s+/g, " ").trimEnd())
     }
     lines.push("")
   }

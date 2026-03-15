@@ -65,6 +65,19 @@ type DocMeta = {
   team: string[]
 }
 
+function cleanMarkdownInline(input: string) {
+  return String(input || "")
+    .replace(/\\\[/g, "[")
+    .replace(/\\\]/g, "]")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/`([^`]*)`/g, "$1")
+    .replace(/[*_]/g, "")
+    .replace(/^\s*-\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
 function parseChecklist(md: string) {
   const lines = md.split("\n")
   const tasks: ChecklistTask[] = []
@@ -703,7 +716,7 @@ export default function KeHoachPage() {
   const meta = useMemo(() => parseDocMeta(draft), [draft])
 
   const derived = useMemo(() => {
-    const tasks = parsed.tasks.map((t) => ({ ...t, meta: parseTaskMeta(t.text) }))
+    const tasks = parsed.tasks.map((t) => ({ ...t, displayText: cleanMarkdownInline(t.text), displaySection: cleanMarkdownInline(t.section), meta: parseTaskMeta(cleanMarkdownInline(t.text)) }))
     const total = tasks.length
     const done = tasks.filter((t) => t.checked).length
     const open = total - done
@@ -713,7 +726,7 @@ export default function KeHoachPage() {
       const secTotal = secTasks.length
       const secDone = secTasks.filter((t) => t.checked).length
       const secPct = secTotal ? Math.round((secDone / secTotal) * 100) : 0
-      return { title: s.title, total: secTotal, done: secDone, open: secTotal - secDone, pct: secPct }
+      return { title: cleanMarkdownInline(s.title), total: secTotal, done: secDone, open: secTotal - secDone, pct: secPct }
     }).filter((x) => x.total > 0)
 
     const assignees = Array.from(
@@ -736,10 +749,10 @@ export default function KeHoachPage() {
     return derived.tasks
       .filter((t) => {
         if (!filterShowDone && t.checked) return false
-        if (filterSection !== "Tất cả" && t.section !== filterSection) return false
+        if (filterSection !== "Tất cả" && cleanMarkdownInline(t.section) !== filterSection) return false
         if (filterAssignee !== "Tất cả" && (t.meta.assignee || "") !== filterAssignee) return false
         if (!q) return true
-        return t.text.toLowerCase().includes(q)
+        return cleanMarkdownInline(t.text).toLowerCase().includes(q)
       })
       .sort((a, b) => {
         const ap = a.meta.priority || "P3"
@@ -766,7 +779,7 @@ export default function KeHoachPage() {
         const idx = parsed.sections.findIndex((x) => x.title === s.title)
         const next = idx >= 0 ? parsed.sections[idx + 1] : undefined
         const info = extractSprintDetails(draft, byTitle.get(s.title)?.firstLine || null, next?.firstLine || null)
-        return { title: s.title, total, done, pct, tasks, time: info.time, goal: info.goal }
+        return { title: cleanMarkdownInline(s.title), rawTitle: s.title, total, done, pct, tasks, time: info.time, goal: info.goal }
       })
       .filter((x) => x.total > 0)
 
@@ -784,14 +797,15 @@ export default function KeHoachPage() {
       const total = tasks.length
       const done = tasks.filter((t) => t.checked).length
       const pct = total ? Math.round((done / total) * 100) : 0
-      return { title, total, done, pct, tasks, time: "", goal: "" }
+      return { title: cleanMarkdownInline(title), rawTitle: title, total, done, pct, tasks, time: "", goal: "" }
     })
   }, [parsed.sections, derived.tasks])
 
   const getTaskKind = (text: string) => {
-    if (/\[AI IDE\]/i.test(text)) return "AI IDE"
-    if (/\[Manual\]/i.test(text)) return "Manual"
-    if (/\[Hybrid\]/i.test(text)) return "Hybrid"
+    const t = cleanMarkdownInline(text)
+    if (/\[AI IDE\]/i.test(t)) return "AI IDE"
+    if (/\[Manual\]/i.test(t)) return "Manual"
+    if (/\[Hybrid\]/i.test(t)) return "Hybrid"
     return null
   }
 
@@ -1121,7 +1135,7 @@ export default function KeHoachPage() {
 
                                       <div className="min-w-0">
                                         <p className={`text-sm md:text-base transition-all break-words ${t.checked ? "text-slate-400 line-through" : "text-slate-700"}`}>
-                                          {t.text}
+                                          {cleanMarkdownInline(t.text)}
                                         </p>
                                         <div className="mt-2 flex flex-wrap gap-2">
                                           {t.meta.priority ? <Badge variant={t.meta.priority === "P1" ? "destructive" : t.meta.priority === "P2" ? "secondary" : "outline"}>{t.meta.priority}</Badge> : null}
@@ -1139,7 +1153,7 @@ export default function KeHoachPage() {
                                         onClick={(e) => {
                                           e.stopPropagation()
                                           setEditingLine(t.lineNumber)
-                                          setEditingText(t.text)
+                                          setEditingText(cleanMarkdownInline(t.text))
                                           setActiveTab("board")
                                         }}
                                       >
@@ -1172,7 +1186,7 @@ export default function KeHoachPage() {
                         <select className="h-10 rounded-md border bg-background px-3 text-sm" value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
                           <option value="Tất cả">Tất cả mục</option>
                           {parsed.sections.map((s) => (
-                            <option key={s.title} value={s.title}>{s.title}</option>
+                            <option key={s.title} value={cleanMarkdownInline(s.title)}>{cleanMarkdownInline(s.title)}</option>
                           ))}
                         </select>
                         <select className="h-10 rounded-md border bg-background px-3 text-sm" value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}>
@@ -1207,9 +1221,9 @@ export default function KeHoachPage() {
                                   className="mt-1"
                                 />
                                 <div className="min-w-0 space-y-1">
-                                  <div className="text-sm break-words">{t.text}</div>
+                                  <div className="text-sm break-words">{cleanMarkdownInline(t.text)}</div>
                                   <div className="flex flex-wrap gap-2">
-                                    <Badge variant="outline">{t.section}</Badge>
+                                    <Badge variant="outline">{cleanMarkdownInline(t.section)}</Badge>
                                     {t.meta.priority ? <Badge variant={t.meta.priority === "P1" ? "destructive" : t.meta.priority === "P2" ? "secondary" : "outline"}>{t.meta.priority}</Badge> : null}
                                     {t.meta.assignee ? <Badge variant="secondary">@{t.meta.assignee}</Badge> : null}
                                     {t.meta.due ? <Badge variant="outline">due:{t.meta.due}</Badge> : null}
@@ -1224,7 +1238,7 @@ export default function KeHoachPage() {
                                   size="sm"
                                   onClick={() => {
                                     setEditingLine(t.lineNumber)
-                                    setEditingText(t.text)
+                                    setEditingText(cleanMarkdownInline(t.text))
                                     setActiveTab("board")
                                   }}
                                 >
@@ -1400,7 +1414,7 @@ export default function KeHoachPage() {
                     {parsed.sections.map((sec) => (
                       <div key={sec.title} className="rounded-lg border p-3 space-y-2">
                         <div className="flex items-center justify-between gap-2">
-                          <div className="text-sm font-medium">{sec.title}</div>
+                          <div className="text-sm font-medium">{cleanMarkdownInline(sec.title)}</div>
                           <div className="text-xs text-muted-foreground">{sec.tasks.filter(t => t.checked).length}/{sec.tasks.length}</div>
                         </div>
                         {!sec.tasks.length ? (
@@ -1447,7 +1461,7 @@ export default function KeHoachPage() {
                                         </div>
                                       </div>
                                     ) : (
-                                      <div className={`text-sm break-words ${t.checked ? "line-through text-muted-foreground" : ""}`}>{t.text}</div>
+                                      <div className={`text-sm break-words ${t.checked ? "line-through text-muted-foreground" : ""}`}>{cleanMarkdownInline(t.text)}</div>
                                     )}
                                     <div className="text-xs text-muted-foreground">Dòng {t.lineNumber}</div>
                                   </div>
@@ -1459,7 +1473,7 @@ export default function KeHoachPage() {
                                       size="sm"
                                       onClick={() => {
                                         setEditingLine(t.lineNumber)
-                                        setEditingText(t.text)
+                                        setEditingText(cleanMarkdownInline(t.text))
                                       }}
                                     >
                                       Sửa
