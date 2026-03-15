@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { Calendar, CheckCircle2, Circle, Cpu, Handshake, LayoutList, Target, UserCog, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -55,6 +56,13 @@ type CommentItem = {
   created_at: string
   created_by: string | null
   resolved: boolean
+}
+
+type DocMeta = {
+  title: string
+  strategy: string
+  duration: string
+  team: string[]
 }
 
 function parseChecklist(md: string) {
@@ -122,6 +130,68 @@ function parseChecklist(md: string) {
   }
 
   return { tasks, sections: sectionItems, json }
+}
+
+function parseDocMeta(md: string): DocMeta {
+  const lines = md.split("\n")
+  const firstHeading = lines.find((l) => /^#\s+/.test(l.trim()))
+  const title = (firstHeading || "")
+    .replace(/^#\s+/, "")
+    .replace(/[*_`]/g, "")
+    .trim() || "Kế hoạch & TODO Team"
+
+  const strategyLine = lines.find((l) => /chiến\s*lược/i.test(l))
+  const strategy = (strategyLine || "")
+    .replace(/[*_`]/g, "")
+    .replace(/^\(|\)$/g, "")
+    .replace(/^.*chiến\s*lược\s*:\s*/i, "")
+    .trim()
+
+  const durationLine = lines.find((l) => /\b\d+\s*tuần\b/i.test(l)) || lines.find((l) => /tuần\s*\d+/i.test(l))
+  const duration = (durationLine || "").replace(/[*_`]/g, "").trim()
+
+  const team: string[] = []
+  for (const l of lines) {
+    const m = l.match(/^\s*-\s+(.+?)\s*$/)
+    if (!m) continue
+    const v = String(m[1] || "").replace(/[*_`]/g, "").trim()
+    if (!v) continue
+    if (/^bảng\s*chú\s*giải/i.test(v)) continue
+    if (/\[AI\s*IDE\]|\[Manual\]|\[Hybrid\]/i.test(v)) continue
+    if (v.length < 4) continue
+    if (!team.includes(v)) team.push(v)
+    if (team.length >= 4) break
+  }
+
+  return {
+    title,
+    strategy,
+    duration,
+    team,
+  }
+}
+
+function extractSprintDetails(md: string, startLine: number | null, endLine: number | null) {
+  if (!startLine) return { time: "", goal: "" }
+  const lines = md.split("\n")
+  const startIdx = Math.max(0, startLine - 1)
+  const endIdx = endLine ? Math.min(lines.length, endLine) : lines.length
+  let time = ""
+  let goal = ""
+  for (let i = startIdx; i < endIdx; i++) {
+    const raw = lines[i] || ""
+    const line = raw.replace(/[*_`]/g, "").trim()
+    if (!time) {
+      const tm = line.match(/tuần\s*\d+(\s*-\s*\d+)?/i)
+      if (tm) time = tm[0]
+    }
+    if (!goal) {
+      const gm = line.match(/mục\s*tiêu\s*[:：]\s*(.+)$/i)
+      if (gm) goal = String(gm[1] || "").trim()
+    }
+    if (time && goal) break
+  }
+  return { time, goal }
 }
 
 function parseTaskMeta(text: string): TaskMeta {
@@ -630,6 +700,7 @@ export default function KeHoachPage() {
   }, [authed, saving, dirty, draft])
 
   const parsed = useMemo(() => parseChecklist(draft), [draft])
+  const meta = useMemo(() => parseDocMeta(draft), [draft])
 
   const derived = useMemo(() => {
     const tasks = parsed.tasks.map((t) => ({ ...t, meta: parseTaskMeta(t.text) }))
@@ -682,13 +753,17 @@ export default function KeHoachPage() {
   const sprintCards = useMemo(() => {
     const sprintSections = parsed.sections.filter((s) => /^SPRINT\s*\d+/i.test(s.title))
     const base = sprintSections.length ? sprintSections : parsed.sections.filter((s) => s.title !== "Chung")
+    const byTitle = new Map(parsed.sections.map((s) => [s.title, s]))
     const items = base
       .map((s) => {
         const tasks = derived.tasks.filter((t) => t.section === s.title)
         const total = tasks.length
         const done = tasks.filter((t) => t.checked).length
         const pct = total ? Math.round((done / total) * 100) : 0
-        return { title: s.title, total, done, pct, tasks }
+        const idx = parsed.sections.findIndex((x) => x.title === s.title)
+        const next = idx >= 0 ? parsed.sections[idx + 1] : undefined
+        const info = extractSprintDetails(draft, byTitle.get(s.title)?.firstLine || null, next?.firstLine || null)
+        return { title: s.title, total, done, pct, tasks, time: info.time, goal: info.goal }
       })
       .filter((x) => x.total > 0)
     return items
@@ -706,6 +781,13 @@ export default function KeHoachPage() {
     if (kind === "Manual") return "bg-orange-50 text-orange-700 border-orange-200"
     if (kind === "Hybrid") return "bg-green-50 text-green-700 border-green-200"
     return "bg-slate-50 text-slate-700 border-slate-200"
+  }
+
+  const getTaskKindIcon = (kind: string | null) => {
+    if (kind === "AI IDE") return <Cpu className="w-3 h-3 mr-1" />
+    if (kind === "Manual") return <UserCog className="w-3 h-3 mr-1" />
+    if (kind === "Hybrid") return <Handshake className="w-3 h-3 mr-1" />
+    return null
   }
 
   useEffect(() => {
@@ -863,121 +945,201 @@ export default function KeHoachPage() {
               </div>
 
               <TabsContent value="todo" className="overflow-hidden">
-                <div className="overflow-auto flex-1 space-y-4 pr-1">
-                  {!sprintCards.length ? (
-                    <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                      Không tìm thấy SPRINT trong markdown. Hãy thêm heading dạng <span className="font-mono">SPRINT 1: ...</span> để hệ thống nhóm theo sprint.
-                    </div>
-                  ) : null}
-                  <div className="space-y-4">
-                    {sprintCards.map((s) => {
-                      const isAllDone = s.pct === 100
-                      return (
-                        <div key={s.title} className={`rounded-xl border overflow-hidden ${isAllDone ? "border-green-300 bg-green-50/10" : ""}`}>
-                          <div className={`p-4 border-b ${isAllDone ? "bg-green-50/50 border-green-100" : ""}`}>
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                              <div className="space-y-1">
-                                <div className="text-sm font-semibold">{s.title}</div>
-                                <div className="text-xs text-muted-foreground">{s.done}/{s.total} hoàn thành</div>
-                              </div>
-                              <div className="flex items-center gap-3 min-w-[140px]">
-                                <div className="flex-1">
-                                  <Progress value={clampPct(s.pct)} />
-                                </div>
-                                <div className={`text-sm font-semibold ${isAllDone ? "text-green-600" : "text-slate-600"}`}>{s.pct}%</div>
-                              </div>
+                <div className="overflow-auto flex-1 pr-1">
+                  <div className="min-h-[70vh] bg-slate-50 rounded-xl border p-4 space-y-6">
+                    <div className="bg-white rounded-xl p-4 md:p-5 border border-slate-200 shadow-sm">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-2">
+                          <div className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
+                            {meta.title}
+                          </div>
+                          {meta.strategy ? (
+                            <div className="text-sm text-slate-500 font-medium">
+                              Chiến lược:{" "}
+                              <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                                {meta.strategy}
+                              </span>
+                            </div>
+                          ) : null}
+                        </div>
+
+                        <div className="w-full md:w-64 bg-slate-50 rounded-lg p-3 border border-slate-200">
+                          <div className="flex justify-between items-end mb-1">
+                            <span className="text-sm font-semibold text-slate-700">Tiến độ tổng</span>
+                            <span className="text-lg font-bold text-indigo-600">{derived.pct}%</span>
+                          </div>
+                          <div className="w-full bg-slate-200 rounded-full h-2.5">
+                            <div
+                              className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-in-out"
+                              style={{ width: `${clampPct(derived.pct)}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-slate-500 mt-1.5 text-right">
+                            {derived.done} / {derived.total} tasks hoàn thành
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                        {meta.duration ? (
+                          <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-md">
+                            <Calendar className="w-4 h-4 text-slate-500" />
+                            <span className="font-medium">Thời gian:</span> {meta.duration}
+                          </div>
+                        ) : null}
+                        {meta.team.length ? (
+                          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-md">
+                            <Users className="w-4 h-4 text-slate-500" />
+                            <span className="font-medium">Team:</span>
+                            <div className="flex flex-wrap gap-2">
+                              {meta.team.map((m) => (
+                                <span key={m} className="bg-white px-2 py-0.5 rounded text-xs border border-slate-200 shadow-sm">
+                                  {m}
+                                </span>
+                              ))}
                             </div>
                           </div>
-                          <div className="divide-y">
-                            {s.tasks.map((t) => {
-                              const kind = getTaskKind(t.text)
-                              const kindStyle = getTaskKindStyle(kind)
-                              return (
-                                <div key={t.lineNumber} className={`group flex items-start gap-3 p-3 hover:bg-slate-50 transition-colors ${t.checked ? "bg-slate-50/50" : ""}`}>
-                                  <input
-                                    type="checkbox"
-                                    checked={t.checked}
-                                    onChange={(e) => toggleTaskAtLine(t.lineNumber, e.target.checked)}
-                                    className="mt-1.5"
-                                  />
-                                  <div className="flex flex-col md:flex-row md:items-start gap-2 flex-1 min-w-0">
-                                    <span className={`shrink-0 inline-flex items-center px-2 py-1 rounded border text-xs font-semibold whitespace-nowrap w-fit ${kindStyle}`}>
-                                      {kind ? `[${kind}]` : "Task"}
-                                    </span>
-                                    <div className="min-w-0 space-y-1">
-                                      {editingLine === t.lineNumber ? (
-                                        <div className="space-y-2">
-                                          <Input value={editingText} onChange={(e) => setEditingText(e.target.value)} />
-                                          <div className="flex items-center gap-2">
-                                            <Button
-                                              size="sm"
-                                              onClick={() => {
-                                                const next = editingText.trim()
-                                                if (!next) return
-                                                setDraft((prev) => setTaskTextInMarkdown(prev, t.lineNumber, next))
-                                                setEditingLine(null)
-                                                setEditingText("")
-                                              }}
-                                              disabled={!editingText.trim()}
-                                            >
-                                              Lưu
-                                            </Button>
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => {
-                                                setEditingLine(null)
-                                                setEditingText("")
-                                              }}
-                                            >
-                                              Hủy
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <p className={`text-sm break-words ${t.checked ? "text-slate-400 line-through" : "text-slate-700"}`}>{t.text}</p>
-                                      )}
-                                      <div className="flex flex-wrap gap-2">
-                                        {t.meta.priority ? <Badge variant={t.meta.priority === "P1" ? "destructive" : t.meta.priority === "P2" ? "secondary" : "outline"}>{t.meta.priority}</Badge> : null}
-                                        {t.meta.assignee ? <Badge variant="secondary">@{t.meta.assignee}</Badge> : null}
-                                        {t.meta.due ? <Badge variant="outline">due:{t.meta.due}</Badge> : null}
-                                        {t.meta.tags.slice(0, 3).map((x) => <Badge key={x} variant="outline">#{x}</Badge>)}
-                                        <Badge variant="outline">Dòng {t.lineNumber}</Badge>
-                                      </div>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-xl p-4 md:p-5 border border-slate-200 shadow-sm">
+                      <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <LayoutList className="w-4 h-4" /> Bảng chú giải nhiệm vụ
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className={`flex flex-col p-3 rounded-lg border bg-blue-50 text-blue-700 border-blue-200 bg-opacity-30`}>
+                          <div className="flex items-center font-bold mb-1">
+                            <span className="mr-2 text-lg">🤖</span> [AI IDE]
+                          </div>
+                          <div className="text-sm opacity-90">Dùng AI sinh code (80-100%)</div>
+                        </div>
+                        <div className={`flex flex-col p-3 rounded-lg border bg-orange-50 text-orange-700 border-orange-200 bg-opacity-30`}>
+                          <div className="flex items-center font-bold mb-1">
+                            <span className="mr-2 text-lg">🧑‍💻</span> [Manual]
+                          </div>
+                          <div className="text-sm opacity-90">Cấu hình, thiết kế kiến trúc</div>
+                        </div>
+                        <div className={`flex flex-col p-3 rounded-lg border bg-green-50 text-green-700 border-green-200 bg-opacity-30`}>
+                          <div className="flex items-center font-bold mb-1">
+                            <span className="mr-2 text-lg">🤝</span> [Hybrid]
+                          </div>
+                          <div className="text-sm opacity-90">AI nháp, người review</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      {sprintCards.map((s) => {
+                        const isAllDone = s.pct === 100
+                        return (
+                          <div
+                            key={s.title}
+                            className={`bg-white rounded-xl shadow-sm border overflow-hidden transition-all ${isAllDone ? "border-green-300 bg-green-50/10" : "border-slate-200"}`}
+                          >
+                            <div className={`p-5 md:p-6 border-b ${isAllDone ? "bg-green-50/50 border-green-100" : "border-slate-100"}`}>
+                              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-3 flex-wrap">
+                                    <div className="text-lg md:text-xl font-bold text-slate-800">
+                                      {s.title}
+                                    </div>
+                                    {s.time ? (
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 border border-slate-200">
+                                        {s.time}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  {s.goal ? (
+                                    <div className="text-slate-600 text-sm flex items-start gap-1.5">
+                                      <Target className="w-4 h-4 mt-0.5 text-indigo-500 shrink-0" />
+                                      <span><strong>Mục tiêu:</strong> {s.goal}</span>
+                                    </div>
+                                  ) : null}
+                                </div>
+
+                                <div className="flex items-center gap-3 min-w-[120px]">
+                                  <div className="flex-1 w-24">
+                                    <div className="w-full bg-slate-100 rounded-full h-2">
+                                      <div
+                                        className={`h-2 rounded-full transition-all duration-500 ${isAllDone ? "bg-green-500" : "bg-indigo-500"}`}
+                                        style={{ width: `${clampPct(s.pct)}%` }}
+                                      />
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2 shrink-0">
-                                    {editingLine !== t.lineNumber ? (
+                                  <span className={`text-sm font-bold ${isAllDone ? "text-green-600" : "text-slate-600"}`}>
+                                    {s.pct}%
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="divide-y divide-slate-100">
+                              {s.tasks.map((t) => {
+                                const kind = getTaskKind(t.text)
+                                const kindStyle = getTaskKindStyle(kind)
+                                const icon = getTaskKindIcon(kind)
+                                const nextChecked = !t.checked
+                                return (
+                                  <div
+                                    key={t.lineNumber}
+                                    onClick={() => toggleTaskAtLine(t.lineNumber, nextChecked)}
+                                    className={`group flex items-start gap-3 p-4 md:px-6 hover:bg-slate-50 cursor-pointer transition-colors ${t.checked ? "bg-slate-50/50" : ""}`}
+                                  >
+                                    <div className="mt-0.5 shrink-0">
+                                      {t.checked ? (
+                                        <CheckCircle2 className="w-6 h-6 text-green-500" />
+                                      ) : (
+                                        <Circle className="w-6 h-6 text-slate-300 group-hover:text-indigo-400 transition-colors" />
+                                      )}
+                                    </div>
+
+                                    <div className="flex flex-col md:flex-row md:items-start gap-2 flex-1 min-w-0">
+                                      <span className={`shrink-0 inline-flex items-center px-2 py-1 rounded border text-xs font-semibold whitespace-nowrap w-fit ${kindStyle}`}>
+                                        {icon}
+                                        {kind ? `[${kind}]` : "Task"}
+                                      </span>
+
+                                      <div className="min-w-0">
+                                        <p className={`text-sm md:text-base transition-all break-words ${t.checked ? "text-slate-400 line-through" : "text-slate-700"}`}>
+                                          {t.text}
+                                        </p>
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                          {t.meta.priority ? <Badge variant={t.meta.priority === "P1" ? "destructive" : t.meta.priority === "P2" ? "secondary" : "outline"}>{t.meta.priority}</Badge> : null}
+                                          {t.meta.assignee ? <Badge variant="secondary">@{t.meta.assignee}</Badge> : null}
+                                          {t.meta.due ? <Badge variant="outline">due:{t.meta.due}</Badge> : null}
+                                          {t.meta.tags.slice(0, 3).map((x) => <Badge key={x} variant="outline">#{x}</Badge>)}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 shrink-0">
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => {
+                                        onClick={(e) => {
+                                          e.stopPropagation()
                                           setEditingLine(t.lineNumber)
                                           setEditingText(t.text)
+                                          setActiveTab("board")
                                         }}
                                       >
                                         Sửa
                                       </Button>
-                                    ) : null}
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        const ok = typeof window !== "undefined" ? window.confirm("Xóa mục này?") : false
-                                        if (!ok) return
-                                        setDraft((prev) => deleteTaskLineInMarkdown(prev, t.lineNumber))
-                                      }}
-                                    >
-                                      Xóa
-                                    </Button>
+                                    </div>
                                   </div>
-                                </div>
-                              )
-                            })}
+                                )
+                              })}
+                            </div>
                           </div>
+                        )
+                      })}
+                      {!sprintCards.length ? (
+                        <div className="rounded-xl border bg-white p-4 text-sm text-muted-foreground">
+                          Chưa có Sprint/Task dạng checklist để hiển thị.
                         </div>
-                      )
-                    })}
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </TabsContent>
