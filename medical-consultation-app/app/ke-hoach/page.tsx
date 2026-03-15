@@ -7,12 +7,37 @@ import remarkGfm from "remark-gfm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type DocState = {
   id: string
   content: string
   updated_at: string
   updated_by: string | null
+}
+
+type RevisionItem = {
+  rev_id: number
+  op: string
+  created_at: string
+  created_by: string | null
+  base_updated_at: string | null
+  doc_updated_at: string | null
+}
+
+type RevisionDetail = RevisionItem & {
+  doc_id: string
+  content: string
+}
+
+type CommentItem = {
+  comment_id: number
+  doc_id: string
+  rev_id: number | null
+  content: string
+  created_at: string
+  created_by: string | null
+  resolved: boolean
 }
 
 export default function KeHoachPage() {
@@ -28,6 +53,14 @@ export default function KeHoachPage() {
   const [doc, setDoc] = useState<DocState | null>(null)
   const [draft, setDraft] = useState("")
   const [dirty, setDirty] = useState(false)
+  const [revisions, setRevisions] = useState<RevisionItem[]>([])
+  const [revLoading, setRevLoading] = useState(false)
+  const [revError, setRevError] = useState("")
+  const [selectedRev, setSelectedRev] = useState<RevisionDetail | null>(null)
+  const [comments, setComments] = useState<CommentItem[]>([])
+  const [commentDraft, setCommentDraft] = useState("")
+  const [commentLoading, setCommentLoading] = useState(false)
+  const [commentError, setCommentError] = useState("")
 
   const toggleTaskAtLine = (lineNumber: number, nextChecked: boolean) => {
     if (!lineNumber || lineNumber < 1) return
@@ -103,6 +136,145 @@ export default function KeHoachPage() {
     }
   }
 
+  const loadRevisions = async (password: string) => {
+    setRevError("")
+    setRevLoading(true)
+    try {
+      const resp = await fetch("/api/team-todo/revisions?limit=80", {
+        method: "GET",
+        headers: { "x-team-todo-pass": password },
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as { items: RevisionItem[] }
+      setRevisions(Array.isArray(data?.items) ? data.items : [])
+    } catch (e: any) {
+      setRevError(e?.message || "Không tải được lịch sử")
+      setRevisions([])
+    } finally {
+      setRevLoading(false)
+    }
+  }
+
+  const viewRevision = async (revId: number) => {
+    const password = effectivePw.trim()
+    if (!password) return
+    setRevError("")
+    setSelectedRev(null)
+    setRevLoading(true)
+    try {
+      const resp = await fetch(`/api/team-todo/revisions/${revId}`, {
+        method: "GET",
+        headers: { "x-team-todo-pass": password },
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as RevisionDetail
+      setSelectedRev(data)
+    } catch (e: any) {
+      setRevError(e?.message || "Không tải được nội dung bản ghi")
+    } finally {
+      setRevLoading(false)
+    }
+  }
+
+  const restoreRevision = async (revId: number) => {
+    const password = effectivePw.trim()
+    if (!password) return
+    const ok = typeof window !== "undefined" ? window.confirm(`Khôi phục theo bản lịch sử #${revId}? Thao tác này sẽ ghi đè bản hiện tại trong DB.`) : false
+    if (!ok) return
+    setError("")
+    setHasConflict(false)
+    setSaving(true)
+    try {
+      const resp = await fetch("/api/team-todo/restore", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-team-todo-pass": password,
+        },
+        body: JSON.stringify({
+          rev_id: revId,
+          updated_by: name.trim(),
+        }),
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as DocState
+      setDoc(data)
+      setDraft(data.content || "")
+      setDirty(false)
+      setSelectedRev(null)
+      await loadRevisions(password)
+    } catch (e: any) {
+      setError(e?.message || "Không khôi phục được")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const loadComments = async (password: string) => {
+    setCommentError("")
+    setCommentLoading(true)
+    try {
+      const resp = await fetch("/api/team-todo/comments", {
+        method: "GET",
+        headers: { "x-team-todo-pass": password },
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as { items: CommentItem[] }
+      setComments(Array.isArray(data?.items) ? data.items : [])
+    } catch (e: any) {
+      setCommentError(e?.message || "Không tải được bình luận")
+      setComments([])
+    } finally {
+      setCommentLoading(false)
+    }
+  }
+
+  const addComment = async () => {
+    const password = effectivePw.trim()
+    if (!password) return
+    const content = commentDraft.trim()
+    if (!content) return
+    setCommentError("")
+    setCommentLoading(true)
+    try {
+      const latestRevId = revisions?.[0]?.rev_id
+      const resp = await fetch("/api/team-todo/comments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-team-todo-pass": password,
+        },
+        body: JSON.stringify({
+          content,
+          created_by: name.trim(),
+          rev_id: latestRevId || null,
+        }),
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      setCommentDraft("")
+      await loadComments(password)
+    } catch (e: any) {
+      setCommentError(e?.message || "Không gửi được bình luận")
+    } finally {
+      setCommentLoading(false)
+    }
+  }
+
   const saveDoc = async () => {
     if (!doc) return
     const password = effectivePw.trim()
@@ -141,6 +313,7 @@ export default function KeHoachPage() {
       setDraft(data.content || "")
       setDirty(false)
       persistPw(password)
+      await loadRevisions(password)
     } catch (e: any) {
       setError(e?.message || "Không lưu được")
     } finally {
@@ -172,6 +345,7 @@ export default function KeHoachPage() {
       setDraft(data.content || "")
       setDirty(false)
       persistPw(password)
+      await loadRevisions(password)
     } catch (e: any) {
       setError(e?.message || "Không đồng bộ được")
     } finally {
@@ -207,6 +381,7 @@ export default function KeHoachPage() {
       setDirty(false)
       setHasConflict(false)
       persistPw(password)
+      await loadRevisions(password)
     } catch (e: any) {
       setError(e?.message || "Không lưu được")
     } finally {
@@ -240,6 +415,13 @@ export default function KeHoachPage() {
       loadDoc(urlPw)
     }
   }, [params])
+
+  useEffect(() => {
+    const password = effectivePw.trim()
+    if (!authed || !password) return
+    void loadRevisions(password)
+    void loadComments(password)
+  }, [authed, doc?.updated_at])
 
   useEffect(() => {
     if (doc && draft !== doc.content) setDirty(true)
@@ -362,36 +544,131 @@ export default function KeHoachPage() {
               />
             </div>
             <div className="rounded-xl border bg-background p-4 space-y-2 overflow-hidden flex flex-col min-h-[70vh]">
-              <div className="text-sm font-medium">Preview</div>
-              <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto flex-1">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    input: ({ node, ...props }) => {
-                      const isCheckbox = props.type === "checkbox"
-                      if (!isCheckbox) return <input {...props} />
-                      const checked = !!props.checked
-                      const line = (node as any)?.position?.start?.line as number | undefined
-                      return (
-                        <input
-                          {...props}
-                          type="checkbox"
-                          checked={checked}
-                          disabled={false}
-                          onChange={(e) => {
-                            const next = e.target.checked
-                            if (typeof line === "number") {
-                              toggleTaskAtLine(line, next)
-                            }
-                          }}
-                        />
-                      )
-                    },
-                  }}
-                >
-                  {draft}
-                </ReactMarkdown>
-              </div>
+              <Tabs defaultValue="preview" className="flex-1 overflow-hidden">
+                <div className="flex items-center justify-between gap-2">
+                  <TabsList>
+                    <TabsTrigger value="preview">Preview</TabsTrigger>
+                    <TabsTrigger value="history">Lịch sử</TabsTrigger>
+                    <TabsTrigger value="comments">Bình luận</TabsTrigger>
+                  </TabsList>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const password = effectivePw.trim()
+                        if (password) {
+                          void loadRevisions(password)
+                          void loadComments(password)
+                        }
+                      }}
+                      disabled={revLoading || commentLoading || saving || loading}
+                    >
+                      Làm mới
+                    </Button>
+                  </div>
+                </div>
+                <TabsContent value="preview" className="overflow-hidden">
+                  <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto flex-1">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        input: ({ node, ...props }) => {
+                          const isCheckbox = props.type === "checkbox"
+                          if (!isCheckbox) return <input {...props} />
+                          const checked = !!props.checked
+                          const line = (node as any)?.position?.start?.line as number | undefined
+                          return (
+                            <input
+                              {...props}
+                              type="checkbox"
+                              checked={checked}
+                              disabled={false}
+                              onChange={(e) => {
+                                const next = e.target.checked
+                                if (typeof line === "number") {
+                                  toggleTaskAtLine(line, next)
+                                }
+                              }}
+                            />
+                          )
+                        },
+                      }}
+                    >
+                      {draft}
+                    </ReactMarkdown>
+                  </div>
+                </TabsContent>
+                <TabsContent value="history" className="overflow-hidden">
+                  <div className="overflow-auto flex-1 space-y-3 pr-1">
+                    {revError ? <div className="text-sm text-red-600">{revError}</div> : null}
+                    <div className="space-y-2">
+                      {revLoading && !revisions.length ? <div className="text-sm text-muted-foreground">Đang tải...</div> : null}
+                      {!revLoading && !revisions.length ? <div className="text-sm text-muted-foreground">Chưa có lịch sử.</div> : null}
+                      {revisions.map((r) => (
+                        <div key={r.rev_id} className="rounded-lg border p-3 flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">#{r.rev_id} • {r.op}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(r.created_at).toLocaleString("vi-VN")}
+                              {r.created_by ? ` • ${r.created_by}` : ""}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => void viewRevision(r.rev_id)} disabled={revLoading}>
+                              Xem
+                            </Button>
+                            <Button size="sm" onClick={() => void restoreRevision(r.rev_id)} disabled={saving || loading}>
+                              Khôi phục
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {selectedRev ? (
+                      <div className="rounded-lg border p-3 space-y-2">
+                        <div className="text-sm font-medium">Nội dung #{selectedRev.rev_id}</div>
+                        <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto max-h-[40vh]">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRev.content}</ReactMarkdown>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </TabsContent>
+                <TabsContent value="comments" className="overflow-hidden">
+                  <div className="overflow-auto flex-1 space-y-3 pr-1">
+                    {commentError ? <div className="text-sm text-red-600">{commentError}</div> : null}
+                    <div className="rounded-lg border p-3 space-y-2">
+                      <div className="text-sm font-medium">Gửi bình luận</div>
+                      <Textarea
+                        value={commentDraft}
+                        onChange={(e) => setCommentDraft(e.target.value)}
+                        className="text-sm"
+                        placeholder="Nhập góp ý, feedback, hoặc hỏi về phần việc..."
+                      />
+                      <div className="flex items-center justify-end">
+                        <Button onClick={addComment} disabled={commentLoading || !commentDraft.trim()}>
+                          {commentLoading ? "Đang gửi..." : "Gửi"}
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {commentLoading && !comments.length ? <div className="text-sm text-muted-foreground">Đang tải...</div> : null}
+                      {!commentLoading && !comments.length ? <div className="text-sm text-muted-foreground">Chưa có bình luận.</div> : null}
+                      {comments.map((c) => (
+                        <div key={c.comment_id} className="rounded-lg border p-3 space-y-1">
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(c.created_at).toLocaleString("vi-VN")}
+                            {c.created_by ? ` • ${c.created_by}` : ""}
+                            {c.rev_id ? ` • rev #${c.rev_id}` : ""}
+                          </div>
+                          <div className="text-sm whitespace-pre-wrap">{c.content}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         )}
