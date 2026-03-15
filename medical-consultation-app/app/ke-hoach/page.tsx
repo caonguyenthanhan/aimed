@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 
 type DocState = {
   id: string
@@ -22,6 +24,13 @@ type ChecklistTask = {
   text: string
   indent: number
   section: string
+}
+
+type TaskMeta = {
+  assignee: string | null
+  tags: string[]
+  priority: "P1" | "P2" | "P3" | null
+  due: string | null
 }
 
 type RevisionItem = {
@@ -98,6 +107,22 @@ function parseChecklist(md: string) {
   }
 
   return { tasks, sections: sectionItems, json }
+}
+
+function parseTaskMeta(text: string): TaskMeta {
+  const tags = Array.from(text.matchAll(/#([a-zA-Z0-9_-]{2,})/g)).map((m) => String(m[1] || "").trim()).filter(Boolean)
+  const assigneeMatch = text.match(/@([a-zA-Z0-9_-]{2,})/)
+  const assignee = assigneeMatch ? String(assigneeMatch[1] || "").trim() : null
+  const prioMatch = text.match(/\bP([1-3])\b/i)
+  const priority = prioMatch ? (`P${prioMatch[1]}`.toUpperCase() as "P1" | "P2" | "P3") : null
+  const dueMatch = text.match(/\b(?:due|deadline)\s*:\s*(\d{4}-\d{2}-\d{2})\b/i)
+  const due = dueMatch ? String(dueMatch[1] || "").trim() : null
+  return { assignee, tags: Array.from(new Set(tags)), priority, due }
+}
+
+function clampPct(v: number) {
+  if (!Number.isFinite(v)) return 0
+  return Math.max(0, Math.min(100, v))
 }
 
 function setTaskCheckedInMarkdown(md: string, lineNumber: number, nextChecked: boolean) {
@@ -207,6 +232,11 @@ export default function KeHoachPage() {
   const [editingLine, setEditingLine] = useState<number | null>(null)
   const [editingText, setEditingText] = useState("")
   const [jsonCopied, setJsonCopied] = useState(false)
+  const [filterQuery, setFilterQuery] = useState("")
+  const [filterSection, setFilterSection] = useState("Tất cả")
+  const [filterAssignee, setFilterAssignee] = useState("Tất cả")
+  const [filterShowDone, setFilterShowDone] = useState(false)
+  const [activeTab, setActiveTab] = useState("progress")
 
   const toggleTaskAtLine = (lineNumber: number, nextChecked: boolean) => {
     setDraft((prev) => setTaskCheckedInMarkdown(prev, lineNumber, nextChecked))
@@ -586,6 +616,54 @@ export default function KeHoachPage() {
 
   const parsed = useMemo(() => parseChecklist(draft), [draft])
 
+  const derived = useMemo(() => {
+    const tasks = parsed.tasks.map((t) => ({ ...t, meta: parseTaskMeta(t.text) }))
+    const total = tasks.length
+    const done = tasks.filter((t) => t.checked).length
+    const open = total - done
+    const pct = total ? Math.round((done / total) * 100) : 0
+    const bySection = parsed.sections.map((s) => {
+      const secTasks = tasks.filter((t) => t.section === s.title)
+      const secTotal = secTasks.length
+      const secDone = secTasks.filter((t) => t.checked).length
+      const secPct = secTotal ? Math.round((secDone / secTotal) * 100) : 0
+      return { title: s.title, total: secTotal, done: secDone, open: secTotal - secDone, pct: secPct }
+    }).filter((x) => x.total > 0)
+
+    const assignees = Array.from(
+      new Set(tasks.map((t) => t.meta.assignee).filter((x): x is string => !!x))
+    ).sort((a, b) => a.localeCompare(b, "vi"))
+
+    const byAssignee = assignees.map((a) => {
+      const at = tasks.filter((t) => t.meta.assignee === a)
+      const atTotal = at.length
+      const atDone = at.filter((t) => t.checked).length
+      const atPct = atTotal ? Math.round((atDone / atTotal) * 100) : 0
+      return { assignee: a, total: atTotal, done: atDone, open: atTotal - atDone, pct: atPct }
+    })
+
+    return { tasks, total, done, open, pct, bySection, assignees, byAssignee }
+  }, [parsed.tasks, parsed.sections])
+
+  const filteredTasks = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase()
+    return derived.tasks
+      .filter((t) => {
+        if (!filterShowDone && t.checked) return false
+        if (filterSection !== "Tất cả" && t.section !== filterSection) return false
+        if (filterAssignee !== "Tất cả" && (t.meta.assignee || "") !== filterAssignee) return false
+        if (!q) return true
+        return t.text.toLowerCase().includes(q)
+      })
+      .sort((a, b) => {
+        const ap = a.meta.priority || "P3"
+        const bp = b.meta.priority || "P3"
+        if (ap !== bp) return ap.localeCompare(bp)
+        if (a.checked !== b.checked) return a.checked ? 1 : -1
+        return a.lineNumber - b.lineNumber
+      })
+  }, [derived.tasks, filterQuery, filterSection, filterAssignee, filterShowDone])
+
   useEffect(() => {
     if (!authed) return
     const titles = parsed.sections.map((s) => s.title)
@@ -660,6 +738,37 @@ export default function KeHoachPage() {
         )}
 
         {authed && (
+          <div className="rounded-xl border bg-background p-4 space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Tiến độ tổng quan</div>
+                <div className="text-xs text-muted-foreground">
+                  {doc?.updated_at ? `Cập nhật lần cuối: ${new Date(doc.updated_at).toLocaleString("vi-VN")}` : ""}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">Tổng: {derived.total}</Badge>
+                <Badge variant="secondary">Hoàn thành: {derived.done}</Badge>
+                <Badge variant="secondary">Còn lại: {derived.open}</Badge>
+                <Badge> {derived.pct}%</Badge>
+              </div>
+            </div>
+            <Progress value={clampPct(derived.pct)} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {derived.bySection.slice(0, 6).map((s) => (
+                <div key={s.title} className="rounded-lg border p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-medium line-clamp-1">{s.title}</div>
+                    <div className="text-xs text-muted-foreground">{s.done}/{s.total}</div>
+                  </div>
+                  <Progress value={clampPct(s.pct)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {authed && (
           <div className="rounded-xl border bg-background p-4 flex flex-col md:flex-row gap-3">
             <div className="w-full md:w-1/3 space-y-2">
               <div className="text-sm font-medium">Tên người cập nhật</div>
@@ -689,9 +798,10 @@ export default function KeHoachPage() {
               />
             </div>
             <div className="rounded-xl border bg-background p-4 space-y-2 overflow-hidden flex flex-col min-h-[70vh]">
-              <Tabs defaultValue="preview" className="flex-1 overflow-hidden">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
                 <div className="flex items-center justify-between gap-2">
                   <TabsList>
+                    <TabsTrigger value="progress">Tiến độ</TabsTrigger>
                     <TabsTrigger value="preview">Preview</TabsTrigger>
                     <TabsTrigger value="board">Bảng</TabsTrigger>
                     <TabsTrigger value="json">JSON</TabsTrigger>
@@ -715,6 +825,141 @@ export default function KeHoachPage() {
                     </Button>
                   </div>
                 </div>
+                <TabsContent value="progress" className="overflow-hidden">
+                  <div className="overflow-auto flex-1 space-y-3 pr-1">
+                    <div className="rounded-lg border p-3 space-y-3">
+                      <div className="text-sm font-medium">Bộ lọc</div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                        <Input value={filterQuery} onChange={(e) => setFilterQuery(e.target.value)} placeholder="Tìm theo nội dung..." />
+                        <select className="h-10 rounded-md border bg-background px-3 text-sm" value={filterSection} onChange={(e) => setFilterSection(e.target.value)}>
+                          <option value="Tất cả">Tất cả mục</option>
+                          {parsed.sections.map((s) => (
+                            <option key={s.title} value={s.title}>{s.title}</option>
+                          ))}
+                        </select>
+                        <select className="h-10 rounded-md border bg-background px-3 text-sm" value={filterAssignee} onChange={(e) => setFilterAssignee(e.target.value)}>
+                          <option value="Tất cả">Tất cả người</option>
+                          {derived.assignees.map((a) => (
+                            <option key={a} value={a}>@{a}</option>
+                          ))}
+                        </select>
+                        <label className="h-10 rounded-md border bg-background px-3 text-sm flex items-center justify-between gap-2">
+                          <span>Hiện đã xong</span>
+                          <input type="checkbox" checked={filterShowDone} onChange={(e) => setFilterShowDone(e.target.checked)} />
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-medium">Việc đang mở</div>
+                        <div className="text-xs text-muted-foreground">{filteredTasks.length} mục</div>
+                      </div>
+                      {!filteredTasks.length ? (
+                        <div className="text-sm text-muted-foreground">Không có mục phù hợp.</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {filteredTasks.slice(0, 80).map((t) => (
+                            <div key={t.lineNumber} className="rounded-md border px-3 py-2 flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2 min-w-0">
+                                <input
+                                  type="checkbox"
+                                  checked={t.checked}
+                                  onChange={(e) => toggleTaskAtLine(t.lineNumber, e.target.checked)}
+                                  className="mt-1"
+                                />
+                                <div className="min-w-0 space-y-1">
+                                  <div className="text-sm break-words">{t.text}</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Badge variant="outline">{t.section}</Badge>
+                                    {t.meta.priority ? <Badge variant={t.meta.priority === "P1" ? "destructive" : t.meta.priority === "P2" ? "secondary" : "outline"}>{t.meta.priority}</Badge> : null}
+                                    {t.meta.assignee ? <Badge variant="secondary">@{t.meta.assignee}</Badge> : null}
+                                    {t.meta.due ? <Badge variant="outline">due:{t.meta.due}</Badge> : null}
+                                    {t.meta.tags.slice(0, 3).map((x) => <Badge key={x} variant="outline">#{x}</Badge>)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">Dòng {t.lineNumber}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingLine(t.lineNumber)
+                                    setEditingText(t.text)
+                                    setActiveTab("board")
+                                  }}
+                                >
+                                  Sửa
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {filteredTasks.length > 80 ? (
+                        <div className="text-xs text-muted-foreground">Đang hiển thị 80 mục đầu tiên.</div>
+                      ) : null}
+                    </div>
+
+                    <div className="rounded-lg border p-3 space-y-2">
+                      <div className="text-sm font-medium">Theo người</div>
+                      {!derived.byAssignee.length ? (
+                        <div className="text-sm text-muted-foreground">Chưa gán người phụ trách (dùng @ten trong nội dung).</div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {derived.byAssignee.map((a) => (
+                            <div key={a.assignee} className="rounded-md border p-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-sm font-medium">@{a.assignee}</div>
+                                <div className="text-xs text-muted-foreground">{a.done}/{a.total}</div>
+                              </div>
+                              <Progress value={clampPct(a.pct)} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="rounded-lg border p-3 space-y-2">
+                      <div className="text-sm font-medium">Hoạt động gần đây</div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="rounded-md border p-3 space-y-2">
+                          <div className="text-sm font-medium">Lịch sử</div>
+                          {!revisions.length ? (
+                            <div className="text-sm text-muted-foreground">Chưa có.</div>
+                          ) : (
+                            <div className="space-y-2">
+                              {revisions.slice(0, 6).map((r) => (
+                                <div key={r.rev_id} className="text-sm">
+                                  <span className="font-medium">#{r.rev_id}</span> • {r.op}
+                                  <span className="text-xs text-muted-foreground"> • {new Date(r.created_at).toLocaleString("vi-VN")}{r.created_by ? ` • ${r.created_by}` : ""}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="rounded-md border p-3 space-y-2">
+                          <div className="text-sm font-medium">Bình luận</div>
+                          {!comments.length ? (
+                            <div className="text-sm text-muted-foreground">Chưa có.</div>
+                          ) : (
+                            <div className="space-y-2">
+                              {comments.slice(0, 6).map((c) => (
+                                <div key={c.comment_id} className="text-sm">
+                                  <div className="text-xs text-muted-foreground">
+                                    {new Date(c.created_at).toLocaleString("vi-VN")}{c.created_by ? ` • ${c.created_by}` : ""}{c.rev_id ? ` • rev #${c.rev_id}` : ""}
+                                  </div>
+                                  <div className="whitespace-pre-wrap line-clamp-3">{c.content}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
                 <TabsContent value="preview" className="overflow-hidden">
                   <div className="prose prose-sm dark:prose-invert max-w-none overflow-auto flex-1">
                     <ReactMarkdown
@@ -896,7 +1141,7 @@ export default function KeHoachPage() {
                       </div>
                     </div>
                     <pre className="rounded-lg border bg-background p-3 text-xs overflow-auto">
-                      {JSON.stringify(parsed.json, null, 2)}
+                      {JSON.stringify({ ...parsed.json, progress: { total: derived.total, done: derived.done, open: derived.open, percent: derived.pct } }, null, 2)}
                     </pre>
                   </div>
                 </TabsContent>
