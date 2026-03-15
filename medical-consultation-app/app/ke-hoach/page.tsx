@@ -751,7 +751,10 @@ export default function KeHoachPage() {
   }, [derived.tasks, filterQuery, filterSection, filterAssignee, filterShowDone])
 
   const sprintCards = useMemo(() => {
-    const sprintSections = parsed.sections.filter((s) => /^SPRINT\s*\d+/i.test(s.title))
+    const sprintSections = parsed.sections.filter((s) => {
+      const t = s.title.replace(/[*_`]/g, "").trim()
+      return /^SPRINT\s*\d+/i.test(t)
+    })
     const base = sprintSections.length ? sprintSections : parsed.sections.filter((s) => s.title !== "Chung")
     const byTitle = new Map(parsed.sections.map((s) => [s.title, s]))
     const items = base
@@ -766,7 +769,23 @@ export default function KeHoachPage() {
         return { title: s.title, total, done, pct, tasks, time: info.time, goal: info.goal }
       })
       .filter((x) => x.total > 0)
-    return items
+
+    if (items.length) return items
+    if (!derived.tasks.length) return []
+
+    const group = new Map<string, typeof derived.tasks>()
+    for (const t of derived.tasks) {
+      const k = t.section || "Chung"
+      const arr = group.get(k) || []
+      arr.push(t)
+      group.set(k, arr)
+    }
+    return Array.from(group.entries()).map(([title, tasks]) => {
+      const total = tasks.length
+      const done = tasks.filter((t) => t.checked).length
+      const pct = total ? Math.round((done / total) * 100) : 0
+      return { title, total, done, pct, tasks, time: "", goal: "" }
+    })
   }, [parsed.sections, derived.tasks])
 
   const getTaskKind = (text: string) => {
