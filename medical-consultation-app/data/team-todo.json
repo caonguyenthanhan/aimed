@@ -29,232 +29,128 @@
   "sprints": [
     {
       "id": 1,
-      "name": "SPRINT 1: Tái cấu trúc, Phân quyền (RBAC) & Chuẩn bị Môi trường",
-      "time": "Tuần 1-2",
-      "goal": "Setup base project, cấu hình Gemini API và tạo ranh giới Bác sĩ - Bệnh nhân.",
+      "name": "GIAI ĐOẠN 1: HỆ THỐNG ĐỊNH DANH & PHÂN QUYỀN ĐẠO ĐỨC (AUTH & ETHICS)",
+      "goal": "Tạo ranh giới an toàn và thực thi quyền riêng tư tuyệt đối.",
       "tasks": [
         {
-          "id": "s1t1",
-          "type": "Manual",
-          "text": "Tạo repo Github mới, clone code từ dự án tiền thân.",
-          "completed": false
-        },
-        {
-          "id": "s1t2",
+          "id": "p1t1",
           "type": "AI IDE",
-          "text": "Tích hợp Auth & Phân quyền (Role-Based Access Control): Tạo 2 role Patient và Doctor. Bệnh nhân vào /chat, Bác sĩ vào /doctor-workspace.",
+          "text": "Authentication (NeonDB + FastAPI): Roles PATIENT, DOCTOR, ADMIN.",
           "completed": false
         },
         {
-          "id": "s1t3",
+          "id": "p1t2",
           "type": "AI IDE",
-          "text": "Thiết kế & Code Unified Composer trên Next.js (cho Bệnh nhân).",
+          "text": "Granular Consent Center: Bệnh nhân tùy chỉnh mức độ chia sẻ dữ liệu (Điểm số vs Nội dung chat).",
           "completed": false
         },
         {
-          "id": "s1t4",
+          "id": "p1t3",
           "type": "AI IDE",
-          "text": "Refactor FastAPI: Tích hợp google-generativeai. Cấu hình .env chứa GEMINI_API_KEY.",
-          "completed": false
-        },
-        {
-          "id": "s1t5",
-          "type": "Manual",
-          "text": "Cài đặt và cấu hình Neo4j (AuraDB) và Zep (Long-term memory).",
-          "completed": false
-        },
-        {
-          "id": "s1t6",
-          "type": "Hybrid",
-          "text": "Định nghĩa Ontology (Cấu trúc đồ thị) cho Y tế.",
+          "text": "Clinical Offboarding: Xóa sạch dấu vết hội thoại lâm sàng khi ngắt kết nối chuyên gia.",
           "completed": false
         }
       ]
     },
     {
       "id": 2,
-      "name": "SPRINT 2: Doctor Workspace & Xây dựng Não bộ Y khoa",
-      "time": "Tuần 3-5",
-      "goal": "Bác sĩ có chỗ làm việc, AI có khả năng truy xuất đồ thị.",
+      "name": "GIAI ĐOẠN 2: HỆ THẦN KINH LƯU TRỮ & CẢM BIẾN (KNOWLEDGE & PHENOTYPING)",
+      "goal": "Chuẩn bị \"sách giáo khoa\" và \"giác quan\" cho bộ não.",
       "tasks": [
         {
-          "id": "s2t1",
-          "type": "AI IDE",
-          "text": "Code UI Doctor Workspace - Phần 1: Màn hình Patient List và Emotion Dashboard (Hiển thị biểu đồ điểm số PHQ-9 mock data).",
-          "completed": false
-        },
-        {
-          "id": "s2t2",
+          "id": "p2t1",
           "type": "Hybrid",
-          "text": "Thu thập & Làm sạch dữ liệu Y tế (bệnh, thuốc).",
+          "text": "GraphRAG Setup (Neo4j): Ingest dữ liệu y khoa từ ViHealthQA.",
           "completed": false
         },
         {
-          "id": "s2t3",
+          "id": "p2t2",
           "type": "AI IDE",
-          "text": "Viết script dùng Gemini API trích xuất Thực thể/Quan hệ từ text -> Import vào Neo4j.",
+          "text": "Clinical Memory (Zep): Metadata extraction & Automatic Summarization.",
           "completed": false
         },
         {
-          "id": "s2t4",
-          "type": "AI IDE",
-          "text": "Tích hợp Vector Search + Graph Search -> Tạo Tool Python search_medical_graph.",
-          "completed": false
-        },
-        {
-          "id": "s2t5",
-          "type": "AI IDE",
-          "text": "Viết Node \"Agent Y khoa\" trong LangGraph (Gemini model), cấp quyền gọi tool.",
+          "id": "p2t3",
+          "type": "Hybrid",
+          "text": "Digital Phenotyping Integration (Mobile): Thu thập dữ liệu bước chân/ngủ làm biến số Stealth Assessment.",
           "completed": false
         }
       ]
     },
     {
       "id": 3,
-      "name": "SPRINT 3: Tác tử Tâm lý & Luồng Setup Level Điều trị",
-      "time": "Tuần 6-8",
-      "goal": "Đánh giá ẩn và cung cấp công cụ \"Lập trình AI\" cho Bác sĩ.",
+      "name": "GIAI ĐOẠN 3: ĐIỀU PHỐI, AN TOÀN & BÀN GIAO (ROUTING & CLINICAL HANDOVER)",
+      "goal": "Xây dựng lớp vỏ bảo vệ và hỗ trợ bác sĩ.",
       "tasks": [
         {
-          "id": "s3t1",
+          "id": "p3t1",
           "type": "AI IDE",
-          "text": "Code UI Doctor Workspace - Phần 2: Màn hình Stepped Care Setup. Form cho phép Bác sĩ nhập: Ngưỡng điểm cảnh báo, Link Video YouTube xả stress, Thông điệp dặn dò.",
+          "text": "Deterministic Safety Layer: Chặn từ khóa nguy hiểm trong <200ms.",
           "completed": false
         },
         {
-          "id": "s3t2",
+          "id": "p3t2",
           "type": "AI IDE",
-          "text": "Viết API FastAPI lưu cấu hình Level Điều trị này vào Database theo từng ID Bệnh nhân.",
+          "text": "SOAP Note Generator: Tự động tạo báo cáo tóm tắt bệnh án từ Memory cho Bác sĩ.",
           "completed": false
         },
         {
-          "id": "s3t3",
+          "id": "p3t3",
           "type": "AI IDE",
-          "text": "Xây dựng luồng Logic \"Đánh giá ẩn\": LLM chain chạy ngầm chấm điểm PHQ-9/GAD-7 từ log chat, lưu vào Zep.",
-          "completed": false
-        },
-        {
-          "id": "s3t4",
-          "type": "Hybrid",
-          "text": "Viết System Prompt động cho Agent Tâm lý: Prompt phải tự động fetch (kéo) Cấu hình Level Điều trị của Bác sĩ từ Database để quyết định có nên gửi link Video hay đổi giọng điệu hay không.",
-          "completed": false
-        },
-        {
-          "id": "s3t5",
-          "type": "AI IDE",
-          "text": "Code Node \"Agent Tâm lý\" và \"Node Chấm điểm ngầm\" vào LangGraph.",
+          "text": "Smart Routing & Fallback: GPU Server -> Gemini -> Local CPU.",
           "completed": false
         }
       ]
     },
     {
       "id": 4,
-      "name": "SPRINT 4: Tác tử Thư ký & Function Calling B2B",
-      "time": "Tuần 9-11",
-      "goal": "Kết nối hành động giữa Bệnh nhân và Bác sĩ.",
+      "name": "GIAI ĐOẠN 4: TỐI ƯU HÓA MOBILE & TRỊ LIỆU KỸ THUẬT SỐ (DIGITAL THERAPEUTICS)",
+      "goal": "Tăng tính tuân thủ và hiện diện đúng lúc (JITAI).",
       "tasks": [
         {
-          "id": "s4t1",
+          "id": "p4t1",
           "type": "AI IDE",
-          "text": "Cấu hình Google Calendar API làm Tool book_appointment.",
+          "text": "Responsive Refactor: Bottom Sheet Menu, Touch-first UI.",
           "completed": false
         },
         {
-          "id": "s4t2",
+          "id": "p4t2",
           "type": "AI IDE",
-          "text": "Code UI Doctor Workspace - Phần 3: Màn hình Appointment & Alerts. Nhận thông báo \"Cờ đỏ\" khi điểm Tâm lý bệnh nhân vượt ngưỡng. Có nút [Duyệt lịch hẹn].",
+          "text": "Mood Tracker & Journaling: Module ghi chép cá nhân hóa.",
           "completed": false
         },
         {
-          "id": "s4t3",
+          "id": "p4t3",
           "type": "AI IDE",
-          "text": "Viết Cronjob kích hoạt Tác tử Tâm lý chủ động nhắn tin hỏi thăm bệnh nhân.",
-          "completed": false
-        },
-        {
-          "id": "s4t4",
-          "type": "AI IDE",
-          "text": "Viết logic rẽ nhánh LangGraph: Nếu điểm > Ngưỡng -> Agent Thư ký bắn Notification/Email khẩn cấp cho Bác sĩ.",
+          "text": "PWA & Push Notifications: Nhắc nhở bài tập hành vi (Behavioral Activation).",
           "completed": false
         }
       ]
     },
     {
-      "id": 5,
-      "name": "SPRINT 5: Tích hợp Fine-Tuned GPU LLM & Hybrid Routing",
-      "time": "Tuần 12-13",
-      "goal": "Ráp mô hình \"nhà làm\" và hoàn thiện cơ chế Fallback.",
+      "id": "dod",
+      "name": "IV. TIÊU CHÍ NGHIỆM THU (DEFINITION OF DONE)",
+      "goal": "Giữ nguyên các tiêu chí cũ và bổ sung.",
       "tasks": [
         {
-          "id": "s5t1",
+          "id": "d1",
           "type": "Manual",
-          "text": "Xuất và Deploy mô hình Llama 3.1 fine-tuned (GGUF/vLLM).",
+          "text": "Handover Test: Bác sĩ mở hồ sơ bệnh nhân, thấy bản tóm tắt định dạng SOAP rõ ràng, không lỗi font.",
           "completed": false
         },
         {
-          "id": "s5t2",
-          "type": "AI IDE",
-          "text": "Cập nhật LangGraph: Đổi LLM từ Gemini sang Local GPU Server.",
-          "completed": false
-        },
-        {
-          "id": "s5t3",
-          "type": "AI IDE",
-          "text": "Thêm Giao diện Quản lý Đồng ý (Consent) bên phía Bệnh nhân: Nút [Cho phép Bác sĩ xem dữ liệu biểu đồ cảm xúc]. (Nếu không cho phép, Doctor Dashboard sẽ bị che data bệnh nhân này).",
-          "completed": false
-        },
-        {
-          "id": "s5t4",
-          "type": "AI IDE",
-          "text": "Cài đặt luồng Offboarding: Viết hàm Python xóa lịch sử trong Zep khi User ngắt kết nối.",
-          "completed": false
-        },
-        {
-          "id": "s5t5",
+          "id": "d2",
           "type": "Manual",
-          "text": "Kiểm thử thuật toán Smart Routing: Chuyển đổi mượt mà giữa GPU Server và Gemini API / Local CPU.",
+          "text": "Privacy Test: Sau khi nhấn \"Offboarding\", kiểm tra DB/Zep đảm bảo nội dung chat của user đó đã biến mất hoàn toàn.",
           "completed": false
-        }
-      ]
-    },
-    {
-      "id": 6,
-      "name": "SPRINT 6: Testing, Đo lường & Viết Báo cáo KLTN",
-      "time": "Tuần 14-16",
-      "goal": "Đóng gói dự án, đánh giá và viết luận văn.",
-      "tasks": [
+        },
         {
-          "id": "s6t1",
+          "id": "d3",
           "type": "Manual",
-          "text": "Đóng vai (Role-play) Testing: Đóng vai Bác sĩ setup level -> Đóng vai bệnh nhân chat để xem AI phản ứng có đúng theo cấu hình của Bác sĩ không.",
-          "completed": false
-        },
-        {
-          "id": "s6t2",
-          "type": "Hybrid",
-          "text": "Đo lường các chỉ số: TTFB, Tỷ lệ Fallback, Độ trễ của GraphRAG.",
-          "completed": false
-        },
-        {
-          "id": "s6t3",
-          "type": "Hybrid",
-          "text": "Viết Báo cáo KLTN theo Đề cương. Nhấn mạnh \"Không gian Bác sĩ\" và \"Luồng Setup Level\" ở Chương 2 & 3.",
-          "completed": false
-        },
-        {
-          "id": "s6t4",
-          "type": "AI IDE",
-          "text": "Đóng gói dự án (Docker Compose).",
-          "completed": false
-        },
-        {
-          "id": "s6t5",
-          "type": "Manual",
-          "text": "Làm Slide thuyết trình và Quay sẵn Video Demo (1 video đóng vai bệnh nhân, 1 video đóng vai bác sĩ).",
+          "text": "Sensor Sync Test: Dữ liệu số bước chân từ Mobile được hiển thị đúng trên Dashboard cá nhân.",
           "completed": false
         }
       ]
     }
   ]
 }
-

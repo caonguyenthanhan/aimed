@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
     const determinedContext = context || determineContext(userMessage, conversationHistory)
     
     const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || '').trim().replace(/\/$/, '')
-    const cpuFallback = (process.env.INTERNAL_LLM_URL || (cpuBase ? `${cpuBase}/v1/chat/completions` : '') || 'http://127.0.0.1:8000/v1/chat/completions').trim()
+    const localCpuFallback = 'http://127.0.0.1:8000/v1/chat/completions'
+    const cpuFallback = (process.env.INTERNAL_LLM_URL || (cpuBase ? `${cpuBase}/v1/chat/completions` : '') || localCpuFallback).trim()
 
     const envGpuBase = (process.env.GPU_SERVER_URL || process.env.DEFAULT_GPU_URL || '').trim().replace(/\/$/, '')
     let fastApiUrl = `${String(envGpuBase || defaultGpuUrl).replace(/\/$/, '')}/v1/chat/completions`
@@ -58,17 +59,21 @@ export async function POST(request: NextRequest) {
           fastApiUrl = `${String(mode.gpu_url).replace(/\/$/, '')}/v1/chat/completions`
         }
       } catch {}
-      // Otherwise pick latest from server registry
-      try {
-        const regRaw = fs.readFileSync(path.join(dataDir, 'server-registry.json'), 'utf-8')
-        const reg = JSON.parse(regRaw)
-        const servers = Array.isArray(reg?.servers) ? reg.servers : []
-        const active = servers.filter((s: any) => s.status === 'active')
-        const latest = (active.length ? active : servers).sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]
-        if (latest?.url) {
-          fastApiUrl = `${String(latest.url).replace(/\/$/, '')}/v1/chat/completions`
-        }
-      } catch {}
+      if (originalTarget === 'cpu') {
+        fastApiUrl = localCpuFallback
+      } else {
+        // Otherwise pick latest from server registry
+        try {
+          const regRaw = fs.readFileSync(path.join(dataDir, 'server-registry.json'), 'utf-8')
+          const reg = JSON.parse(regRaw)
+          const servers = Array.isArray(reg?.servers) ? reg.servers : []
+          const active = servers.filter((s: any) => s.status === 'active')
+          const latest = (active.length ? active : servers).sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]
+          if (latest?.url) {
+            fastApiUrl = `${String(latest.url).replace(/\/$/, '')}/v1/chat/completions`
+          }
+        } catch {}
+      }
     } catch {}
     const personaText = typeof systemPromptOverride === 'string' && systemPromptOverride.trim()
       ? systemPromptOverride.trim()
@@ -198,7 +203,7 @@ NGUYÊN TẮC QUAN TRỌNG:
       const text = await resp.text()
       console.error('LLM server error:', text)
       return NextResponse.json(
-        { error: 'LLM server error', details: text },
+        { error: 'LLM server error', details: text, debug: { target: originalTarget, fastApiUrl, cpuFallback } },
         { status: 502 }
       )
     }

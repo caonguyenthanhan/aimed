@@ -12,6 +12,7 @@ type WebSearchItem = {
 }
 
 const LAST_SCREENING_KEY = "mcs_last_screening_v1"
+const RIGHT_RATIO_KEY = "mcs_news_right_ratio_v1"
 const DEFAULT_QUERY = "tin-tuc-y-khoa"
 const DEFAULT_GOOGLE_NEWS_URL = `https://www.google.com.vn/search?tbm=nws&q=${encodeURIComponent(DEFAULT_QUERY)}`
 
@@ -23,6 +24,33 @@ type LastScreening = {
   ts?: number
 }
 
+type KnowledgeEntity = {
+  id: string
+  name: string
+  category: string
+  specialty?: string
+  description?: string
+}
+
+type KnowledgeRelation = {
+  source_id: string
+  target_id: string
+  relation_type: string
+  evidence_level?: number
+  evidence_note?: string
+  source_name?: string
+  target_name?: string
+}
+
+type KnowledgeIntervention = {
+  id: string
+  entity_id: string
+  entity_name?: string
+  title: string
+  target_care_level: number
+  content_markdown: string
+}
+
 export default function TinTucYKhoaPage() {
   const [q, setQ] = useState("")
   const [loading, setLoading] = useState(false)
@@ -31,8 +59,64 @@ export default function TinTucYKhoaPage() {
   const [selectedUrl, setSelectedUrl] = useState<string>("")
   const [notice, setNotice] = useState("")
   const [topics, setTopics] = useState<string[]>([])
+  const [rightRatio, setRightRatio] = useState(0.62)
+  const [authToken, setAuthToken] = useState("")
+  const [refQuery, setRefQuery] = useState("")
+  const [refLoading, setRefLoading] = useState(false)
+  const [refError, setRefError] = useState("")
+  const [refEntities, setRefEntities] = useState<KnowledgeEntity[]>([])
+  const [refRelations, setRefRelations] = useState<KnowledgeRelation[]>([])
+  const [refInterventions, setRefInterventions] = useState<KnowledgeIntervention[]>([])
 
   const canSearch = useMemo(() => q.trim().length >= 2, [q])
+
+  const applyRightRatio = (value: number) => {
+    const next = Math.max(0.5, Math.min(0.8, value))
+    setRightRatio(next)
+    try {
+      localStorage.setItem(RIGHT_RATIO_KEY, String(next))
+    } catch {}
+  }
+
+  const runRefSearch = async (query: string) => {
+    const qq = (query || "").trim()
+    if (!qq) return
+    if (!authToken) {
+      setRefError("Đăng nhập để xem dữ liệu tham khảo.")
+      setRefEntities([])
+      setRefRelations([])
+      setRefInterventions([])
+      return
+    }
+    setRefError("")
+    setRefLoading(true)
+    try {
+      const resp = await fetch(`/api/backend/v1/knowledge/search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ query: qq, limit: 8, include_relations: true, include_interventions: true }),
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as {
+        entities?: KnowledgeEntity[]
+        relations?: KnowledgeRelation[]
+        interventions?: KnowledgeIntervention[]
+      }
+      setRefEntities(Array.isArray(data?.entities) ? data.entities : [])
+      setRefRelations(Array.isArray(data?.relations) ? data.relations : [])
+      setRefInterventions(Array.isArray(data?.interventions) ? data.interventions : [])
+    } catch (e: any) {
+      setRefError(e?.message || "Không tải được dữ liệu tham khảo")
+      setRefEntities([])
+      setRefRelations([])
+      setRefInterventions([])
+    } finally {
+      setRefLoading(false)
+    }
+  }
 
   const runSearch = async (forcedQuery?: string) => {
     const query = (forcedQuery ?? q).trim()
@@ -48,17 +132,36 @@ export default function TinTucYKhoaPage() {
       const data = (await resp.json()) as { items?: WebSearchItem[] }
       const next = Array.isArray(data?.items) ? data.items : []
       setItems(next)
-      setSelectedUrl(next?.[0]?.link || "")
+      const first = next?.[0]
+      const firstUrl = first?.link || ""
+      const firstRef = (first?.title || query).trim()
+      setSelectedUrl(firstUrl)
+      setRefQuery(firstRef)
+      void runRefSearch(firstRef)
     } catch (e: any) {
       setError(e?.message || "Không tìm kiếm được")
       setItems([])
       setSelectedUrl("")
+      setRefQuery(query)
+      void runRefSearch(query)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    try {
+      const t = localStorage.getItem("authToken")
+      if (t) setAuthToken(t)
+    } catch {}
+    try {
+      const raw = localStorage.getItem(RIGHT_RATIO_KEY)
+      if (raw) {
+        const v = Number(raw)
+        if (!Number.isNaN(v)) applyRightRatio(v)
+      }
+    } catch {}
+
     let last: LastScreening | null = null
     try {
       const raw = localStorage.getItem(LAST_SCREENING_KEY)
@@ -166,8 +269,14 @@ export default function TinTucYKhoaPage() {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="rounded-xl border bg-background p-4 space-y-3">
+        <div className="flex flex-col gap-4 lg:flex-row">
+          <div
+            className="rounded-xl border bg-background p-4 space-y-3 lg:flex-none"
+            style={{
+              flexBasis: `${Math.round((1 - rightRatio) * 1000) / 10}%`,
+              maxWidth: `${Math.round((1 - rightRatio) * 1000) / 10}%`,
+            }}
+          >
             <div className="text-sm font-medium">Kết quả</div>
             {!items.length && !loading ? (
               <div className="text-sm text-muted-foreground">Chưa có kết quả.</div>
@@ -179,7 +288,12 @@ export default function TinTucYKhoaPage() {
                   <button
                     key={it.link}
                     type="button"
-                    onClick={() => setSelectedUrl(it.link)}
+                    onClick={() => {
+                      setSelectedUrl(it.link)
+                      const rq = (it.title || it.link).trim()
+                      setRefQuery(rq)
+                      void runRefSearch(rq)
+                    }}
                     className={`w-full text-left rounded-lg border p-3 hover:bg-muted transition-colors ${active ? "bg-muted" : ""}`}
                   >
                     <div className="text-sm font-medium line-clamp-2">{it.title}</div>
@@ -191,8 +305,23 @@ export default function TinTucYKhoaPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border bg-background p-4 space-y-3 overflow-hidden flex flex-col min-h-[60vh]">
-            <div className="text-sm font-medium">Nhúng trang</div>
+          <div
+            className="rounded-xl border bg-background p-4 space-y-3 overflow-hidden flex flex-col min-h-[60vh] lg:flex-none"
+            style={{ flexBasis: `${Math.round(rightRatio * 1000) / 10}%`, maxWidth: `${Math.round(rightRatio * 1000) / 10}%` }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-medium">Nhúng trang</div>
+              <div className="hidden md:flex items-center gap-2">
+                <div className="text-xs text-muted-foreground">{Math.round(rightRatio * 100)}%</div>
+                <input
+                  type="range"
+                  min={50}
+                  max={80}
+                  value={Math.round(rightRatio * 100)}
+                  onChange={(e) => applyRightRatio(Number(e.target.value) / 100)}
+                />
+              </div>
+            </div>
             {!selectedUrl ? (
               <div className="text-sm text-muted-foreground">Chọn một kết quả để nhúng.</div>
             ) : (
@@ -205,6 +334,66 @@ export default function TinTucYKhoaPage() {
                 title="Medical news embed"
               />
             )}
+
+            <div className="rounded-lg border p-3 bg-background">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-medium">Dữ liệu tham khảo</div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!refQuery.trim() || refLoading}
+                  onClick={() => void runRefSearch(refQuery)}
+                >
+                  {refLoading ? "Đang tải..." : "Làm mới"}
+                </Button>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {refQuery ? `Từ khóa: ${refQuery}` : "Chọn kết quả hoặc tìm kiếm để xem tham khảo."}
+              </div>
+              {refError ? <div className="text-sm text-red-600 whitespace-pre-wrap mt-2">{refError}</div> : null}
+              {!refError && !refLoading && !refEntities.length ? (
+                <div className="text-sm text-muted-foreground mt-2">Chưa có dữ liệu.</div>
+              ) : null}
+              {refEntities.length ? (
+                <div className="mt-3 space-y-2">
+                  {refEntities.slice(0, 6).map((e) => (
+                    <div key={e.id} className="rounded-md border p-2">
+                      <div className="text-sm font-medium">{e.name}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {String(e.category || "").toUpperCase()}
+                        {e.specialty ? ` • ${e.specialty}` : ""}
+                      </div>
+                      {e.description ? <div className="text-xs text-muted-foreground mt-1 line-clamp-3">{e.description}</div> : null}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {refInterventions.length ? (
+                <div className="mt-3 space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Can thiệp gợi ý</div>
+                  {refInterventions.slice(0, 3).map((itv) => (
+                    <div key={itv.id} className="rounded-md border p-2">
+                      <div className="text-sm font-medium">{itv.title}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {itv.entity_name ? `${itv.entity_name} • ` : ""}
+                        Level {itv.target_care_level}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 line-clamp-4 whitespace-pre-wrap">{itv.content_markdown}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {refRelations.length ? (
+                <div className="mt-3 space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Quan hệ liên quan</div>
+                  {refRelations.slice(0, 6).map((r, idx) => (
+                    <div key={`${r.source_id}-${r.target_id}-${r.relation_type}-${idx}`} className="text-xs text-muted-foreground">
+                      {r.source_name || r.source_id} → {r.relation_type} → {r.target_name || r.target_id}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

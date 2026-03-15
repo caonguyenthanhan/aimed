@@ -9,6 +9,33 @@ import { Badge } from "@/components/ui/badge"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
+type KnowledgeEntity = {
+  id: string
+  name: string
+  category: string
+  specialty?: string
+  description?: string
+}
+
+type KnowledgeRelation = {
+  source_id: string
+  target_id: string
+  relation_type: string
+  evidence_level?: number
+  evidence_note?: string
+  source_name?: string
+  target_name?: string
+}
+
+type KnowledgeIntervention = {
+  id: string
+  entity_id: string
+  entity_name?: string
+  title: string
+  target_care_level: number
+  content_markdown: string
+}
+
 export function HealthLookup() {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -20,6 +47,13 @@ export function HealthLookup() {
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [categoryTitle, setCategoryTitle] = useState<string>('')
   const [categoryItems, setCategoryItems] = useState<string[]>([])
+  const [authToken, setAuthToken] = useState("")
+  const [refQuery, setRefQuery] = useState("")
+  const [refLoading, setRefLoading] = useState(false)
+  const [refError, setRefError] = useState("")
+  const [refEntities, setRefEntities] = useState<KnowledgeEntity[]>([])
+  const [refRelations, setRefRelations] = useState<KnowledgeRelation[]>([])
+  const [refInterventions, setRefInterventions] = useState<KnowledgeIntervention[]>([])
 
   useEffect(() => {
     try {
@@ -32,6 +66,53 @@ export function HealthLookup() {
       }
     } catch {}
   }, [])
+
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("authToken")
+      if (t) setAuthToken(t)
+    } catch {}
+  }, [])
+
+  const runRefSearch = async (query: string) => {
+    const qq = (query || "").trim()
+    if (!qq) return
+    if (!authToken) {
+      setRefError("Đăng nhập để xem dữ liệu tham khảo.")
+      setRefEntities([])
+      setRefRelations([])
+      setRefInterventions([])
+      return
+    }
+    setRefError("")
+    setRefLoading(true)
+    try {
+      const resp = await fetch(`/api/backend/v1/knowledge/search`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ query: qq, limit: 8, include_relations: true, include_interventions: true }),
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        throw new Error(t || `HTTP ${resp.status}`)
+      }
+      const data = (await resp.json()) as {
+        entities?: KnowledgeEntity[]
+        relations?: KnowledgeRelation[]
+        interventions?: KnowledgeIntervention[]
+      }
+      setRefEntities(Array.isArray(data?.entities) ? data.entities : [])
+      setRefRelations(Array.isArray(data?.relations) ? data.relations : [])
+      setRefInterventions(Array.isArray(data?.interventions) ? data.interventions : [])
+    } catch (e: any) {
+      setRefError(e?.message || "Không tải được dữ liệu tham khảo")
+      setRefEntities([])
+      setRefRelations([])
+      setRefInterventions([])
+    } finally {
+      setRefLoading(false)
+    }
+  }
 
   const saveHistory = (q: string, type: string) => {
     const item = { query: q, type, ts: Date.now() }
@@ -96,6 +177,10 @@ export function HealthLookup() {
           severity: 'low'
         }
         setSearchResults([result])
+        setRefQuery("")
+        setRefEntities([])
+        setRefRelations([])
+        setRefInterventions([])
         return
       }
 
@@ -126,6 +211,8 @@ export function HealthLookup() {
       }
       setSearchResults([result])
       saveHistory(queryToSend, type)
+      setRefQuery(queryToSend)
+      void runRefSearch(queryToSend)
     } catch (e: any) {
       const fallback = {
         id: Date.now(),
@@ -135,6 +222,9 @@ export function HealthLookup() {
         severity: 'medium'
       }
       setSearchResults([fallback])
+      const q = searchQuery.trim()
+      setRefQuery(q)
+      void runRefSearch(q)
     } finally {
       setIsLoading(false)
     }
@@ -491,6 +581,79 @@ export function HealthLookup() {
               </CardContent>
             </Card>
           ))}
+
+          <Card className="border-0 shadow-sm bg-white">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base text-gray-800">Dữ liệu tham khảo</CardTitle>
+                  <CardDescription className="text-xs">
+                    {refQuery ? `Từ khóa: ${refQuery}` : "Nhập từ khóa và bấm tìm kiếm để xem dữ liệu tham khảo."}
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  className="h-8 px-3"
+                  disabled={!refQuery.trim() || refLoading}
+                  onClick={() => void runRefSearch(refQuery)}
+                >
+                  {refLoading ? "Đang tải..." : "Làm mới"}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-3">
+              {refError ? <div className="text-sm text-red-600 whitespace-pre-wrap">{refError}</div> : null}
+              {!refError && !refLoading && !refEntities.length ? (
+                <div className="text-sm text-gray-500">Chưa có dữ liệu.</div>
+              ) : null}
+              {refEntities.length ? (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-gray-600">Thực thể</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {refEntities.slice(0, 6).map((e) => (
+                      <div key={e.id} className="rounded-lg border border-gray-200 p-3">
+                        <div className="text-sm font-medium text-gray-800">{e.name}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {String(e.category || "").toUpperCase()}
+                          {e.specialty ? ` • ${e.specialty}` : ""}
+                        </div>
+                        {e.description ? <div className="text-xs text-gray-600 mt-1 line-clamp-3">{e.description}</div> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {refInterventions.length ? (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-gray-600">Can thiệp gợi ý</div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {refInterventions.slice(0, 3).map((itv) => (
+                      <div key={itv.id} className="rounded-lg border border-gray-200 p-3">
+                        <div className="text-sm font-medium text-gray-800">{itv.title}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {itv.entity_name ? `${itv.entity_name} • ` : ""}
+                          Level {itv.target_care_level}
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1 line-clamp-5 whitespace-pre-wrap">{itv.content_markdown}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {refRelations.length ? (
+                <div className="space-y-2">
+                  <div className="text-xs font-medium text-gray-600">Quan hệ liên quan</div>
+                  <div className="space-y-1">
+                    {refRelations.slice(0, 8).map((r, idx) => (
+                      <div key={`${r.source_id}-${r.target_id}-${r.relation_type}-${idx}`} className="text-xs text-gray-600">
+                        {r.source_name || r.source_id} → {r.relation_type} → {r.target_name || r.target_id}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
         </div>
       )}
 

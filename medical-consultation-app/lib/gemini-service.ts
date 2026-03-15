@@ -94,12 +94,26 @@ export class GeminiService {
     return `Lịch sử:\n${lines.join('\n')}\n`
   }
 
+  private getGenerationConfigForCategory(category: 'consultation' | 'friend' | 'lookup' | 'speech_stream') {
+    if (category === 'friend') {
+      return {
+        temperature: 0.85,
+        topK: 40,
+        topP: 0.9,
+        maxOutputTokens: 1400,
+        stopSequences: []
+      }
+    }
+    return this.getGenerationConfig()
+  }
+
   async generateFromConfig(opts: {
     category: 'consultation' | 'friend' | 'lookup' | 'speech_stream'
     tier?: 'flash' | 'pro'
     question: string
     persona?: string
     messages?: Array<{ role?: string; content?: string }>
+    generationConfig?: { temperature?: number; maxOutputTokens?: number }
   }): Promise<{ text: string; model: string }> {
     const cfg = this.loadPromptConfig()
     const tier = opts?.tier === 'pro' ? 'pro' : 'flash'
@@ -127,7 +141,7 @@ export class GeminiService {
 
     const requestBody: GeminiRequest = {
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: this.getGenerationConfig(),
+      generationConfig: { ...this.getGenerationConfigForCategory(opts.category), ...(opts.generationConfig || {}) },
       safetySettings: this.getSafetySettings()
     }
 

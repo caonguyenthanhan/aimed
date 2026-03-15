@@ -1,0 +1,9 @@
+Name,Category,Specialty,Description,Aliases
+Trầm cảm,DISEASE,Medical,Rối loạn khí sắc kéo dài với buồn bã/giảm hứng thú và suy giảm chức năng.,"{""items"":[""Depression""]}"
+Lo âu,SYMPTOM,Both,Cảm giác căng thẳng, lo lắng quá mức, khó kiểm soát.,"{""items"":[""Anxiety""]}"
+Mất ngủ,SYMPTOM,Both,Khó đi vào giấc ngủ hoặc duy trì giấc ngủ, ảnh hưởng sinh hoạt.,"{""items"":[""Insomnia""]}"
+Sertraline,MEDICATION,Medical,Thuốc SSRI thường dùng trong trầm cảm và rối loạn lo âu.,"{""items"":[""Zoloft""]}"
+Rượu bia,CRISIS_LEVEL,Medical,Yếu tố nguy cơ tương tác thuốc và làm nặng triệu chứng.,"{""items"":[""Alcohol""]}"
+Liệu pháp CBT,THERAPY,Psychology,Liệu pháp nhận thức hành vi giúp nhận diện và thay đổi suy nghĩ tiêu cực.,"{""items"":[""Cognitive Behavioral Therapy""]}"
+Hít thở 4-7-8,EXERCISE,Psychology,Kỹ thuật hô hấp giúp giảm căng thẳng cấp tính và hỗ trợ ngủ.,"{""items"":[""Breathing 4-7-8""]}"
+Kích hoạt hành vi (BA),THERAPY,Psychology,Tăng hoạt động có ý nghĩa để giảm né tránh và cải thiện khí sắc.,"{""items"":[""Behavioral Activation""]}"

@@ -1,0 +1,7 @@
+Source Name,Relation Type,Target Name,Evidence/Note,Evidence Level
+Trầm cảm,HAS_SYMPTOM,Mất ngủ,Triệu chứng thường gặp trong trầm cảm.,3
+Trầm cảm,HAS_SYMPTOM,Lo âu,Có thể đồng mắc hoặc xuất hiện cùng thời gian.,2
+Trầm cảm,TREATED_BY,Sertraline,Thuốc SSRI có thể được cân nhắc theo đánh giá lâm sàng.,3
+Sertraline,CONTRAINDICATED,Rượu bia,Khuyến cáo tránh phối hợp vì tăng nguy cơ tác dụng phụ.,4
+Mất ngủ,SUGGEST_INTERVENTION,Hít thở 4-7-8,Can thiệp nhẹ hỗ trợ thư giãn trước ngủ.,2
+Hít thở 4-7-8,IS_PART_OF,Liệu pháp CBT,Bài tập hỗ trợ kỹ năng điều tiết cơ thể trong CBT.,1

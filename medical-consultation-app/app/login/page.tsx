@@ -79,14 +79,6 @@ export default function LoginPage() {
       })
       const data = await resp.json()
       if (!resp.ok) {
-        if (username === 'admin' && password === '123456') {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('authToken', 'dev-admin-token')
-            localStorage.setItem('userId', 'admin')
-          }
-          router.replace('/')
-          return
-        }
         setError(data?.detail || 'Đăng nhập thất bại')
         setLoading(false)
         return
@@ -99,14 +91,6 @@ export default function LoginPage() {
       }
       router.replace('/')
     } catch (err: any) {
-      if (username === 'admin' && password === '123456') {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('authToken', 'dev-admin-token')
-          localStorage.setItem('userId', 'admin')
-        }
-        router.replace('/')
-        return
-      }
       setError(err?.message || 'Có lỗi xảy ra khi đăng nhập')
     } finally {
       setLoading(false)

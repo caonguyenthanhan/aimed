@@ -7,4 +7,5 @@ Pillow==11.0.0
 gTTS==2.5.4
 SpeechRecognition==3.11.0
 pydub==0.25.1
+psycopg[binary]==3.2.6
 llama-cpp-python

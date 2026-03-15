@@ -55,6 +55,81 @@ try:
 except Exception:
     jwt = None
 
+def _load_dotenv_file(path: str) -> None:
+    try:
+        if not path or not os.path.exists(path):
+            return
+        with open(path, "r", encoding="utf-8") as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                key = k.strip()
+                val = v.strip().strip('"').strip("'")
+                if key and key not in os.environ:
+                    os.environ[key] = val
+    except Exception:
+        return
+
+
+_load_dotenv_file(os.path.join(os.path.dirname(__file__), ".env"))
+
+try:
+    from .db import (
+        append_message as _db_append_message,
+        bump_token_version as _db_bump_token_version,
+        create_conversation as _db_create_conversation,
+        create_user as _db_create_user,
+        delete_conversation as _db_delete_conversation,
+        ensure_auth_schema as _db_ensure_auth_schema,
+        ensure_clinical_memory_schema as _db_ensure_clinical_memory_schema,
+        ensure_knowledge_schema as _db_ensure_knowledge_schema,
+        get_conversation_summary as _db_get_conversation_summary,
+        get_consent as _db_get_consent,
+        get_conversation as _db_get_conversation,
+        get_conversation_messages as _db_get_conversation_messages,
+        get_entity_neighbors as _db_get_entity_neighbors,
+        get_interventions_for_entities as _db_get_interventions_for_entities,
+        get_recent_conversation_messages as _db_get_recent_conversation_messages,
+        get_user_by_id as _db_get_user_by_id,
+        get_user_by_username as _db_get_user_by_username,
+        list_conversations as _db_list_conversations,
+        offboard_user_data as _db_offboard_user_data,
+        search_medical_entities as _db_search_medical_entities,
+        set_password as _db_set_password,
+        set_consent as _db_set_consent,
+        upsert_conversation_summary as _db_upsert_conversation_summary,
+        update_username as _db_update_username,
+        update_conversation_title as _db_update_conversation_title,
+    )
+except Exception:
+    _db_ensure_auth_schema = None
+    _db_ensure_clinical_memory_schema = None
+    _db_ensure_knowledge_schema = None
+    _db_get_user_by_username = None
+    _db_get_user_by_id = None
+    _db_create_user = None
+    _db_bump_token_version = None
+    _db_get_conversation_summary = None
+    _db_get_consent = None
+    _db_set_consent = None
+    _db_set_password = None
+    _db_update_username = None
+    _db_create_conversation = None
+    _db_append_message = None
+    _db_list_conversations = None
+    _db_get_conversation = None
+    _db_get_conversation_messages = None
+    _db_get_entity_neighbors = None
+    _db_get_interventions_for_entities = None
+    _db_get_recent_conversation_messages = None
+    _db_search_medical_entities = None
+    _db_update_conversation_title = None
+    _db_delete_conversation = None
+    _db_offboard_user_data = None
+    _db_upsert_conversation_summary = None
+
 try:
     import pypdf
 except ImportError:
@@ -163,6 +238,24 @@ def _current_target():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await _setup_event_loop_handler()
+    try:
+        if _db_ensure_auth_schema is not None:
+            _db_ensure_auth_schema()
+        if _db_ensure_knowledge_schema is not None:
+            _db_ensure_knowledge_schema()
+        if _db_ensure_clinical_memory_schema is not None:
+            _db_ensure_clinical_memory_schema()
+            admin_user = (os.environ.get("BOOTSTRAP_ADMIN_USERNAME") or "").strip()
+            admin_pass = (os.environ.get("BOOTSTRAP_ADMIN_PASSWORD") or "").strip()
+            if admin_user and admin_pass and _db_get_user_by_username is not None and _db_create_user is not None:
+                existing = _db_get_user_by_username(admin_user)
+                if not existing:
+                    import uuid as _uuid
+                    salt = _uuid.uuid4().hex
+                    pwd_hash = _hash_password(admin_pass, salt)
+                    _db_create_user(admin_user, salt, pwd_hash, role="ADMIN")
+    except Exception:
+        pass
     await load_model()
     yield
 
@@ -325,11 +418,16 @@ class LoginResponse(BaseModel):
     token: str
 
 class UserProfile(BaseModel):
+    user_id: str
     username: str
     has_password: bool
+    role: str
 
 class UserUpdate(BaseModel):
-    username: str
+    username: Optional[str] = None
+    full_name: Optional[str] = None
+    nickname: Optional[str] = None
+    bio: Optional[str] = None
     password: Optional[str] = None
 
 class RegisterRequest(BaseModel):
@@ -338,6 +436,13 @@ class RegisterRequest(BaseModel):
 
 class GoogleLoginRequest(BaseModel):
     id_token: str
+
+
+class KnowledgeSearchRequest(BaseModel):
+    query: str
+    limit: Optional[int] = 8
+    include_relations: Optional[bool] = True
+    include_interventions: Optional[bool] = True
 
 # Load model once at startup
 llm_pro: Optional[Llama] = None
@@ -351,9 +456,10 @@ USER_FILE = os.path.join(DATA_DIR, "user.json")
 
 def _hash_password(password: str, salt: str) -> str:
     import hashlib
-    h = hashlib.sha256()
-    h.update((salt + password).encode("utf-8"))
-    return h.hexdigest()
+    p = (password or "").encode("utf-8")
+    s = (salt or "").encode("utf-8")
+    dk = hashlib.pbkdf2_hmac("sha256", p, s, 120000, dklen=32)
+    return dk.hex()
 
 def _ensure_user_file():
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -376,6 +482,12 @@ def _ensure_user(user_id: str):
         MOCK_CHAT_DB[user_id] = {"conversations": {}}
 
 def create_conversation(user_id: str, title: Optional[str] = None) -> str:
+    if user_id and user_id != "anonymous" and _db_create_conversation is not None:
+        try:
+            conv = _db_create_conversation(user_id, title or "")
+            return str(conv["id"])
+        except Exception:
+            pass
     _ensure_user(user_id)
     conv_id = str(uuid.uuid4())
     MOCK_CHAT_DB[user_id]["conversations"][conv_id] = {
@@ -389,12 +501,35 @@ def create_conversation(user_id: str, title: Optional[str] = None) -> str:
     return conv_id
 
 def load_chat_history(user_id: str, conversation_id: str) -> List[dict]:
+    if user_id and user_id != "anonymous" and _db_get_conversation is not None and _db_get_recent_conversation_messages is not None:
+        try:
+            conv = _db_get_conversation(user_id, conversation_id)
+            if not conv:
+                return []
+            return _db_get_recent_conversation_messages(conversation_id, 200)
+        except Exception:
+            return []
     conv = MOCK_CHAT_DB.get(user_id, {}).get("conversations", {}).get(conversation_id)
     if not conv:
         return []
     return list(conv.get("messages", []))
 
 def save_chat_history(user_id: str, conversation_id: str, new_messages: List[dict], title: Optional[str] = None):
+    if user_id and user_id != "anonymous" and _db_get_conversation is not None and _db_append_message is not None:
+        try:
+            conv = _db_get_conversation(user_id, conversation_id)
+            if not conv:
+                return
+            for m in (new_messages or []):
+                _db_append_message(conversation_id, str(m.get("role") or "user"), str(m.get("content") or ""))
+            if title is not None and title.strip() and _db_update_conversation_title is not None:
+                try:
+                    _db_update_conversation_title(user_id, conversation_id, title.strip())
+                except Exception:
+                    pass
+            return
+        except Exception:
+            pass
     _ensure_user(user_id)
     convs = MOCK_CHAT_DB[user_id]["conversations"]
     conv = convs.get(conversation_id)
@@ -457,22 +592,90 @@ def save_social_history(user_id: str, conversation_id: str, new_messages: List[d
     if title is not None and not conv.get("title"):
         conv["title"] = title
 
+def _issue_token(user: dict) -> str:
+    if jwt is None:
+        raise HTTPException(status_code=500, detail="Missing PyJWT")
+    uid = str(user.get("id") or "").strip()
+    role = str(user.get("role") or "PATIENT").strip().upper()
+    tv = int(user.get("token_version") or 0)
+    now = int(datetime.datetime.utcnow().timestamp())
+    exp = now + 60 * 60 * 24 * 7
+    payload = {"sub": uid, "role": role, "tv": tv, "iat": now, "exp": exp}
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
+
+
+def get_current_actor(request: Request):
+    auth = request.headers.get("Authorization") or ""
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth.split(" ", 1)[1].strip()
+    if not token:
+        return None
+    if token.startswith("mock-"):
+        if _db_get_user_by_username is None:
+            return None
+        uname = token.replace("mock-", "").strip().lower()
+        if not uname:
+            return None
+        user = _db_get_user_by_username(uname)
+        if not user:
+            return None
+        return {"id": str(user["id"]), "role": str(user.get("role") or "PATIENT").upper(), "username": user["username"]}
+    if jwt is None:
+        return None
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+    except Exception:
+        return None
+    uid = str(payload.get("sub") or "").strip()
+    role = str(payload.get("role") or "").strip().upper()
+    tv = int(payload.get("tv") or 0)
+    if not uid or not role:
+        return None
+    if _db_get_user_by_id is None:
+        return None
+    user = _db_get_user_by_id(uid)
+    if not user:
+        return None
+    if int(user.get("token_version") or 0) != tv:
+        return None
+    return {"id": str(user["id"]), "role": str(user.get("role") or role).upper(), "username": user["username"]}
+
+
 def get_current_user(request: Request) -> str:
-    auth = request.headers.get("Authorization")
-    if not auth:
-        return "anonymous"
-    if auth.startswith("Bearer "):
-        token = auth.split(" ", 1)[1]
-        if token.startswith("mock-"):
-            return token.replace("mock-", "").strip() or "anonymous"
-        if jwt is not None:
-            try:
-                payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
-                uid = str(payload.get("sub") or payload.get("user_id") or "").strip()
-                return uid or "anonymous"
-            except Exception:
-                return "anonymous"
-    return "anonymous"
+    actor = get_current_actor(request)
+    return str(actor["id"]) if actor else "anonymous"
+
+
+def require_actor(request: Request):
+    actor = get_current_actor(request)
+    if not actor:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return actor
+
+
+def require_role(request: Request, roles: List[str]):
+    actor = require_actor(request)
+    allowed = {str(r).strip().upper() for r in (roles or []) if str(r).strip()}
+    if allowed and actor["role"] not in allowed:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return actor
+
+
+def _risk_metadata_from_messages(messages: List[dict]) -> dict:
+    risk_terms = [
+        "tự tử",
+        "tự sát",
+        "muốn chết",
+        "kết liễu",
+        "overdose",
+        "cắt tay",
+        "nhảy lầu",
+        "uống thuốc quá liều",
+    ]
+    text = " ".join([str(m.get("content") or "") for m in (messages or []) if str(m.get("role") or "").lower() == "user"]).lower()
+    hits = [t for t in risk_terms if t in text]
+    return {"risk_terms": hits, "risk_hit": bool(hits)}
 
 def paginate_items(items: List[dict], page: int, page_size: int) -> dict:
     total = len(items)
@@ -772,6 +975,12 @@ async def chat_completions(req: ChatRequest, request: Request):
     conversation_id = req.conversation_id or None
     if not conversation_id:
         conversation_id = create_conversation(user_id)
+    elif user_id and user_id != "anonymous" and _db_get_conversation is not None:
+        try:
+            if not _db_get_conversation(user_id, conversation_id):
+                conversation_id = create_conversation(user_id)
+        except Exception:
+            pass
 
     history = load_chat_history(user_id, conversation_id)
     base_messages = [{"role": m.role, "content": m.content} for m in (req.messages or [])]
@@ -808,11 +1017,8 @@ Lưu ý: Luôn khuyến cáo người dùng đi khám bác sĩ nếu có dấu h
         if last_user:
             to_save.append(last_user)
         to_save.append({"role": "assistant", "content": content})
-        save_chat_history(user_id, conversation_id, to_save)
-        conv = MOCK_CHAT_DB.get(user_id, {}).get("conversations", {}).get(conversation_id)
-        if conv and not conv.get("title"):
-            title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
-            conv["title"] = title
+        title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
+        save_chat_history(user_id, conversation_id, to_save, title=title)
         response = ChatResponse(
             id="gemini",
             choices=[ChatChoice(index=0, message=ChatMessage(role="assistant", content=content))],
@@ -878,11 +1084,8 @@ Lưu ý: Luôn khuyến cáo người dùng đi khám bác sĩ nếu có dấu h
             if last_user:
                 to_save.append(last_user)
             to_save.append({"role": "assistant", "content": content})
-            save_chat_history(user_id, conversation_id, to_save)
-            conv = MOCK_CHAT_DB.get(user_id, {}).get("conversations", {}).get(conversation_id)
-            if conv and not conv.get("title"):
-                title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
-                conv["title"] = title
+            title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
+            save_chat_history(user_id, conversation_id, to_save, title=title)
             response = ChatResponse(
                 id=str(proxied_data.get("id", "proxy")),
                 choices=[ChatChoice(index=0, message=ChatMessage(role="assistant", content=content))],
@@ -924,11 +1127,8 @@ Lưu ý: Luôn khuyến cáo người dùng đi khám bác sĩ nếu có dấu h
         if last_user:
             to_save.append(last_user)
         to_save.append({"role": "assistant", "content": content})
-        save_chat_history(user_id, conversation_id, to_save)
-        conv = MOCK_CHAT_DB.get(user_id, {}).get("conversations", {}).get(conversation_id)
-        if conv and not conv.get("title"):
-            title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
-            conv["title"] = title
+        title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
+        save_chat_history(user_id, conversation_id, to_save, title=title)
         response = ChatResponse(
             id=str(result.get("id", "local-llama")),
             choices=[ChatChoice(index=0, message=ChatMessage(role="assistant", content=content))],
@@ -962,15 +1162,17 @@ async def friend_chat_completions(req: ChatRequest, request: Request):
     history = load_social_history(user_id, conversation_id)
     friend_prompt = (
         "Bạn là một người bạn thân, nói chuyện đời thường bằng tiếng Việt.\n"
-        "Cách nói tự nhiên, gần gũi, có thể hài hước nhẹ, dùng từ ngữ bình dân.\n\n"
+        "Cách nói tự nhiên, gần gũi, dịu dàng và ấm áp; có thể hài hước nhẹ khi phù hợp.\n"
+        "Mục tiêu là giúp người nói cảm thấy được lắng nghe và bớt cô đơn.\n\n"
         "Nguyên tắc:\n"
-        "- Ưu tiên lắng nghe và đồng cảm trước.\n"
+        "- Ưu tiên lắng nghe và phản chiếu cảm xúc trước, rồi mới gợi ý.\n"
         "- Không giảng đạo lý, không nói như sách vở.\n"
         "- Không khuyên dạy ngay, trừ khi người dùng hỏi rõ.\n"
-        "- Phản hồi giống người thật đang trò chuyện, không phải trợ lý máy móc.\n"
-        "- Có thể hỏi lại 1 câu ngắn để hiểu thêm cảm xúc người nói.\n\n"
+        "- Trả lời sâu lắng: 2–5 đoạn ngắn, có nhịp, không vội.\n"
+        "- Hỏi lại tối đa 1 câu nhẹ nhàng để hiểu thêm.\n"
+        "- Nếu người dùng đang rất mệt/khủng hoảng, ưu tiên trấn an và an toàn.\n\n"
         "Tránh:\n"
-        "- Nói quá dài.\n"
+        "- Lan man, lặp ý.\n"
         "- Dùng từ ngữ học thuật.\n"
         "- Kết luận thay người dùng.\n"
     )
@@ -2216,59 +2418,259 @@ async def document_chat(req: DocumentChatRequest):
 
 @app.post("/v1/login")
 async def login(req: LoginRequest):
-    u = _load_user()
     input_user = req.username.strip()
     input_pass = req.password.strip()
     if not input_user or not input_pass:
         raise HTTPException(status_code=400, detail="Thiếu username hoặc password")
-    if input_user != u.get("username"):
+    if _db_get_user_by_username is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    try:
+        user = _db_get_user_by_username(input_user)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+    if not user:
         raise HTTPException(status_code=401, detail="Thông tin đăng nhập không hợp lệ")
-    salt = u.get("salt") or ""
-    stored_hash = u.get("password_hash") or ""
-    if stored_hash:
-        calc = _hash_password(input_pass, salt)
-        if calc != stored_hash:
-            raise HTTPException(status_code=401, detail="Thông tin đăng nhập không hợp lệ")
-    user_id = input_user.strip().lower()
-    token = f"mock-{user_id}"
-    _ensure_user(user_id)
-    return LoginResponse(user_id=user_id, token=token)
+    salt = str(user.get("password_salt") or "")
+    stored_hash = str(user.get("password_hash") or "")
+    if not salt or not stored_hash:
+        raise HTTPException(status_code=401, detail="Tài khoản không hỗ trợ đăng nhập bằng mật khẩu")
+    calc = _hash_password(input_pass, salt)
+    if calc != stored_hash:
+        raise HTTPException(status_code=401, detail="Thông tin đăng nhập không hợp lệ")
+    token = _issue_token(user)
+    return LoginResponse(user_id=str(user["id"]), token=token)
 
 @app.post("/v1/logout")
 async def logout():
     return {"success": True}
 
 @app.get("/v1/user")
-async def get_user_profile() -> UserProfile:
-    u = _load_user()
-    return UserProfile(username=u.get("username") or "", has_password=bool(u.get("password_hash")))
+async def get_user_profile(request: Request) -> UserProfile:
+    actor = require_actor(request)
+    if _db_get_user_by_id is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    user = _db_get_user_by_id(actor["id"])
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return UserProfile(
+        user_id=str(user["id"]),
+        username=str(user.get("username") or ""),
+        has_password=bool(user.get("password_hash")),
+        role=str(user.get("role") or "PATIENT").upper(),
+    )
 
 @app.put("/v1/user")
-async def update_user_profile(req: UserUpdate):
-    u = _load_user()
-    new_username = req.username.strip()
-    if not new_username:
-        raise HTTPException(status_code=400, detail="Username không hợp lệ")
-    u["username"] = new_username
-    if req.password and req.password.strip():
-        import uuid as _uuid
-        salt = _uuid.uuid4().hex
-        u["salt"] = salt
-        u["password_hash"] = _hash_password(req.password.strip(), salt)
-    _save_user(u)
+async def update_user_profile(req: Request):
+    actor = require_actor(req)
+    if _db_update_username is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    try:
+        if "multipart/form-data" in (req.headers.get("content-type") or "").lower():
+            form = await req.form()
+            payload = {
+                "username": str(form.get("username") or "").strip(),
+                "full_name": str(form.get("full_name") or "").strip(),
+                "nickname": str(form.get("nickname") or "").strip(),
+                "bio": str(form.get("bio") or "").strip(),
+            }
+        else:
+            payload = await req.json()
+            if not isinstance(payload, dict):
+                payload = {}
+    except Exception:
+        payload = {}
+    new_username = str(payload.get("username") or "").strip().lower()
+    if new_username:
+        try:
+            _db_update_username(actor["id"], new_username)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
     return {"success": True}
+
+
+@app.put("/v1/user/password")
+async def update_user_password(req: Request):
+    actor = require_actor(req)
+    if _db_set_password is None or _db_bump_token_version is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    try:
+        body = await req.json()
+        if not isinstance(body, dict):
+            body = {}
+    except Exception:
+        body = {}
+    pwd = str(body.get("password") or "").strip()
+    if not pwd:
+        raise HTTPException(status_code=400, detail="Thiếu password")
+    import uuid as _uuid
+    salt = _uuid.uuid4().hex
+    pwd_hash = _hash_password(pwd, salt)
+    try:
+        _db_set_password(actor["id"], salt, pwd_hash)
+        _db_bump_token_version(actor["id"])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+    return {"success": True}
+
+
+@app.post("/v1/user/sessions/logout-all")
+async def logout_all_sessions(request: Request):
+    actor = require_actor(request)
+    if _db_bump_token_version is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    try:
+        _db_bump_token_version(actor["id"])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+    return {"success": True}
+
+
+@app.get("/v1/consent")
+async def get_consent(request: Request):
+    actor = require_actor(request)
+    if _db_get_consent is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    try:
+        c = _db_get_consent(actor["id"])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+    return {
+        "share_scores": bool(c.get("share_scores")),
+        "share_chat_content": bool(c.get("share_chat_content")),
+        "updated_at": str(c.get("updated_at").isoformat() if c.get("updated_at") else ""),
+    }
+
+
+@app.put("/v1/consent")
+async def set_consent(request: Request):
+    actor = require_actor(request)
+    if _db_set_consent is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            body = {}
+    except Exception:
+        body = {}
+    share_scores = bool(body.get("share_scores"))
+    share_chat_content = bool(body.get("share_chat_content"))
+    try:
+        c = _db_set_consent(actor["id"], share_scores, share_chat_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+    return {
+        "share_scores": bool(c.get("share_scores")),
+        "share_chat_content": bool(c.get("share_chat_content")),
+        "updated_at": str(c.get("updated_at").isoformat() if c.get("updated_at") else ""),
+    }
+
+
+@app.post("/v1/knowledge/search")
+async def knowledge_search(req: KnowledgeSearchRequest, request: Request):
+    require_actor(request)
+    if _db_search_medical_entities is None:
+        raise HTTPException(status_code=500, detail="Knowledge DB not available")
+    q = (req.query or "").strip()
+    if not q:
+        raise HTTPException(status_code=400, detail="Thiếu query")
+    try:
+        entities = _db_search_medical_entities(q, int(req.limit or 8))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Knowledge DB error")
+    ids = [str(e["id"]) for e in (entities or [])]
+    relations = []
+    interventions = []
+    if req.include_relations and _db_get_entity_neighbors is not None and ids:
+        try:
+            relations = _db_get_entity_neighbors(ids, 60)
+        except Exception:
+            relations = []
+    if req.include_interventions and _db_get_interventions_for_entities is not None and ids:
+        try:
+            interventions = _db_get_interventions_for_entities(ids, 20)
+        except Exception:
+            interventions = []
+    return {"entities": entities, "relations": relations, "interventions": interventions}
+
+
+@app.get("/v1/clinical/summary/{conv_id}")
+async def get_clinical_summary(conv_id: str, request: Request, refresh: bool = False):
+    actor = require_actor(request)
+    if _db_get_conversation is None or _db_get_recent_conversation_messages is None:
+        raise HTTPException(status_code=500, detail="Clinical DB not available")
+    conv = _db_get_conversation(actor["id"], conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if not refresh and _db_get_conversation_summary is not None:
+        existing = _db_get_conversation_summary(conv_id)
+        if existing and str(existing.get("summary") or "").strip():
+            return {"conv_id": conv_id, "summary": existing.get("summary"), "metadata": existing.get("metadata") or {}, "updated_at": existing.get("updated_at").isoformat() if existing.get("updated_at") else ""}
+    msgs = _db_get_recent_conversation_messages(conv_id, 180)
+    meta = _risk_metadata_from_messages(msgs)
+    prompt = "Hãy tóm tắt hội thoại lâm sàng ngắn gọn bằng tiếng Việt. Không chẩn đoán khẳng định. Nêu: lý do, triệu chứng, diễn tiến, can thiệp đã đề xuất, khuyến nghị an toàn."
+    content = ""
+    try:
+        content = _gemini_generate_text(
+            [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(msgs, ensure_ascii=False)}],
+            "flash",
+            0.3,
+            600,
+        )
+    except Exception:
+        try:
+            chosen = llm_flash or llm_pro
+            if chosen is None:
+                ensure_text_model("flash")
+                chosen = llm_flash or llm_pro
+            if chosen is None:
+                raise RuntimeError("No local model")
+            r = chosen.create_chat_completion(
+                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(msgs, ensure_ascii=False)}],
+                temperature=0.3,
+                max_tokens=600,
+            )
+            content = str(r.get("choices", [{}])[0].get("message", {}).get("content", "") or "")
+        except Exception:
+            content = ""
+    if _db_upsert_conversation_summary is not None and content.strip():
+        try:
+            _db_upsert_conversation_summary(conv_id, content, meta)
+        except Exception:
+            pass
+    return {"conv_id": conv_id, "summary": content, "metadata": meta}
+
+
+@app.post("/v1/offboarding")
+async def offboarding(request: Request):
+    actor = require_actor(request)
+    if _db_offboard_user_data is None or _db_bump_token_version is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    try:
+        result = _db_offboard_user_data(actor["id"])
+        _db_bump_token_version(actor["id"])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+    return {"success": True, "deleted": result}
 
 @app.post("/v1/register")
 async def register(req: RegisterRequest):
     if not req.username.strip() or not req.password.strip():
         raise HTTPException(status_code=400, detail="Thiếu username hoặc password")
-    u = _load_user()
-    if u.get("username") and u.get("username").strip().lower() == req.username.strip().lower():
+    if _db_get_user_by_username is None or _db_create_user is None:
+        raise HTTPException(status_code=500, detail="Auth DB not available")
+    try:
+        exists = _db_get_user_by_username(req.username.strip())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+    if exists:
         raise HTTPException(status_code=409, detail="Tài khoản đã tồn tại")
     import uuid as _uuid
     salt = _uuid.uuid4().hex
-    data = {"username": req.username.strip(), "salt": salt, "password_hash": _hash_password(req.password.strip(), salt)}
-    _save_user(data)
+    pwd_hash = _hash_password(req.password.strip(), salt)
+    try:
+        _db_create_user(req.username.strip(), salt, pwd_hash, role="PATIENT")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
     return {"success": True}
 
 @app.post("/v1/login/google")
@@ -2284,14 +2686,19 @@ async def login_google(req: GoogleLoginRequest):
         email = str(info.get("email") or "").strip()
         if not email:
             raise HTTPException(status_code=401, detail="Không lấy được email từ id_token")
-        u = _load_user()
-        u["username"] = email
-        u["salt"] = ""
-        u["password_hash"] = ""
-        _save_user(u)
-        user_id = email.strip().lower()
-        _ensure_user(user_id)
-        return LoginResponse(user_id=user_id, token=f"mock-{user_id}")
+        if _db_get_user_by_username is None or _db_create_user is None:
+            raise HTTPException(status_code=500, detail="Auth DB not available")
+        try:
+            user = _db_get_user_by_username(email)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+        if not user:
+            try:
+                user = _db_create_user(email, "", "", role="PATIENT")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=str(e) or "Auth DB error")
+        jwt_token = _issue_token(user)
+        return LoginResponse(user_id=str(user["id"]), token=jwt_token)
     except HTTPException:
         raise
     except Exception:
@@ -2300,33 +2707,34 @@ async def login_google(req: GoogleLoginRequest):
 @app.get("/v1/conversations")
 async def list_conversations(request: Request):
     user_id = get_current_user(request)
+    if user_id and user_id != "anonymous" and _db_list_conversations is not None:
+        items = _db_list_conversations(user_id) or []
+        return {
+            "conversations": [
+                {"id": str(c["id"]), "title": str(c.get("title") or ""), "last_active": c["last_active"].isoformat() if c.get("last_active") else ""}
+                for c in items
+            ]
+        }
     _ensure_user(user_id)
     items = list(MOCK_CHAT_DB[user_id]["conversations"].values())
     items.sort(key=lambda x: x["last_active"], reverse=True)
-    return {
-        "conversations": [
-            {
-                "id": c["id"],
-                "title": c.get("title", ""),
-                "last_active": c["last_active"].isoformat()
-            } for c in items
-        ]
-    }
+    return {"conversations": [{"id": c["id"], "title": c.get("title", ""), "last_active": c["last_active"].isoformat()} for c in items]}
 
 @app.get("/v1/conversations/{conv_id}")
 async def get_conversation(conv_id: str, request: Request, page: int = 1, page_size: int = 50):
     user_id = get_current_user(request)
+    if user_id and user_id != "anonymous" and _db_get_conversation is not None and _db_get_conversation_messages is not None:
+        conv = _db_get_conversation(user_id, conv_id)
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        msgs = _db_get_conversation_messages(conv_id, page, page_size)
+        return {"id": str(conv["id"]), "title": str(conv.get("title") or ""), "last_active": conv["last_active"].isoformat() if conv.get("last_active") else "", "messages": msgs}
     _ensure_user(user_id)
     conv = MOCK_CHAT_DB[user_id]["conversations"].get(conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     data = paginate_items(conv.get("messages", []), page, page_size)
-    return {
-        "id": conv_id,
-        "title": conv.get("title", ""),
-        "last_active": conv["last_active"].isoformat(),
-        "messages": data.get("items", [])
-    }
+    return {"id": conv_id, "title": conv.get("title", ""), "last_active": conv["last_active"].isoformat(), "messages": data.get("items", [])}
 
 @app.post("/v1/conversations/start")
 async def start_conversation(request: Request):
@@ -2334,7 +2742,6 @@ async def start_conversation(request: Request):
     Optional JSON body: { "title": string }
     """
     user_id = get_current_user(request)
-    _ensure_user(user_id)
     try:
         payload = await request.json()
     except Exception:
@@ -2344,18 +2751,17 @@ async def start_conversation(request: Request):
         t = payload.get("title")
         if isinstance(t, str):
             title = t.strip()
+    if user_id and user_id != "anonymous" and _db_create_conversation is not None:
+        conv = _db_create_conversation(user_id, title or "")
+        return {"id": str(conv["id"]), "title": str(conv.get("title") or ""), "last_active": conv["last_active"].isoformat() if conv.get("last_active") else ""}
+    _ensure_user(user_id)
     conv_id = create_conversation(user_id, title or None)
     conv = MOCK_CHAT_DB[user_id]["conversations"].get(conv_id, {})
-    return {
-        "id": conv_id,
-        "title": conv.get("title", ""),
-        "last_active": conv.get("last_active", datetime.datetime.utcnow).isoformat() if conv.get("last_active") else datetime.datetime.utcnow().isoformat()
-    }
+    return {"id": conv_id, "title": conv.get("title", ""), "last_active": conv.get("last_active", datetime.datetime.utcnow).isoformat() if conv.get("last_active") else datetime.datetime.utcnow().isoformat()}
 
 @app.post("/v1/conversations/new")
 async def new_conversation(request: Request):
     user_id = get_current_user(request)
-    _ensure_user(user_id)
     try:
         payload = await request.json()
     except Exception:
@@ -2365,22 +2771,27 @@ async def new_conversation(request: Request):
         t = payload.get("title")
         if isinstance(t, str):
             title = t.strip()
+    if user_id and user_id != "anonymous" and _db_create_conversation is not None:
+        conv = _db_create_conversation(user_id, title or "")
+        ts = conv["last_active"].isoformat() if conv.get("last_active") else ""
+        return {"conversation_id": str(conv["id"]), "id": str(conv["id"]), "title": str(conv.get("title") or ""), "last_active": ts}
+    _ensure_user(user_id)
     conv_id = create_conversation(user_id, title or None)
     conv = MOCK_CHAT_DB[user_id]["conversations"].get(conv_id, {})
     last_active = conv.get("last_active")
     ts = last_active.isoformat() if last_active else datetime.datetime.utcnow().isoformat()
-    return {
-        "conversation_id": conv_id,
-        "id": conv_id,
-        "title": conv.get("title", ""),
-        "last_active": ts
-    }
+    return {"conversation_id": conv_id, "id": conv_id, "title": conv.get("title", ""), "last_active": ts}
 
 @app.patch("/v1/conversations/{conv_id}/title")
 async def update_conversation_title(conv_id: str, request: Request):
     payload = await request.json()
     title = str(payload.get("title", "")).strip()
     user_id = get_current_user(request)
+    if user_id and user_id != "anonymous" and _db_update_conversation_title is not None:
+        ok = _db_update_conversation_title(user_id, conv_id, title)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return {"success": True, "id": conv_id, "title": title}
     _ensure_user(user_id)
     conv = MOCK_CHAT_DB[user_id]["conversations"].get(conv_id)
     if not conv:
@@ -2391,6 +2802,23 @@ async def update_conversation_title(conv_id: str, request: Request):
 @app.post("/v1/conversations/{conv_id}/auto-title")
 async def auto_title(conv_id: str, request: Request):
     user_id = get_current_user(request)
+    if user_id and user_id != "anonymous" and _db_get_conversation is not None and _db_get_recent_conversation_messages is not None and _db_update_conversation_title is not None:
+        conv = _db_get_conversation(user_id, conv_id)
+        if not conv:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        msgs = _db_get_recent_conversation_messages(conv_id, 120)
+        last_user_text = ""
+        last_assistant_text = ""
+        for m in reversed(msgs):
+            if not last_assistant_text and m.get("role") == "assistant":
+                last_assistant_text = str(m.get("content") or "")
+            if not last_user_text and m.get("role") == "user":
+                last_user_text = str(m.get("content") or "")
+            if last_user_text and last_assistant_text:
+                break
+        title = generate_auto_title(last_user_text, last_assistant_text)
+        _db_update_conversation_title(user_id, conv_id, title)
+        return {"success": True, "id": conv_id, "title": title}
     _ensure_user(user_id)
     conv = MOCK_CHAT_DB[user_id]["conversations"].get(conv_id)
     if not conv:
@@ -2414,6 +2842,11 @@ async def auto_title(conv_id: str, request: Request):
 @app.delete("/v1/conversations/{conv_id}")
 async def delete_conversation(conv_id: str, request: Request):
     user_id = get_current_user(request)
+    if user_id and user_id != "anonymous" and _db_delete_conversation is not None:
+        ok = _db_delete_conversation(user_id, conv_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Conversation not found")
+        return {"success": True}
     _ensure_user(user_id)
     convs = MOCK_CHAT_DB[user_id]["conversations"]
     if conv_id not in convs:

@@ -14,6 +14,10 @@ export async function POST(request: NextRequest) {
     const user_id: string | null = typeof bodyIn?.user_id === 'string' ? bodyIn.user_id : null
     const selectedModel = (typeof bodyIn?.model === 'string' ? String(bodyIn.model).toLowerCase() : 'flash')
     const modeHeader = selectedModel === 'pro' ? 'pro' : 'flash'
+    const temperatureIn = Number(bodyIn?.temperature)
+    const maxTokensIn = Number(bodyIn?.max_tokens ?? bodyIn?.maxTokens)
+    const temperature = Number.isFinite(temperatureIn) ? Math.max(0.2, Math.min(1.2, temperatureIn)) : 0.85
+    const max_tokens = Number.isFinite(maxTokensIn) ? Math.max(256, Math.min(1536, Math.trunc(maxTokensIn))) : 1100
     const provider = (typeof bodyIn?.provider === 'string' ? String(bodyIn.provider).trim().toLowerCase() : '') || (process.env.LLM_PROVIDER || '').trim().toLowerCase()
     const useGemini = provider === 'gemini' || selectedModel === 'gemini'
 
@@ -31,7 +35,8 @@ export async function POST(request: NextRequest) {
         tier: modeHeader,
         question: userMessage,
         persona: '',
-        messages: conversationHistory
+        messages: conversationHistory,
+        generationConfig: { temperature, maxOutputTokens: max_tokens }
       })
       const durationGemini = Date.now() - startGemini
       const content = String(out?.text || '').trim()
@@ -70,22 +75,28 @@ export async function POST(request: NextRequest) {
           targetUrl = `${String(mode.gpu_url).replace(/\/$/, '')}/v1/friend-chat/completions`
         }
       } catch {}
-      try {
-        const regRaw = fs.readFileSync(path.join(dataDir, 'server-registry.json'), 'utf-8')
-        const reg = JSON.parse(regRaw)
-        const servers = Array.isArray(reg?.servers) ? reg.servers : []
-        const active = servers.filter((s: any) => s.status === 'active')
-        const latest = (active.length ? active : servers).sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]
-        if (latest?.url) {
-          targetUrl = `${String(latest.url).replace(/\/$/, '')}/v1/friend-chat/completions`
-        }
-      } catch {}
+      if (originalTarget === 'cpu') {
+        targetUrl = cpuFallback
+      } else {
+        try {
+          const regRaw = fs.readFileSync(path.join(dataDir, 'server-registry.json'), 'utf-8')
+          const reg = JSON.parse(regRaw)
+          const servers = Array.isArray(reg?.servers) ? reg.servers : []
+          const active = servers.filter((s: any) => s.status === 'active')
+          const latest = (active.length ? active : servers).sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]
+          if (latest?.url) {
+            targetUrl = `${String(latest.url).replace(/\/$/, '')}/v1/friend-chat/completions`
+          }
+        } catch {}
+      }
     } catch {}
 
-    const friendSystem = "Bạn là một người bạn thân, nói chuyện đời thường bằng tiếng Việt. Cách nói tự nhiên, gần gũi, có thể hài hước nhẹ, dùng từ ngữ bình dân. Nguyên tắc: ưu tiên lắng nghe và đồng cảm; không giảng đạo lý; không khuyên dạy ngay trừ khi người dùng hỏi rõ; phản hồi giống người thật; có thể hỏi lại 1 câu ngắn để hiểu thêm cảm xúc người nói."
+    const friendSystem = "Bạn là một người bạn thân, nói chuyện đời thường bằng tiếng Việt. Giọng điệu dịu dàng, ấm áp, thân thiện và sâu lắng. Nguyên tắc: ưu tiên lắng nghe và đồng cảm trước; không giảng đạo lý; không khuyên dạy ngay trừ khi người dùng hỏi rõ; phản hồi giống người thật; trả lời 2–5 đoạn ngắn có nhịp; hỏi lại tối đa 1 câu nhẹ để hiểu thêm cảm xúc."
     const payload = {
       model: selectedModel,
       mode: modeHeader,
+      temperature,
+      max_tokens,
       messages: [
         { role: 'system', content: friendSystem },
         ...conversationHistory.map((m: any) => ({

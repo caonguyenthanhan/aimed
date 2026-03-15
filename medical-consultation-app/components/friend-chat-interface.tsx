@@ -15,6 +15,8 @@ const GREETINGS: string[] = [
   "Muốn nói chuyện, hay chỉ cần có người nghe?"
 ]
 
+const FRIEND_STYLE_KEY = "mcs_friend_style_v1"
+
 interface Message {
   id: string
   content: string
@@ -34,6 +36,19 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
       return prev
     })
   }, [])
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FRIEND_STYLE_KEY)
+      if (raw === "standard" || raw === "deep") setFriendStyle(raw)
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FRIEND_STYLE_KEY, friendStyle)
+    } catch {}
+  }, [friendStyle])
   const [headerPad, setHeaderPad] = useState<string>('6rem')
   useEffect(() => {
     const updatePad = () => {
@@ -76,6 +91,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState<string>("")
   const [selectedModel, setSelectedModel] = useState<"flash" | "pro">("flash")
+  const [friendStyle, setFriendStyle] = useState<"standard" | "deep">("deep")
   const [voiceMode, setVoiceMode] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -331,6 +347,8 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
         conversationHistory,
         messages: conversationHistory,
         provider,
+        temperature: friendStyle === "deep" ? 0.9 : 0.75,
+        max_tokens: friendStyle === "deep" ? 1200 : 800,
       }
       const url = "/api/tam-su-chat"
       const headers: Record<string, string> = { "Content-Type": "application/json" }
@@ -710,6 +728,10 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
                 <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value as any)} className="text-xs px-2 py-1 border rounded">
                   <option value="flash">flash</option>
                   <option value="pro">pro</option>
+                </select>
+                <select value={friendStyle} onChange={(e) => setFriendStyle(e.target.value as any)} className="text-xs px-2 py-1 border rounded">
+                  <option value="standard">gọn</option>
+                  <option value="deep">sâu</option>
                 </select>
                 <button onClick={() => setVoiceMode(v => !v)} className={`text-xs px-2 py-1 rounded ${voiceMode ? "bg-green-500 text-white" : "bg-gray-100 hover:bg-gray-200"}`}>
                   {voiceMode ? "Voice" : "Chat"}

@@ -22,8 +22,29 @@ export default function AdminServerPage() {
   const [clearing, setClearing] = useState(false)
 
   useEffect(() => {
-    const t = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
-    if (!t) window.location.href = "/login"
+    const run = async () => {
+      const t = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
+      if (!t) {
+        window.location.href = "/login"
+        return
+      }
+      try {
+        const r = await fetch("/api/backend/v1/user", { headers: { Authorization: `Bearer ${t}` } })
+        if (!r.ok) {
+          window.location.href = "/login"
+          return
+        }
+        const u = await r.json()
+        const role = String(u?.role || "").toUpperCase()
+        if (role !== "ADMIN") {
+          window.location.href = "/"
+          return
+        }
+      } catch {
+        window.location.href = "/login"
+      }
+    }
+    run()
   }, [])
 
   const latestUrl = useMemo(() => {

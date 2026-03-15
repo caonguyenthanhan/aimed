@@ -68,6 +68,8 @@ audio/*.wav
 medical-consultation-app/data/runtime-events.jsonl
 medical-consultation-app/data/runtime-metrics.jsonl
 medical-consultation-app/data/server-registry-logs.jsonl
+medical-consultation-app/data/runtime-mode.json
+medical-consultation-app/data/server-registry.json
 
 # OS
 .DS_Store

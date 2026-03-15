@@ -36,6 +36,9 @@ export default function AccountPage() {
   const [editingProfile, setEditingProfile] = useState(false)
   const [editingSecurity, setEditingSecurity] = useState(false)
   const [password, setPassword] = useState("")
+  const [shareScores, setShareScores] = useState(false)
+  const [shareChatContent, setShareChatContent] = useState(false)
+  const [consentLoaded, setConsentLoaded] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string>("")
   const [avatarUrlObject, setAvatarUrlObject] = useState<string>("")
@@ -79,6 +82,17 @@ export default function AccountPage() {
         })
         if (!avatar) setAvatarPreview("")
         else setAvatarPreview(avatar)
+        if (token) {
+          try {
+            const r = await fetch("/api/backend/v1/consent", { headers: { Authorization: `Bearer ${token}` } })
+            if (r.ok) {
+              const c = await r.json()
+              setShareScores(!!c?.share_scores)
+              setShareChatContent(!!c?.share_chat_content)
+              setConsentLoaded(true)
+            }
+          } catch {}
+        }
       } catch {}
     }
     load()
@@ -255,6 +269,66 @@ export default function AccountPage() {
     router.replace("/login")
   }
 
+  const saveConsent = async () => {
+    if (!token) return
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const resp = await fetch("/api/backend/v1/consent", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ share_scores: shareScores, share_chat_content: shareChatContent }),
+      })
+      if (!resp.ok) {
+        const t = await resp.text()
+        setError(t || "Lưu đồng ý thất bại")
+        setLoading(false)
+        return
+      }
+      setSuccess("Đã lưu cài đặt quyền riêng tư")
+      setConsentLoaded(true)
+    } catch (e: any) {
+      setError(e?.message || "Có lỗi xảy ra khi lưu cài đặt")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const offboard = async () => {
+    if (!token) return
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const resp = await fetch("/api/backend/v1/offboarding", { method: "POST", headers: { "Authorization": `Bearer ${token}` } })
+      if (!resp.ok) {
+        const t = await resp.text()
+        setError(t || "Offboarding thất bại")
+        setLoading(false)
+        return
+      }
+      try {
+        if (typeof window !== "undefined") {
+          const keys = Object.keys(localStorage)
+          for (const k of keys) {
+            if (k.startsWith("conv_messages_") || k.startsWith("conv_title_") || k.startsWith("friend_conv_messages_") || k.startsWith("friend_conv_title_")) {
+              localStorage.removeItem(k)
+            }
+          }
+          localStorage.removeItem("authToken")
+          localStorage.removeItem("userId")
+        }
+      } catch {}
+      setSuccess("Đã offboarding và xóa dữ liệu hội thoại")
+      setTimeout(() => router.replace("/login"), 800)
+    } catch (e: any) {
+      setError(e?.message || "Có lỗi xảy ra khi offboarding")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const joinInfo = useMemo(() => {
     if (!profile.joined_at) return "Thành viên từ tháng 12/2025"
     try {
@@ -357,6 +431,32 @@ export default function AccountPage() {
             </div>
             <div className="mt-4">
               <button onClick={logout} className="px-3 py-2 rounded-md bg-slate-800 text-white text-sm">Đăng xuất</button>
+            </div>
+            <div className="mt-6 grid md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="text-sm text-slate-700">Trung tâm đồng ý (Consent)</label>
+                <div className="mt-2 space-y-2 rounded-xl border p-4">
+                  <label className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-700">Cho phép bác sĩ xem điểm số</span>
+                    <input type="checkbox" checked={shareScores} onChange={(e) => setShareScores(e.target.checked)} className="h-4 w-4" />
+                  </label>
+                  <label className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-700">Cho phép bác sĩ xem nội dung chat</span>
+                    <input type="checkbox" checked={shareChatContent} onChange={(e) => setShareChatContent(e.target.checked)} className="h-4 w-4" />
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button onClick={saveConsent} disabled={loading || !token} className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50">{loading ? "Đang lưu..." : "Lưu đồng ý"}</button>
+                    {!consentLoaded && <span className="text-xs text-slate-500">Chưa tải được cấu hình từ server</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm text-slate-700">Clinical Offboarding</label>
+                <div className="mt-2 flex items-center justify-between rounded-xl border p-4">
+                  <span className="text-sm text-slate-700">Xóa sạch dấu vết hội thoại lâm sàng của tài khoản</span>
+                  <button onClick={offboard} disabled={loading || !token} className="px-3 py-2 rounded-md bg-red-600 text-white text-sm disabled:opacity-50">Offboarding</button>
+                </div>
+              </div>
             </div>
           </section>
           <section id="special" className="bg-white border rounded-xl p-6 shadow-sm">

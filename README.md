@@ -69,6 +69,13 @@ Mở: `http://localhost:3000`
 - `DATABASE_URL`: connection string Postgres (Neon).
 - `TEAM_TODO_PASSWORD`: mật khẩu vào `/ke-hoach` và gọi API `/api/team-todo`.
 
+### Auth & Ethics (CPU FastAPI)
+
+- `DATABASE_URL`: dùng chung Neon Postgres cho Auth/Consent/Conversations/Knowledge.
+- `JWT_SECRET`: bắt buộc đổi khỏi giá trị mặc định.
+- `JWT_ALG`: mặc định `HS256`.
+- `BOOTSTRAP_ADMIN_USERNAME`, `BOOTSTRAP_ADMIN_PASSWORD`: tự tạo user ADMIN lần đầu khởi động backend.
+
 ### Tùy chọn cho Tin tức y khoa (Google Programmable Search)
 
 - `GOOGLE_CSE_API_KEY`: API key của Custom Search API.
@@ -83,6 +90,15 @@ Nếu thiếu 2 biến này, gọi `/api/web-search` sẽ trả lỗi `Missing G
 - Team todo:
   - `GET /api/team-todo` (header `x-team-todo-pass`)
   - `GET /api/team-todo/revisions`
+
+- Seed kho tri thức (GraphRAG virtual graph):
+  - `python cpu_server/scripts/seed_knowledge_base.py --entities <MedicalEntities.csv> --relations <MedicalRelations.csv> --interventions <InterventionContent.json>`
+
+- Demo data (để trình diễn nhanh):
+  - Seed kho tri thức mẫu (CSV/JSON đã chuẩn bị sẵn):
+    - `python cpu_server/scripts/seed_knowledge_base.py --entities medical-consultation-app/data/demo/MedicalEntities.csv --relations medical-consultation-app/data/demo/MedicalRelations.csv --interventions medical-consultation-app/data/demo/InterventionContent.json`
+  - Seed tài khoản + consent + hội thoại + tóm tắt mẫu:
+    - `python cpu_server/scripts/seed_demo_data.py`
 
 ## 📌 Lưu ý
 
