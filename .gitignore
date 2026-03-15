@@ -76,6 +76,7 @@ Thumbs.db
 # Trae & Jupyter artifacts
 .trae/
 .ipynb_checkpoints/
+/gpu_server/server_AI_MCS.ipynb
 
 # local planning (do not commit)
 PLAN_LOCAL.md

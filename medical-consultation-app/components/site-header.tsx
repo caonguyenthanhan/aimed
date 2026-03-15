@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn } from 'lucide-react'
+import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper } from 'lucide-react'
 import dynamic from 'next/dynamic'
 const ComputeToggle = dynamic(() => import('./compute-toggle'), { ssr: false })
 
@@ -56,6 +56,7 @@ export default function SiteHeader() {
     { href: '/tu-van', label: 'Tư vấn', icon: MessageSquare },
     { href: '/tra-cuu', label: 'Tra cứu', icon: Search },
     { href: '/sang-loc', label: 'Sàng lọc', icon: Activity },
+    { href: '/tin-tuc-y-khoa', label: 'Tin tức', icon: Newspaper },
   ]
 
   return (
