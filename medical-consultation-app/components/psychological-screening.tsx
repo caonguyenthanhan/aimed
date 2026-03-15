@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronRight, CheckCircle, AlertCircle, Info, MessageCircle, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -798,24 +798,38 @@ const asrsAssessment: Assessment = {
   ],
 }
 
+const LAST_SCREENING_KEY = "mcs_last_screening_v1"
+
 export function PsychologicalScreening() {
-  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(phq9Assessment)
+  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null)
   const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<Record<string, string>>({
-    "phq9-1": "1",
-    "phq9-2": "2",
-    "phq9-3": "1",
-    "phq9-4": "2",
-    "phq9-5": "1",
-    "phq9-6": "0",
-    "phq9-7": "1",
-    "phq9-8": "0",
-    "phq9-9": "0"
-  })
-  const [showResults, setShowResults] = useState(true)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [showResults, setShowResults] = useState(false)
   const [showAiSupport, setShowAiSupport] = useState(false)
   const [showPDFGenerator, setShowPDFGenerator] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    if (!showResults || !selectedAssessment) return
+    try {
+      const score = selectedAssessment.questions.reduce((total, question) => {
+        const answer = answers[question.id]
+        const option = question.options.find((opt) => opt.value === answer)
+        return total + (option?.score || 0)
+      }, 0)
+      const interp = selectedAssessment.interpretation.find((it) => score >= it.min && score <= it.max)
+      localStorage.setItem(
+        LAST_SCREENING_KEY,
+        JSON.stringify({
+          assessment_id: selectedAssessment.id,
+          title: selectedAssessment.title,
+          score,
+          level: interp?.level || "",
+          ts: Date.now(),
+        })
+      )
+    } catch {}
+  }, [showResults, selectedAssessment, answers])
 
 
 
