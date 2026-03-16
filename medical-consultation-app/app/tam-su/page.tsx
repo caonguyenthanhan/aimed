@@ -1,11 +1,18 @@
 "use client"
 import dynamic from "next/dynamic"
-import { useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 import { ClientErrorBoundary } from "@/components/client-error-boundary"
 const FriendChatInterface = dynamic(() => import("@/components/friend-chat-interface").then(m => m.FriendChatInterface), { ssr: false })
 export default function TamSuPage() {
-  const params = useSearchParams()
-  const id = params.get('id') || undefined
+  const [id, setId] = useState<string | undefined>(undefined)
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href)
+      setId(url.searchParams.get("id") || undefined)
+    } catch {
+      setId(undefined)
+    }
+  }, [])
   return (
     <div suppressHydrationWarning>
       <ClientErrorBoundary>
