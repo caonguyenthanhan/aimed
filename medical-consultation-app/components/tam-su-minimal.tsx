@@ -572,9 +572,9 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               </div>
             </div>
 
-            <div className="px-4 pt-3 flex flex-wrap gap-2">
+            <div className="px-4 pt-3 -mx-4 px-4 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {suggestedQuestions.slice(0, 4).map((q) => (
-                <button key={q} type="button" className="text-xs px-3 py-1.5 rounded-full border bg-white hover:bg-slate-50" onClick={() => setInput(q)}>
+                <button key={q} type="button" className="shrink-0 text-[11px] px-3 py-1.5 rounded-full border bg-white hover:bg-slate-50" onClick={() => setInput(q)}>
                   {q}
                 </button>
               ))}

@@ -60,6 +60,7 @@ export default function TinTucYKhoaPage() {
   const [notice, setNotice] = useState("")
   const [topics, setTopics] = useState<string[]>([])
   const [rightRatio, setRightRatio] = useState(0.62)
+  const [isLarge, setIsLarge] = useState(false)
   const [authToken, setAuthToken] = useState("")
   const [refQuery, setRefQuery] = useState("")
   const [refLoading, setRefLoading] = useState(false)
@@ -69,6 +70,20 @@ export default function TinTucYKhoaPage() {
   const [refInterventions, setRefInterventions] = useState<KnowledgeIntervention[]>([])
 
   const canSearch = useMemo(() => q.trim().length >= 2, [q])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(min-width: 1024px)")
+    const update = () => setIsLarge(!!mq.matches)
+    update()
+    try {
+      mq.addEventListener("change", update)
+      return () => mq.removeEventListener("change", update)
+    } catch {
+      mq.addListener(update)
+      return () => mq.removeListener(update)
+    }
+  }, [])
 
   const applyRightRatio = (value: number) => {
     const next = Math.max(0.5, Math.min(0.8, value))
@@ -272,10 +287,10 @@ export default function TinTucYKhoaPage() {
         <div className="flex flex-col gap-4 lg:flex-row">
           <div
             className="rounded-xl border bg-background p-4 space-y-3 lg:flex-none"
-            style={{
+            style={isLarge ? {
               flexBasis: `${Math.round((1 - rightRatio) * 1000) / 10}%`,
               maxWidth: `${Math.round((1 - rightRatio) * 1000) / 10}%`,
-            }}
+            } : undefined}
           >
             <div className="text-sm font-medium">Kết quả</div>
             {!items.length && !loading ? (
@@ -307,7 +322,7 @@ export default function TinTucYKhoaPage() {
 
           <div
             className="rounded-xl border bg-background p-4 space-y-3 overflow-hidden flex flex-col min-h-[60vh] lg:flex-none"
-            style={{ flexBasis: `${Math.round(rightRatio * 1000) / 10}%`, maxWidth: `${Math.round(rightRatio * 1000) / 10}%` }}
+            style={isLarge ? { flexBasis: `${Math.round(rightRatio * 1000) / 10}%`, maxWidth: `${Math.round(rightRatio * 1000) / 10}%` } : undefined}
           >
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-medium">Nhúng trang</div>

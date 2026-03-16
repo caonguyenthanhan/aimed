@@ -29,6 +29,21 @@ const Stethoscope = (props: any) => (
   </Icon>
 )
 
+const MessageSquare = (props: any) => (
+  <Icon {...props}>
+    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
+  </Icon>
+)
+
+const Mic = (props: any) => (
+  <Icon {...props}>
+    <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z" />
+    <path d="M19 11a7 7 0 0 1-14 0" />
+    <path d="M12 19v3" />
+    <path d="M8 22h8" />
+  </Icon>
+)
+
 const Terminal = (props: any) => (
   <Icon {...props}>
     <polyline points="4 17 10 11 4 5" />
@@ -149,8 +164,8 @@ export default function LandingPage() {
           <div className="flex items-center space-x-2">
             <BrainCircuit className="text-blue-500" size={32} />
             <div>
-              <h1 className="text-lg font-bold tracking-tight">MedConsult<span className="text-blue-500">AI</span></h1>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest">HCMUTE • TLCN 2025</p>
+              <h1 className="text-lg font-bold tracking-tight"><span className="text-blue-500">AI</span>Med</h1>
+              <p className="text-[10px] text-slate-400 uppercase tracking-widest">KLTN 2026</p>
             </div>
           </div>
           <nav className="hidden md:flex items-center space-x-8">
@@ -175,6 +190,14 @@ export default function LandingPage() {
                 <a href="/tu-van" className="px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-500/25 transition-all hover:scale-105 flex items-center">
                   <Stethoscope className="mr-2" size={20} />
                   Bắt đầu Tư vấn
+                </a>
+                <a href="/tam-su" className="px-6 py-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold border border-white/10 transition-all hover:scale-105 flex items-center">
+                  <MessageSquare className="mr-2" size={20} />
+                  Tâm sự
+                </a>
+                <a href="/speech-chat" className="px-6 py-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold border border-white/10 transition-all hover:scale-105 flex items-center">
+                  <Mic className="mr-2" size={20} />
+                  Stream
                 </a>
               </div>
             </div>

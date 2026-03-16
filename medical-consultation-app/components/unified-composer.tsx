@@ -56,12 +56,12 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
       onDrop={props.onDrop}
     >
       <div className="max-w-3xl mx-auto px-2">
-        <div className="mb-2 flex flex-wrap gap-2">
+        <div className="mb-2 -mx-2 px-2 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {props.suggestedQuestions.slice(0, 4).map((q, i) => (
             <button
               key={i}
               onClick={() => props.onSuggestedQuestion(q)}
-              className="px-3 py-1.5 rounded-2xl bg-gray-100 text-gray-700 text-xs hover:bg-blue-100 border border-gray-200 hover:border-blue-200 transition-all duration-200"
+              className="shrink-0 px-3 py-1.5 rounded-2xl bg-gray-100 text-gray-700 text-[11px] hover:bg-blue-100 border border-gray-200 hover:border-blue-200 transition-all duration-200"
             >
               {q}
             </button>

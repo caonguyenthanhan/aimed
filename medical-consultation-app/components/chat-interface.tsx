@@ -17,6 +17,7 @@ import { sanitizeTtsText } from "@/lib/tts-text"
 import { UnifiedComposer } from "@/components/unified-composer"
 import { LlmChatResponseSchema } from "@/lib/llm-schema"
 import type { LlmMessage } from "@/types/llm"
+import { Drawer, DrawerContent } from "@/components/ui/drawer"
 
 interface Message {
   id: string
@@ -788,11 +789,26 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const [conversations, setConversations] = useState<{ id: string; title: string; last_active: string }[]>([])
   const [isLoadingConversations, setIsLoadingConversations] = useState<boolean>(false)
-  const [showSidebar, setShowSidebar] = useState<boolean>(true)
+  const [showSidebar, setShowSidebar] = useState<boolean>(() => (typeof window !== "undefined" ? window.innerWidth >= 640 : true))
   const [isRenameOpen, setIsRenameOpen] = useState<boolean>(false)
   const [renameTargetId, setRenameTargetId] = useState<string | null>(null)
   const [renameInput, setRenameInput] = useState<string>("")
   const [serverUnavailable, setServerUnavailable] = useState<boolean>(false)
+  const [isMobile, setIsMobile] = useState<boolean>(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(max-width: 639px)")
+    const update = () => setIsMobile(!!mq.matches)
+    update()
+    try {
+      mq.addEventListener("change", update)
+      return () => mq.removeEventListener("change", update)
+    } catch {
+      mq.addListener(update)
+      return () => mq.removeListener(update)
+    }
+  }, [])
 
   const loadLocalConversations = () => {
     if (typeof window === 'undefined') return
@@ -1165,7 +1181,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {showSidebar && (
+      {!isMobile && showSidebar && (
         <div className="w-64 glass-panel bg-gray-50/50 p-0 flex-shrink-0 h-full flex flex-col rounded-r-2xl backdrop-blur-md">
           <div className="flex items-center justify-between px-3 py-2">
             <span className="text-sm font-medium text-gray-700">Hội thoại</span>
@@ -1231,10 +1247,84 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </div>
         </div>
       )}
+      {isMobile && (
+        <Drawer open={showSidebar} onOpenChange={setShowSidebar} direction="left">
+          <DrawerContent className="data-[vaul-drawer-direction=left]:w-full data-[vaul-drawer-direction=left]:max-w-none data-[vaul-drawer-direction=left]:border-r p-0">
+            <div className="h-[100dvh] bg-white flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <span className="text-sm font-semibold text-slate-800">Lịch sử hội thoại</span>
+                <button onClick={() => setShowSidebar(false)} className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button">
+                  <X className="h-4 w-4 text-slate-700" />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 px-4 py-3">
+                <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button">
+                  <Search className="h-4 w-4 text-slate-700" />
+                </button>
+                <button onClick={beginNewConversation} className="h-9 w-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow" type="button">
+                  <Plus className="h-4 w-4" />
+                </button>
+                <button onClick={fetchConversations} className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button">
+                  <RefreshCcw className="h-4 w-4 text-slate-700" />
+                </button>
+              </div>
+
+              {sidebarSearchOpen && (
+                <div className="px-4 pb-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      value={sidebarSearch}
+                      onChange={(e) => setSidebarSearch(e.target.value)}
+                      placeholder="Lọc hội thoại..."
+                      className="w-full pl-9 pr-9 py-2 text-sm rounded-2xl border border-gray-200 focus:border-blue-400 outline-none bg-white"
+                    />
+                    {sidebarSearch && (
+                      <button onClick={() => setSidebarSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500" type="button">
+                        x
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex-1 space-y-2 overflow-y-auto px-4 pb-6">
+                {isLoadingConversations ? (
+                  <div className="text-sm text-gray-500">Đang tải...</div>
+                ) : (
+                  serverUnavailable ? (
+                    <div className="text-sm text-red-600">Không kết nối được với server</div>
+                  ) : (
+                    (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).length
+                      ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
+                        <div key={c.id} className={`flex items-center justify-between p-3 rounded-2xl border ${conversationId === c.id ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+                          <button className="text-left text-sm flex-1 pr-2" onClick={() => { openConversation(c.id); setShowSidebar(false) }} type="button">
+                            <div className="font-medium text-slate-800">{c.title || 'Chưa có tiêu đề'}</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">{c.last_active ? new Date(c.last_active).toLocaleString('vi-VN') : ''}</div>
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <button className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" onClick={() => { setRenameTargetId(c.id); setRenameInput(c.title || ''); setIsRenameOpen(true) }} type="button">
+                              <Sparkles className="h-4 w-4 text-slate-700" />
+                            </button>
+                            <button className="h-9 w-9 rounded-full bg-red-600 text-white flex items-center justify-center" onClick={() => deleteConversation(c.id)} type="button">
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                      : <div className="text-sm text-gray-500">Chưa có hội thoại</div>
+                  )
+                )}
+              </div>
+            </div>
+          </DrawerContent>
+        </Drawer>
+      )}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {!showSidebar && (
           <div className="p-2">
-            <button onClick={() => setShowSidebar(true)} className="text-xs px-2 py-1 bg-gray-100 rounded hover:bg-gray-200">Mở lịch sử</button>
+            <button onClick={() => setShowSidebar(true)} className="text-xs px-3 py-1.5 bg-gray-100 rounded-full hover:bg-gray-200">Mở lịch sử</button>
           </div>
         )}
       {/* Input and actions moved to bottom */}

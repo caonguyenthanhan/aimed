@@ -65,7 +65,7 @@ export default function SiteHeader() {
   return (
     <div className="fixed top-3 left-0 right-0 z-50 flex justify-center px-3 sm:px-4">
       {/* Floating Glass Container */}
-      <div data-site-header className="w-full max-w-4xl bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-full px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between transition-all duration-300 hover:shadow-2xl hover:bg-white/90">
+      <div data-site-header className="relative w-full max-w-4xl bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-full px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between transition-all duration-300 hover:shadow-2xl hover:bg-white/90">
         
         {/* Logo Section */}
         <Link href="/" className="flex items-center gap-2 pl-1 sm:pl-2 group">
@@ -73,9 +73,13 @@ export default function SiteHeader() {
             <BrainCircuit className="text-blue-600" size={20} />
           </div>
           <span className="font-bold text-gray-800 tracking-tight hidden sm:block">
-            MedConsult<span className="text-blue-500">AI</span>
+            <span className="text-blue-500">AI</span>Med
           </span>
         </Link>
+
+        <div className="sm:hidden absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-slate-800 tracking-tight">
+          AIMed
+        </div>
 
         {/* Navigation Section */}
         <nav className="hidden sm:flex items-center gap-1">

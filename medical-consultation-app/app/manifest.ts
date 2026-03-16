@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "MedConsultAI",
-    short_name: "MedConsultAI",
+    name: "AIMed",
+    short_name: "AIMed",
     description: "Tư vấn y tế & tâm lý với AI",
     start_url: "/",
     display: "standalone",
@@ -15,4 +15,3 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
   }
 }
-
