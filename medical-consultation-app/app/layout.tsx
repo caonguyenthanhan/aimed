@@ -1,5 +1,5 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
@@ -15,11 +15,16 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swa
 export const metadata: Metadata = {
   title: "Tư vấn Y tế AI - Ứng dụng Chăm sóc Sức khỏe",
   description: "Ứng dụng tư vấn y tế thông minh với AI, tra cứu thông tin sức khỏe và sàng lọc tâm lý",
+  manifest: "/manifest.webmanifest",
   formatDetection: {
     telephone: false,
     email: false,
     address: false,
   },
+}
+
+export const viewport: Viewport = {
+  themeColor: "#2563eb",
 }
 
 export default function RootLayout({
@@ -30,6 +35,15 @@ export default function RootLayout({
   return (
     <html lang="vi" suppressHydrationWarning>
       <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 min-h-screen overflow-hidden`}>
+        <Script id="sw-register" strategy="afterInteractive">
+          {`(function(){
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                try { navigator.serviceWorker.register('/sw.js'); } catch {}
+              });
+            }
+          })();`}
+        </Script>
         <Script id="sanitize-dom" strategy="beforeInteractive">
           {`(function(){try{
             var sanitize=function(node){try{if(node&&node.getAttribute&&node.hasAttribute('bis_skin_checked')){node.removeAttribute('bis_skin_checked')}}catch{}};

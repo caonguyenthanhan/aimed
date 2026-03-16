@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper } from 'lucide-react'
+import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper, Smile, BookOpenText, Bell } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import { MobileBottomSheetMenu } from '@/components/mobile-bottom-sheet-menu'
 const ComputeToggle = dynamic(() => import('./compute-toggle'), { ssr: false })
 
 export default function SiteHeader() {
@@ -54,8 +55,11 @@ export default function SiteHeader() {
   const items = [
     { href: '/', label: 'Trang chủ', icon: Home },
     { href: '/tu-van', label: 'Tư vấn', icon: MessageSquare },
+    { href: '/tam-su', label: 'Tâm sự', icon: Smile },
     { href: '/tra-cuu', label: 'Tra cứu', icon: Search },
     { href: '/sang-loc', label: 'Sàng lọc', icon: Activity },
+    { href: '/tri-lieu', label: 'Trị liệu', icon: BookOpenText },
+    { href: '/nhac-nho', label: 'Nhắc nhở', icon: Bell },
     { href: '/tin-tuc-y-khoa', label: 'Tin tức', icon: Newspaper },
   ]
 
@@ -104,6 +108,7 @@ export default function SiteHeader() {
           <div className="h-4 w-[1px] bg-slate-200 mx-2 hidden sm:block"></div>
           <ComputeToggle />
           <div className="h-4 w-[1px] bg-slate-200 mx-2 hidden sm:block"></div>
+          <MobileBottomSheetMenu />
           {!authed ? (
             <Link href="/login" className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-blue-600 text-white text-sm hover:bg-blue-500">
               <LogIn size={16} />
