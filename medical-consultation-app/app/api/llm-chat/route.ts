@@ -3,6 +3,8 @@ import fs from 'fs'
 import path from 'path'
 import { geminiService } from '@/lib/gemini-service'
 import { buildBlockResponse, shouldBlock } from '@/lib/safety'
+import { persistChatTurn } from '@/lib/chat-persistence'
+import crypto from 'crypto'
 
 // Determine context based on the conversation or user input
 function determineContext(userMessage: string, conversationHistory?: any[]): string {
@@ -39,6 +41,15 @@ export async function POST(request: NextRequest) {
 
     const safetyHits = shouldBlock(String(userMessage), Array.isArray(conversationHistory) ? conversationHistory : [])
     if (safetyHits.length) {
+      const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+      try {
+        await persistChatTurn({
+          sessionId: sid,
+          kind: String(context) === 'speech_stream' ? 'speech_stream' : 'consultation',
+          userText: String(userMessage),
+          assistantText: buildBlockResponse(safetyHits)
+        })
+      } catch {}
       return NextResponse.json({
         response: buildBlockResponse(safetyHits),
         metadata: {
@@ -47,7 +58,7 @@ export async function POST(request: NextRequest) {
           blocked: true,
           blocked_categories: Array.from(new Set(safetyHits.map(h => h.category))).sort(),
         },
-        conversation_id: conversation_id || null,
+        conversation_id: sid,
       })
     }
     
@@ -141,6 +152,15 @@ NGUYÊN TẮC QUAN TRỌNG:
       if (!content) {
         return NextResponse.json({ error: 'No content in response' }, { status: 502 })
       }
+      const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+      try {
+        await persistChatTurn({
+          sessionId: sid,
+          kind: category === 'speech_stream' ? 'speech_stream' : 'consultation',
+          userText: String(userMessage),
+          assistantText: content
+        })
+      } catch {}
 
       return NextResponse.json({
         response: content,
@@ -160,7 +180,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           provider: 'gemini',
           duration_ms: durationGemini
         },
-        conversation_id: conversation_id || null
+        conversation_id: sid
       })
     }
 
@@ -285,6 +305,15 @@ NGUYÊN TẮC QUAN TRỌNG:
           const durationGemini = Date.now() - startGemini
           const content = String(out?.text || '').trim()
           if (content) {
+            const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+            try {
+              await persistChatTurn({
+                sessionId: sid,
+                kind: category === 'speech_stream' ? 'speech_stream' : 'consultation',
+                userText: String(userMessage),
+                assistantText: content
+              })
+            } catch {}
             return NextResponse.json({
               response: content,
               context: determinedContext,
@@ -303,7 +332,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                 provider: 'gemini',
                 duration_ms: durationGemini
               },
-              conversation_id: conversation_id || null
+              conversation_id: sid
             })
           }
         } catch {}
@@ -334,7 +363,9 @@ NGUYÊN TẮC QUAN TRỌNG:
       } catch {}
     } catch {}
     const content = data?.choices?.[0]?.message?.content || data?.response || ''
-    const newConversationId = data?.conversation_id || conversation_id || null
+    const newConversationId = (typeof data?.conversation_id === 'string' && String(data.conversation_id).trim())
+      ? String(data.conversation_id).trim()
+      : ((typeof conversation_id === 'string' && String(conversation_id).trim()) ? String(conversation_id).trim() : crypto.randomUUID())
 
     if (!content) {
       console.error('No content in response:', data)
@@ -343,6 +374,14 @@ NGUYÊN TẮC QUAN TRỌNG:
         { status: 502 }
       )
     }
+    try {
+      await persistChatTurn({
+        sessionId: newConversationId,
+        kind: String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation',
+        userText: String(userMessage),
+        assistantText: String(content)
+      })
+    } catch {}
 
     return NextResponse.json({
       response: content,
