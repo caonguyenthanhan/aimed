@@ -25,6 +25,15 @@ interface Message {
 }
 
 export function FriendChatInterface({ initialConversationId }: { initialConversationId?: string }) {
+  const formatTime = (d: Date) => {
+    try {
+      const t = d instanceof Date ? d : new Date(d as any)
+      if (!(t instanceof Date) || Number.isNaN(t.getTime())) return ""
+      return t.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })
+    } catch {
+      return ""
+    }
+  }
   const [greeting, setGreeting] = useState(GREETINGS[0])
   useEffect(() => {
     const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
@@ -715,7 +724,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
                       )}
                       <div className={`text-[11px] mt-1 ${message.isUser ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>
                         <span suppressHydrationWarning>
-                          {message.timestamp.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                          {formatTime(message.timestamp)}
                         </span>
                       </div>
                     </div>
