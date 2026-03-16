@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
 
 type Message = {
   id: string
@@ -153,6 +154,29 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const items = await getUserState("friend_conversations")
+      if (cancelled) return
+      for (const it of items) {
+        const id = String(it?.key || "").trim()
+        const v = it?.value
+        if (!id || !v) continue
+        try {
+          const title = typeof v?.title === "string" ? v.title : ""
+          const msgs = Array.isArray(v?.messages) ? v.messages : null
+          if (title) saveLocalTitle(id, title)
+          if (msgs) localStorage.setItem(`${FRIEND_CONV_MESSAGES_PREFIX}${id}`, JSON.stringify(msgs))
+        } catch {}
+      }
+      try {
+        setConversations(loadLocalConversations())
+      } catch {}
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
     try {
       setConversations(loadLocalConversations())
     } catch {}
@@ -212,6 +236,15 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
     } catch {}
   }
 
+  const persistConversation = async (id: string) => {
+    try {
+      const title = loadLocalTitle(id)
+      const raw = localStorage.getItem(`${FRIEND_CONV_MESSAGES_PREFIX}${id}`)
+      const messagesStored = raw ? JSON.parse(raw) : []
+      await upsertUserState("friend_conversations", id, { title, messages: messagesStored })
+    } catch {}
+  }
+
   const openConversation = (id: string) => {
     setConversationId(id)
     updateUrlId(id)
@@ -227,6 +260,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
     saveLocalMessages(id, [greetingMsg])
     refreshLocalConversations()
     openConversation(id)
+    void persistConversation(id)
   }
 
   const renameConversation = (id: string) => {
@@ -235,6 +269,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
     setRenamingId(null)
     setRenameValue("")
     refreshLocalConversations()
+    void persistConversation(id)
   }
 
   const deleteConversation = (id: string) => {
@@ -245,6 +280,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
       updateUrlId(null)
       setMessages([greetingMsg])
     }
+    void deleteUserState("friend_conversations", id)
   }
 
   const speak = async (text: string) => {
@@ -281,6 +317,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
     setMessages(snapshot)
     saveLocalMessages(ensuredId, snapshot)
     refreshLocalConversations()
+      void persistConversation(ensuredId)
 
     setIsLoading(true)
     try {
@@ -325,8 +362,10 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         saveLocalTitle(newId, loadLocalTitle(ensuredId))
         saveLocalMessages(newId, finalSnap)
         if (newId !== ensuredId) deleteLocalConversation(ensuredId)
+        void persistConversation(newId)
       } else {
         saveLocalMessages(ensuredId, finalSnap)
+        void persistConversation(ensuredId)
       }
 
       try {
@@ -344,6 +383,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
       setMessages(finalSnap)
       saveLocalMessages(ensuredId, finalSnap)
       refreshLocalConversations()
+      void persistConversation(ensuredId)
     } finally {
       setIsLoading(false)
     }

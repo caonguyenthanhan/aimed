@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { readLocal, writeLocal } from "@/lib/local-store"
+import { getUserState, upsertUserState } from "@/lib/user-state-client"
 
 type MoodEntry = {
   id: string
@@ -24,6 +25,7 @@ type JournalEntry = {
 
 const MOOD_KEY = "mcs_mood_entries_v1"
 const JOURNAL_KEY = "mcs_journal_entries_v1"
+const REMOTE_NS = "dtx"
 
 const nowTs = () => Date.now()
 
@@ -65,6 +67,25 @@ export function DtxTriLieu() {
     setJournalItems(Array.isArray(j) ? j : [])
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const items = await getUserState(REMOTE_NS)
+      if (cancelled) return
+      const moodRemote = items.find((x: any) => x?.key === "mood_entries")?.value
+      const journalRemote = items.find((x: any) => x?.key === "journal_entries")?.value
+      if (Array.isArray(moodRemote)) {
+        setMoodItems(moodRemote as any)
+        try { writeLocal(MOOD_KEY, moodRemote) } catch {}
+      }
+      if (Array.isArray(journalRemote)) {
+        setJournalItems(journalRemote as any)
+        try { writeLocal(JOURNAL_KEY, journalRemote) } catch {}
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   const toggleTag = (t: string) => {
     setMoodTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t].slice(0, 6)))
   }
@@ -80,6 +101,7 @@ export function DtxTriLieu() {
     const next = [entry, ...moodItems].slice(0, 120)
     setMoodItems(next)
     writeLocal(MOOD_KEY, next)
+    void upsertUserState(REMOTE_NS, "mood_entries", next)
     setMoodNote("")
     setMoodTags([])
   }
@@ -88,6 +110,7 @@ export function DtxTriLieu() {
     const next = moodItems.filter((x) => x.id !== id)
     setMoodItems(next)
     writeLocal(MOOD_KEY, next)
+    void upsertUserState(REMOTE_NS, "mood_entries", next)
   }
 
   const saveJournal = () => {
@@ -98,6 +121,7 @@ export function DtxTriLieu() {
     const next = [entry, ...journalItems].slice(0, 200)
     setJournalItems(next)
     writeLocal(JOURNAL_KEY, next)
+    void upsertUserState(REMOTE_NS, "journal_entries", next)
     setJournalTitle("")
     setJournalContent("")
   }
@@ -106,6 +130,7 @@ export function DtxTriLieu() {
     const next = journalItems.filter((x) => x.id !== id)
     setJournalItems(next)
     writeLocal(JOURNAL_KEY, next)
+    void upsertUserState(REMOTE_NS, "journal_entries", next)
   }
 
   const mood7 = useMemo(() => moodItems.slice(0, 7), [moodItems])
@@ -284,4 +309,3 @@ export function DtxTriLieu() {
     </div>
   )
 }
-

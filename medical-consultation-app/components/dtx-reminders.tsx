@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { readLocal, writeLocal } from "@/lib/local-store"
 import { requestNotificationPermission, showNotification } from "@/lib/notifications"
+import { getUserState, upsertUserState } from "@/lib/user-state-client"
 
 type ReminderSettings = {
   enabled: boolean
@@ -15,6 +16,7 @@ type ReminderSettings = {
 }
 
 const KEY = "mcs_ba_reminder_v1"
+const REMOTE_NS = "dtx"
 
 const todayKey = () => {
   const d = new Date()
@@ -52,7 +54,22 @@ export function DtxReminders() {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const items = await getUserState(REMOTE_NS)
+      if (cancelled) return
+      const remote = items.find((x: any) => x?.key === "ba_reminder")?.value
+      if (remote && typeof remote === "object") {
+        setSettings((prev) => ({ ...prev, ...(remote as any) }))
+        try { writeLocal(KEY, { ...settings, ...(remote as any) }) } catch {}
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
     writeLocal(KEY, settings)
+    void upsertUserState(REMOTE_NS, "ba_reminder", settings)
   }, [settings])
 
   useEffect(() => {
@@ -182,4 +199,3 @@ export function DtxReminders() {
     </div>
   )
 }
-
