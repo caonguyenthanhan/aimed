@@ -4,8 +4,6 @@ import { Send, Bot, User, Plus, RefreshCcw, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
-import ReactMarkdown from "react-markdown"
-import remarkGfm from "remark-gfm"
 
 const GREETINGS: string[] = [
   "Ở đây rồi, cứ nói những gì bạn muốn. Tôi nghe.",
@@ -716,11 +714,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
                       {message.isUser ? (
                         <p className="text-sm leading-relaxed">{message.content}</p>
                       ) : (
-                        <div className="text-sm prose prose-sm dark:prose-invert leading-relaxed">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {message.content}
-                          </ReactMarkdown>
-                        </div>
+                        <div className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</div>
                       )}
                       <div className={`text-[11px] mt-1 ${message.isUser ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>
                         <span suppressHydrationWarning>
