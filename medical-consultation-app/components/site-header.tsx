@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper, Smile, BookOpenText, Bell } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import { MobileBottomSheetMenu } from '@/components/mobile-bottom-sheet-menu'
 const ComputeToggle = dynamic(() => import('./compute-toggle'), { ssr: false })
 
 export default function SiteHeader() {
@@ -64,12 +63,12 @@ export default function SiteHeader() {
   ]
 
   return (
-    <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4">
+    <div className="fixed top-3 left-0 right-0 z-50 flex justify-center px-3 sm:px-4">
       {/* Floating Glass Container */}
-      <div data-site-header className="w-full max-w-4xl bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-full px-4 h-14 flex items-center justify-between transition-all duration-300 hover:shadow-2xl hover:bg-white/90">
+      <div data-site-header className="w-full max-w-4xl bg-white/80 backdrop-blur-xl border border-white/40 shadow-xl rounded-full px-3 sm:px-4 h-12 sm:h-14 flex items-center justify-between transition-all duration-300 hover:shadow-2xl hover:bg-white/90">
         
         {/* Logo Section */}
-        <Link href="/" className="flex items-center gap-2 pl-2 group">
+        <Link href="/" className="flex items-center gap-2 pl-1 sm:pl-2 group">
           <div className="bg-blue-500/10 p-1.5 rounded-full group-hover:bg-blue-500/20 transition-colors">
             <BrainCircuit className="text-blue-600" size={20} />
           </div>
@@ -79,7 +78,7 @@ export default function SiteHeader() {
         </Link>
 
         {/* Navigation Section */}
-        <nav className="flex items-center gap-1">
+        <nav className="hidden sm:flex items-center gap-1">
           {items.map((item) => {
             const isActive = pathname === item.href
             return (
@@ -96,8 +95,6 @@ export default function SiteHeader() {
               >
                 {/* Ẩn icon trên desktop, hiện trên mobile nếu muốn, ở đây tôi hiện text trên desktop */}
                 <span className="hidden sm:inline">{item.label}</span>
-                {/* Trên mobile có thể chỉ hiện Icon */}
-                <item.icon size={18} className="sm:hidden" />
               </Link>
             )
           })}
@@ -108,7 +105,6 @@ export default function SiteHeader() {
           <div className="h-4 w-[1px] bg-slate-200 mx-2 hidden sm:block"></div>
           <ComputeToggle />
           <div className="h-4 w-[1px] bg-slate-200 mx-2 hidden sm:block"></div>
-          <MobileBottomSheetMenu />
           {!authed ? (
             <Link href="/login" className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-blue-600 text-white text-sm hover:bg-blue-500">
               <LogIn size={16} />

@@ -25,7 +25,7 @@ export default function FloatingQuickMenu() {
   if (pathname === "/ke-hoach") return null
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="hidden sm:block fixed bottom-6 right-6 z-50">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -51,4 +51,3 @@ export default function FloatingQuickMenu() {
     </div>
   )
 }
-

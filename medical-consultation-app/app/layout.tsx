@@ -7,6 +7,7 @@ import { Suspense } from "react"
 import Script from "next/script"
 import SiteHeader from "@/components/site-header"
 import FloatingQuickMenu from "@/components/floating-quick-menu"
+import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -34,7 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 min-h-screen overflow-hidden`}>
+      <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 pb-20 sm:pb-0 min-h-screen overflow-hidden`}>
         <Script id="sw-register" strategy="afterInteractive">
           {`(function(){
             if ('serviceWorker' in navigator) {
@@ -59,6 +60,7 @@ export default function RootLayout({
           <div className="absolute -bottom-[20%] left-[20%] w-[60%] h-[60%] rounded-full bg-pink-200/30 blur-[100px] animate-blob animation-delay-4000" />
         </div>
         <Suspense fallback={null}>{children}</Suspense>
+        <MobileBottomNav />
         <FloatingQuickMenu />
         <div suppressHydrationWarning><Toaster /></div>
         <Analytics />
