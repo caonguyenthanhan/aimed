@@ -580,7 +580,7 @@ export default function SpeechChatPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800" suppressHydrationWarning>
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <div className="hidden sm:block bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -641,7 +641,26 @@ export default function SpeechChatPage() {
       </div>
 
       {/* Chat Messages */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      <div className="max-w-4xl mx-auto px-4 py-6 pb-44 sm:pb-6">
+        <div className="sm:hidden mb-4">
+          <div className="text-lg font-semibold text-slate-900">Stream</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setAutoPlayResponse(v => !v)}
+              className={`text-xs px-3 py-1.5 rounded-full border ${autoPlayResponse ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700 border-slate-200"}`}
+            >
+              Auto phát
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseOptimizedAPI(v => !v)}
+              className={`text-xs px-3 py-1.5 rounded-full border ${useOptimizedAPI ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-700 border-slate-200"}`}
+            >
+              API tối ưu
+            </button>
+          </div>
+        </div>
         <div className="space-y-6 mb-6">
           {messages.length === 0 ? (
             <div className="text-center py-12">
@@ -746,7 +765,7 @@ export default function SpeechChatPage() {
       </div>
 
       {/* Control Buttons */}
-      <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2">
+      <div className="fixed bottom-[calc(96px+env(safe-area-inset-bottom))] sm:bottom-8 left-1/2 transform -translate-x-1/2 z-40">
         <div className="flex items-center space-x-4">
           {/* Camera Button */}
           <button

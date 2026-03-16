@@ -35,7 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 pb-20 sm:pb-0 min-h-screen overflow-x-hidden`}>
+      <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-14 sm:pt-16 pb-20 sm:pb-0 min-h-screen overflow-x-hidden`}>
         <Script id="sw-register" strategy="afterInteractive">
           {`(function(){
             if ('serviceWorker' in navigator) {

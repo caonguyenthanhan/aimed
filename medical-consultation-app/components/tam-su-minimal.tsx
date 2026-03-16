@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
+import { Drawer, DrawerContent } from "@/components/ui/drawer"
+import { Menu, X } from "lucide-react"
 
 type Message = {
   id: string
@@ -128,7 +130,8 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   const [friendStyle, setFriendStyle] = useState<"standard" | "deep">("deep")
   const [authToken, setAuthToken] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ConversationItem[]>([])
-  const [showSidebar, setShowSidebar] = useState(true)
+  const [showSidebar, setShowSidebar] = useState<boolean>(() => (typeof window !== "undefined" ? window.innerWidth >= 640 : true))
+  const [isMobile, setIsMobile] = useState<boolean>(false)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState("")
   const [voiceMode, setVoiceMode] = useState(false)
@@ -143,6 +146,20 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   const analyserRef = useRef<AnalyserNode | null>(null)
 
   const endRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(max-width: 639px)")
+    const update = () => setIsMobile(!!mq.matches)
+    update()
+    try {
+      mq.addEventListener("change", update)
+      return () => mq.removeEventListener("change", update)
+    } catch {
+      mq.addListener(update)
+      return () => mq.removeListener(update)
+    }
+  }, [])
 
   useEffect(() => {
     try {
@@ -475,7 +492,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
     <div className="min-h-[calc(100vh-64px)] bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       <div className="max-w-6xl mx-auto p-4">
         <div className="rounded-2xl border bg-white shadow-sm overflow-hidden flex min-h-[72vh]">
-          {showSidebar ? (
+          {!isMobile && showSidebar ? (
             <div className="w-72 border-r bg-white flex flex-col">
               <div className="p-3 border-b flex items-center justify-between gap-2">
                 <div className="text-sm font-semibold">Hội thoại</div>
@@ -504,11 +521,43 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 )}
               </div>
             </div>
-          ) : (
-            <div className="w-10 border-r flex items-start justify-center p-2">
-              <button className="text-xs px-2 py-1 border rounded" type="button" onClick={() => setShowSidebar(true)}>≡</button>
-            </div>
-          )}
+          ) : null}
+
+          {isMobile ? (
+            <Drawer open={showSidebar} onOpenChange={setShowSidebar} direction="left">
+              <DrawerContent className="data-[vaul-drawer-direction=left]:w-full data-[vaul-drawer-direction=left]:max-w-none data-[vaul-drawer-direction=left]:border-r p-0">
+                <div className="h-[100dvh] bg-white flex flex-col">
+                  <div className="p-4 border-b flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold">Hội thoại</div>
+                    <button className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button" onClick={() => setShowSidebar(false)}>
+                      <X className="h-4 w-4 text-slate-700" />
+                    </button>
+                  </div>
+                  <div className="p-4 flex items-center justify-between gap-2">
+                    <button className="text-sm px-4 py-2 rounded-xl bg-blue-600 text-white" type="button" onClick={createConversation}>Mới</button>
+                    <button className="text-sm px-4 py-2 rounded-xl border" type="button" onClick={refreshLocalConversations}>Tải lại</button>
+                  </div>
+                  <div className="px-4 pb-6 overflow-y-auto flex-1 space-y-2">
+                    {conversations.length ? (
+                      conversations.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => { openConversation(c.id); setShowSidebar(false) }}
+                          className={`w-full text-left px-4 py-3 rounded-2xl border ${conversationId === c.id ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:bg-slate-50"}`}
+                        >
+                          <div className="text-sm font-medium truncate">{c.title || "Tâm sự"}</div>
+                          <div className="text-xs text-muted-foreground">{c.last_active ? new Date(c.last_active).toLocaleString("vi-VN") : ""}</div>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="text-sm text-muted-foreground py-3">Chưa có hội thoại.</div>
+                    )}
+                  </div>
+                </div>
+              </DrawerContent>
+            </Drawer>
+          ) : null}
 
           <div className="flex-1 flex flex-col">
             <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
@@ -538,6 +587,11 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 <div className="text-xs text-muted-foreground">Chia sẻ điều bạn đang nghĩ, mình luôn lắng nghe.</div>
               </div>
               <div className="flex items-center gap-2">
+                {isMobile ? (
+                  <button className="h-9 w-9 rounded-full border bg-white flex items-center justify-center" type="button" onClick={() => setShowSidebar(true)} aria-label="Mở lịch sử">
+                    <Menu className="h-4 w-4 text-slate-700" />
+                  </button>
+                ) : null}
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as any)}

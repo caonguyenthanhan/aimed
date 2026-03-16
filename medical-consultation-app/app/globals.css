@@ -132,7 +132,8 @@ html, body {
   height: 100%;
 }
 body {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .glass-panel {

@@ -44,6 +44,36 @@ const Mic = (props: any) => (
   </Icon>
 )
 
+const Newspaper = (props: any) => (
+  <Icon {...props}>
+    <path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+    <path d="M8 7h8" />
+    <path d="M8 11h8" />
+    <path d="M8 15h5" />
+  </Icon>
+)
+
+const BookOpen = (props: any) => (
+  <Icon {...props}>
+    <path d="M2 4h7a3 3 0 0 1 3 3v14a3 3 0 0 0-3-3H2z" />
+    <path d="M22 4h-7a3 3 0 0 0-3 3v14a3 3 0 0 1 3-3h7z" />
+  </Icon>
+)
+
+const Bell = (props: any) => (
+  <Icon {...props}>
+    <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+  </Icon>
+)
+
+const User = (props: any) => (
+  <Icon {...props}>
+    <path d="M20 21a8 8 0 1 0-16 0" />
+    <circle cx="12" cy="7" r="4" />
+  </Icon>
+)
+
 const Terminal = (props: any) => (
   <Icon {...props}>
     <polyline points="4 17 10 11 4 5" />
@@ -232,6 +262,84 @@ export default function LandingPage() {
             <FeatureCard title="Tư vấn AI" description="Trò chuyện trực tiếp với trợ lý ảo để nhận lời khuyên sức khỏe." icon={Stethoscope} link="/tu-van" colorClass="text-blue-500" />
             <FeatureCard title="Tra cứu Y dược" description="Tìm kiếm thông tin thuốc, bệnh lý từ cơ sở dữ liệu chuẩn hóa." icon={SearchIcon} link="/tra-cuu" colorClass="text-teal-400" />
             <FeatureCard title="Sàng lọc Tâm lý" description="Thực hiện các bài test (PHQ-9, GAD-7) để đánh giá tinh thần." icon={Activity} link="/sang-loc" colorClass="text-purple-400" />
+          </div>
+
+          <div className="mt-10">
+            <div className="text-sm font-semibold text-slate-200 uppercase tracking-widest mb-3">Chức năng</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              <a href="/tu-van" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-blue-600/20 flex items-center justify-center"><Stethoscope size={20} className="text-blue-300" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Tư vấn</div>
+                    <div className="text-[11px] text-white/70">Chat y tế</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/tam-su" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-teal-600/20 flex items-center justify-center"><MessageSquare size={20} className="text-teal-200" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Tâm sự</div>
+                    <div className="text-[11px] text-white/70">Companion</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/speech-chat" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-indigo-600/20 flex items-center justify-center"><Mic size={20} className="text-indigo-200" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Stream</div>
+                    <div className="text-[11px] text-white/70">Voice</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/tin-tuc-y-khoa" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-amber-600/20 flex items-center justify-center"><Newspaper size={20} className="text-amber-200" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Tin tức</div>
+                    <div className="text-[11px] text-white/70">Web search</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/tri-lieu" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-purple-600/20 flex items-center justify-center"><BookOpen size={20} className="text-purple-200" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Trị liệu</div>
+                    <div className="text-[11px] text-white/70">Mood/Journal</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/nhac-nho" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-600/20 flex items-center justify-center"><Bell size={20} className="text-emerald-200" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Nhắc nhở</div>
+                    <div className="text-[11px] text-white/70">Behavior</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/account" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-slate-600/20 flex items-center justify-center"><User size={20} className="text-slate-200" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Tài khoản</div>
+                    <div className="text-[11px] text-white/70">Profile</div>
+                  </div>
+                </div>
+              </a>
+              <a href="/quan-ly" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-slate-600/20 flex items-center justify-center"><Monitor size={20} className="text-slate-200" /></div>
+                  <div>
+                    <div className="text-sm font-semibold">Quản lý</div>
+                    <div className="text-[11px] text-white/70">Dashboard</div>
+                  </div>
+                </div>
+              </a>
+            </div>
           </div>
           
         </div>

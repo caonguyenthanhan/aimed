@@ -72,14 +72,10 @@ export default function SiteHeader() {
           <div className="bg-blue-500/10 p-1.5 rounded-full group-hover:bg-blue-500/20 transition-colors">
             <BrainCircuit className="text-blue-600" size={20} />
           </div>
-          <span className="font-bold text-gray-800 tracking-tight hidden sm:block">
+          <span className="font-bold text-gray-800 tracking-tight text-sm sm:text-base">
             <span className="text-blue-500">AI</span>Med
           </span>
         </Link>
-
-        <div className="sm:hidden absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-slate-800 tracking-tight">
-          AIMed
-        </div>
 
         {/* Navigation Section */}
         <nav className="hidden sm:flex items-center gap-1">
