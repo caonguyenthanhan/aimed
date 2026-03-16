@@ -86,7 +86,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
   const [showSidebar, setShowSidebar] = useState(true)
   const [isLoadingConversations, setIsLoadingConversations] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const authToken = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
+  const [authToken, setAuthToken] = useState<string | null>(null)
   const [currentTitle, setCurrentTitle] = useState<string>("Tâm sự")
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState<string>("")
@@ -113,6 +113,15 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
   useEffect(() => { scrollToBottom() }, [messages])
+
+  useEffect(() => {
+    try {
+      const t = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
+      setAuthToken(t && String(t).trim() ? String(t) : null)
+    } catch {
+      setAuthToken(null)
+    }
+  }, [])
 
   useEffect(() => {
     if (!authToken && initialConversationId) {
