@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic"
 import { useEffect, useState } from "react"
 import { ClientErrorBoundary } from "@/components/client-error-boundary"
-const FriendChatInterface = dynamic(() => import("@/components/friend-chat-interface").then(m => m.FriendChatInterface), { ssr: false })
+const TamSuMinimal = dynamic(() => import("@/components/tam-su-minimal").then(m => m.TamSuMinimal), { ssr: false })
 export default function TamSuPage() {
   const [id, setId] = useState<string | undefined>(undefined)
   useEffect(() => {
@@ -16,7 +16,7 @@ export default function TamSuPage() {
   return (
     <div suppressHydrationWarning>
       <ClientErrorBoundary>
-        <FriendChatInterface initialConversationId={id} />
+        <TamSuMinimal initialConversationId={id} />
       </ClientErrorBoundary>
     </div>
   )
