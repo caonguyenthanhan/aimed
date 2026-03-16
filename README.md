@@ -100,6 +100,10 @@ Nếu thiếu 2 biến này, gọi `/api/web-search` sẽ trả lỗi `Missing G
   - Seed tài khoản + consent + hội thoại + tóm tắt mẫu:
     - `python cpu_server/scripts/seed_demo_data.py`
 
+- Neo4j (GraphRAG) ingest ViHealthQA (JSONL):
+  - ENV: `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `NEO4J_DATABASE`
+  - `python cpu_server/scripts/ingest_vihealthqa_neo4j.py --input <vihealthqa.jsonl> --limit 0`
+
 ## 📌 Lưu ý
 
 - Nội dung y khoa do AI sinh ra chỉ mang tính tham khảo, không thay thế chẩn đoán/điều trị của bác sĩ.

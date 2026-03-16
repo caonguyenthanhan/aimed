@@ -140,6 +140,116 @@ def ensure_clinical_memory_schema() -> None:
                 )
                 """
             )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS conversation_soap_notes (
+                  conv_id UUID PRIMARY KEY REFERENCES conversations(id) ON DELETE CASCADE,
+                  soap TEXT NOT NULL DEFAULT '',
+                  metadata JSONB,
+                  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+                """
+            )
+
+
+def ensure_phenotyping_schema() -> None:
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS phenotyping_daily_metrics (
+                  user_id UUID NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+                  day DATE NOT NULL,
+                  steps INT NOT NULL DEFAULT 0,
+                  sleep_minutes INT NOT NULL DEFAULT 0,
+                  stealth_score REAL NOT NULL DEFAULT 0,
+                  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                  PRIMARY KEY (user_id, day)
+                )
+                """
+            )
+            cur.execute("CREATE INDEX IF NOT EXISTS phenotyping_daily_metrics_user_id_idx ON phenotyping_daily_metrics (user_id)")
+
+
+def get_conversation_soap_note(conv_id: str) -> Optional[Dict[str, Any]]:
+    try:
+        cid = uuid.UUID(str(conv_id))
+    except Exception:
+        return None
+    with db_connect() as conn:
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute("SELECT * FROM conversation_soap_notes WHERE conv_id = %s", (cid,))
+            return cur.fetchone()
+
+
+def upsert_conversation_soap_note(conv_id: str, soap: str, metadata: Optional[dict] = None) -> None:
+    try:
+        cid = uuid.UUID(str(conv_id))
+    except Exception:
+        raise ValueError("Invalid conv_id")
+    s = (soap or "").strip()
+    with db_connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO conversation_soap_notes (conv_id, soap, metadata, updated_at)
+                VALUES (%s, %s, %s, now())
+                ON CONFLICT (conv_id) DO UPDATE SET soap = EXCLUDED.soap, metadata = EXCLUDED.metadata, updated_at = now()
+                """,
+                (cid, s, Jsonb(metadata) if metadata is not None else None),
+            )
+
+
+def upsert_phenotyping_daily_metrics(user_id: str, day: str, steps: int, sleep_minutes: int) -> Dict[str, Any]:
+    try:
+        uid = uuid.UUID(str(user_id))
+    except Exception:
+        raise ValueError("Invalid user_id")
+    d = str(day or "").strip()
+    if not d:
+        raise ValueError("Invalid day")
+    st = max(int(steps or 0), 0)
+    sm = max(int(sleep_minutes or 0), 0)
+    steps_score = min(st / 8000.0, 1.0)
+    sleep_score = min(max((sm - 360) / 180.0, 0.0), 1.0)
+    stealth = float(round((0.55 * steps_score + 0.45 * sleep_score) * 100.0, 2))
+    with db_connect() as conn:
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute(
+                """
+                INSERT INTO phenotyping_daily_metrics (user_id, day, steps, sleep_minutes, stealth_score, updated_at)
+                VALUES (%s, %s::date, %s, %s, %s, now())
+                ON CONFLICT (user_id, day) DO UPDATE SET
+                  steps = EXCLUDED.steps,
+                  sleep_minutes = EXCLUDED.sleep_minutes,
+                  stealth_score = EXCLUDED.stealth_score,
+                  updated_at = now()
+                RETURNING *
+                """,
+                (uid, d, st, sm, stealth),
+            )
+            return cur.fetchone()
+
+
+def list_phenotyping_daily_metrics(user_id: str, limit: int = 14) -> List[Dict[str, Any]]:
+    try:
+        uid = uuid.UUID(str(user_id))
+    except Exception:
+        return []
+    lim = max(min(int(limit or 14), 60), 1)
+    with db_connect() as conn:
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute(
+                """
+                SELECT * FROM phenotyping_daily_metrics
+                WHERE user_id = %s
+                ORDER BY day DESC
+                LIMIT %s
+                """,
+                (uid, lim),
+            )
+            return list(cur.fetchall() or [])
 
 
 def now_iso(cur) -> str:

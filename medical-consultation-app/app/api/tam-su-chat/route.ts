@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { geminiService } from '@/lib/gemini-service'
+import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +24,20 @@ export async function POST(request: NextRequest) {
 
     if (!userMessage) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
+    }
+
+    const safetyHits = shouldBlock(String(userMessage), conversationHistory)
+    if (safetyHits.length) {
+      return NextResponse.json({
+        response: buildBlockResponse(safetyHits),
+        metadata: {
+          timestamp: new Date().toISOString(),
+          mode: 'safety',
+          blocked: true,
+          blocked_categories: Array.from(new Set(safetyHits.map(h => h.category))).sort(),
+        },
+        conversation_id: conversation_id || null
+      })
     }
 
     if (useGemini) {
@@ -120,6 +135,35 @@ export async function POST(request: NextRequest) {
     if (!resp.ok) {
       try {
         if (modeUsed === 'gpu') {
+          if (process.env.GEMINI_API_KEY) {
+            try {
+              const startGemini = Date.now()
+              const out = await geminiService.generateFromConfig({
+                category: 'friend',
+                tier: modeHeader,
+                question: userMessage,
+                persona: '',
+                messages: conversationHistory,
+                generationConfig: { temperature, maxOutputTokens: max_tokens }
+              })
+              const durationGemini = Date.now() - startGemini
+              const content = String(out?.text || '').trim()
+              if (content) {
+                return NextResponse.json({
+                  response: content,
+                  metadata: {
+                    timestamp: new Date().toISOString(),
+                    mode: 'gpu',
+                    fallback: true,
+                    provider: 'gemini',
+                    duration_ms: durationGemini,
+                    model: out?.model || process.env.GEMINI_MODEL || 'gemini'
+                  },
+                  conversation_id: conversation_id || null
+                })
+              }
+            } catch {}
+          }
           const retry = await fetch(cpuFallback, {
             method: 'POST',
             headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': 'true' } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
@@ -152,6 +196,35 @@ export async function POST(request: NextRequest) {
       if (!responseText || responseText.trim() === '') throw new Error('Empty response from server')
       data = JSON.parse(responseText)
     } catch (e: any) {
+      if (modeUsed === 'gpu' && process.env.GEMINI_API_KEY) {
+        try {
+          const startGemini = Date.now()
+          const out = await geminiService.generateFromConfig({
+            category: 'friend',
+            tier: modeHeader,
+            question: userMessage,
+            persona: '',
+            messages: conversationHistory,
+            generationConfig: { temperature, maxOutputTokens: max_tokens }
+          })
+          const durationGemini = Date.now() - startGemini
+          const content = String(out?.text || '').trim()
+          if (content) {
+            return NextResponse.json({
+              response: content,
+              metadata: {
+                timestamp: new Date().toISOString(),
+                mode: 'gpu',
+                fallback: true,
+                provider: 'gemini',
+                duration_ms: durationGemini,
+                model: out?.model || process.env.GEMINI_MODEL || 'gemini'
+              },
+              conversation_id: conversation_id || null
+            })
+          }
+        } catch {}
+      }
       return NextResponse.json({ error: 'Invalid JSON response from server', details: e?.message || 'parse_error' }, { status: 502 })
     }
 

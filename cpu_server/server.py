@@ -55,6 +55,11 @@ try:
 except Exception:
     jwt = None
 
+try:
+    from . import safety as _safety
+except Exception:
+    _safety = None
+
 def _load_dotenv_file(path: str) -> None:
     try:
         if not path or not os.path.exists(path):
@@ -85,6 +90,8 @@ try:
         ensure_auth_schema as _db_ensure_auth_schema,
         ensure_clinical_memory_schema as _db_ensure_clinical_memory_schema,
         ensure_knowledge_schema as _db_ensure_knowledge_schema,
+        ensure_phenotyping_schema as _db_ensure_phenotyping_schema,
+        get_conversation_soap_note as _db_get_conversation_soap_note,
         get_conversation_summary as _db_get_conversation_summary,
         get_consent as _db_get_consent,
         get_conversation as _db_get_conversation,
@@ -99,19 +106,27 @@ try:
         search_medical_entities as _db_search_medical_entities,
         set_password as _db_set_password,
         set_consent as _db_set_consent,
+        upsert_conversation_soap_note as _db_upsert_conversation_soap_note,
         upsert_conversation_summary as _db_upsert_conversation_summary,
+        upsert_phenotyping_daily_metrics as _db_upsert_phenotyping_daily_metrics,
         update_username as _db_update_username,
         update_conversation_title as _db_update_conversation_title,
+        list_phenotyping_daily_metrics as _db_list_phenotyping_daily_metrics,
     )
 except Exception:
     _db_ensure_auth_schema = None
     _db_ensure_clinical_memory_schema = None
     _db_ensure_knowledge_schema = None
+    _db_ensure_phenotyping_schema = None
+    _db_get_conversation_soap_note = None
     _db_get_user_by_username = None
     _db_get_user_by_id = None
     _db_create_user = None
     _db_bump_token_version = None
     _db_get_conversation_summary = None
+    _db_upsert_conversation_soap_note = None
+    _db_upsert_phenotyping_daily_metrics = None
+    _db_list_phenotyping_daily_metrics = None
     _db_get_consent = None
     _db_set_consent = None
     _db_set_password = None
@@ -245,6 +260,8 @@ async def lifespan(app: FastAPI):
             _db_ensure_knowledge_schema()
         if _db_ensure_clinical_memory_schema is not None:
             _db_ensure_clinical_memory_schema()
+        if _db_ensure_phenotyping_schema is not None:
+            _db_ensure_phenotyping_schema()
             admin_user = (os.environ.get("BOOTSTRAP_ADMIN_USERNAME") or "").strip()
             admin_pass = (os.environ.get("BOOTSTRAP_ADMIN_PASSWORD") or "").strip()
             if admin_user and admin_pass and _db_get_user_by_username is not None and _db_create_user is not None:
@@ -443,6 +460,12 @@ class KnowledgeSearchRequest(BaseModel):
     limit: Optional[int] = 8
     include_relations: Optional[bool] = True
     include_interventions: Optional[bool] = True
+
+
+class PhenotypingDailyRequest(BaseModel):
+    day: Optional[str] = None
+    steps: Optional[int] = 0
+    sleep_minutes: Optional[int] = 0
 
 # Load model once at startup
 llm_pro: Optional[Llama] = None
@@ -995,16 +1018,34 @@ Lưu ý: Luôn khuyến cáo người dùng đi khám bác sĩ nếu có dấu h
             base_messages = [{"role": "user", "content": user_text}]
     full_messages = history + base_messages
 
-    try:
-        _log_user = ""
-        for _m in reversed(base_messages):
-            if _m.get("role") == "user":
-                _log_user = _m.get("content", "")
-                break
-        if _log_user:
-            print(f"[USER] { _log_user }")
-    except Exception:
-        pass
+    if _safety is not None:
+        try:
+            last_user_text = ""
+            for _m in reversed(base_messages):
+                if str(_m.get("role") or "").lower() == "user":
+                    last_user_text = str(_m.get("content") or "")
+                    break
+            hits = _safety.should_block(last_user_text, base_messages)
+            if hits:
+                content = _safety.build_block_response(hits)
+                to_save = []
+                if last_user_text:
+                    to_save.append({"role": "user", "content": last_user_text})
+                to_save.append({"role": "assistant", "content": content})
+                title = generate_auto_title(last_user_text, content)
+                save_chat_history(user_id, conversation_id, to_save, title=title)
+                response = ChatResponse(
+                    id="safety",
+                    choices=[ChatChoice(index=0, message=ChatMessage(role="assistant", content=content))],
+                    conversation_id=conversation_id,
+                )
+                data = response.dict()
+                data["mode_used"] = "safety"
+                data["blocked"] = True
+                data["blocked_categories"] = sorted({h.category for h in hits})
+                return data
+        except Exception:
+            pass
     provider = (req.provider or os.environ.get("LLM_PROVIDER", "") or "").strip().lower()
     if provider == "gemini":
         content = _gemini_generate_text(full_messages, selected, req.temperature or 0.7, req.max_tokens or 512)
@@ -1102,6 +1143,32 @@ Lưu ý: Luôn khuyến cáo người dùng đi khám bác sĩ nếu có dấu h
             return data
         except Exception:
             pass
+        try:
+            content = _gemini_generate_text(full_messages, selected, req.temperature or 0.7, req.max_tokens or 512)
+            if str(content or "").strip():
+                last_user = None
+                for m in reversed(base_messages):
+                    if m.get("role") == "user":
+                        last_user = {"role": "user", "content": m.get("content", "")}
+                        break
+                to_save = []
+                if last_user:
+                    to_save.append(last_user)
+                to_save.append({"role": "assistant", "content": content})
+                title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
+                save_chat_history(user_id, conversation_id, to_save, title=title)
+                response = ChatResponse(
+                    id="gemini",
+                    choices=[ChatChoice(index=0, message=ChatMessage(role="assistant", content=content))],
+                    conversation_id=conversation_id,
+                )
+                data = response.dict()
+                data["mode_used"] = "gpu"
+                data["provider"] = "gemini"
+                data["fallback"] = True
+                return data
+        except Exception:
+            pass
 
     just_loaded = False
     if chosen_llm is None:
@@ -1183,6 +1250,36 @@ async def friend_chat_completions(req: ChatRequest, request: Request):
     else:
         base_messages = [{"role": "system", "content": friend_prompt}] + base_messages
     full_messages = history + base_messages
+    if _safety is not None:
+        try:
+            last_user_text = ""
+            for _m in reversed(base_messages):
+                if str(_m.get("role") or "").lower() == "user":
+                    last_user_text = str(_m.get("content") or "")
+                    break
+            hits = _safety.should_block(last_user_text, base_messages)
+            if hits:
+                content = _safety.build_block_response(hits)
+                to_save = []
+                if last_user_text:
+                    to_save.append({"role": "user", "content": last_user_text})
+                to_save.append({"role": "assistant", "content": content})
+                save_social_history(user_id, conversation_id, to_save)
+                conv = MOCK_SOCIAL_DB.get(user_id, {}).get("conversations", {}).get(conversation_id)
+                if conv and not conv.get("title"):
+                    title = generate_auto_title(last_user_text, content)
+                    conv["title"] = title
+                return {
+                    "id": "safety",
+                    "object": "chat.completion",
+                    "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
+                    "conversation_id": conversation_id,
+                    "mode_used": "safety",
+                    "blocked": True,
+                    "blocked_categories": sorted({h.category for h in hits}),
+                }
+        except Exception:
+            pass
     provider = (req.provider or os.environ.get("LLM_PROVIDER", "") or "").strip().lower()
     if provider == "gemini":
         content = _gemini_generate_text(full_messages, selected, req.temperature or 0.7, req.max_tokens or 512)
@@ -1267,6 +1364,34 @@ async def friend_chat_completions(req: ChatRequest, request: Request):
                 "conversation_id": conversation_id,
                 "mode_used": "gpu"
             }
+        except Exception:
+            pass
+        try:
+            content = _gemini_generate_text(full_messages, selected, req.temperature or 0.7, req.max_tokens or 512)
+            if str(content or "").strip():
+                last_user = None
+                for m in reversed(base_messages):
+                    if m.get("role") == "user":
+                        last_user = {"role": "user", "content": m.get("content", "")}
+                        break
+                to_save = []
+                if last_user:
+                    to_save.append(last_user)
+                to_save.append({"role": "assistant", "content": content})
+                save_social_history(user_id, conversation_id, to_save)
+                conv = MOCK_SOCIAL_DB.get(user_id, {}).get("conversations", {}).get(conversation_id)
+                if conv and not conv.get("title"):
+                    title = generate_auto_title(last_user.get("content", "") if last_user else "", content)
+                    conv["title"] = title
+                return {
+                    "id": "gemini",
+                    "object": "chat.completion",
+                    "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
+                    "conversation_id": conversation_id,
+                    "mode_used": "gpu",
+                    "provider": "gemini",
+                    "fallback": True,
+                }
         except Exception:
             pass
     just_loaded = False
@@ -2638,6 +2763,133 @@ async def get_clinical_summary(conv_id: str, request: Request, refresh: bool = F
         except Exception:
             pass
     return {"conv_id": conv_id, "summary": content, "metadata": meta}
+
+
+@app.get("/v1/clinical/soap/{conv_id}")
+async def get_soap_note(conv_id: str, request: Request, refresh: bool = False, patient_id: Optional[str] = None):
+    actor = require_actor(request)
+    if _db_get_conversation is None or _db_get_recent_conversation_messages is None:
+        raise HTTPException(status_code=500, detail="Clinical DB not available")
+    target_user_id = actor["id"]
+    if actor.get("role") in ("DOCTOR", "ADMIN") and patient_id:
+        target_user_id = str(patient_id).strip()
+    elif patient_id and str(patient_id).strip() != str(actor["id"]):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    conv = _db_get_conversation(target_user_id, conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if not refresh and _db_get_conversation_soap_note is not None:
+        existing = _db_get_conversation_soap_note(conv_id)
+        if existing and str(existing.get("soap") or "").strip():
+            return {
+                "conv_id": conv_id,
+                "soap": existing.get("soap"),
+                "metadata": existing.get("metadata") or {},
+                "updated_at": existing.get("updated_at").isoformat() if existing.get("updated_at") else "",
+            }
+    msgs = _db_get_recent_conversation_messages(conv_id, 220)
+    meta = _risk_metadata_from_messages(msgs)
+    summary_text = ""
+    if _db_get_conversation_summary is not None:
+        try:
+            s = _db_get_conversation_summary(conv_id)
+            if s and str(s.get("summary") or "").strip():
+                summary_text = str(s.get("summary") or "").strip()
+        except Exception:
+            summary_text = ""
+    prompt = (
+        "Bạn là bác sĩ ghi chép bệnh án. Hãy tạo SOAP note tiếng Việt dựa trên dữ liệu hội thoại.\n"
+        "Yêu cầu: không chẩn đoán khẳng định; viết ngắn gọn; ưu tiên thông tin lâm sàng; nếu thiếu dữ kiện thì ghi 'chưa rõ'.\n"
+        "Định dạng đúng 4 mục:\n"
+        "S: (Subjective)\n"
+        "O: (Objective)\n"
+        "A: (Assessment)\n"
+        "P: (Plan)\n"
+    )
+    payload_obj = {"summary": summary_text, "messages": msgs}
+    content = ""
+    try:
+        content = _gemini_generate_text(
+            [{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(payload_obj, ensure_ascii=False)}],
+            "flash",
+            0.2,
+            800,
+        )
+    except Exception:
+        try:
+            chosen = llm_flash or llm_pro
+            if chosen is None:
+                ensure_text_model("flash")
+                chosen = llm_flash or llm_pro
+            if chosen is None:
+                raise RuntimeError("No local model")
+            r = chosen.create_chat_completion(
+                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": json.dumps(payload_obj, ensure_ascii=False)}],
+                temperature=0.2,
+                max_tokens=800,
+            )
+            content = str(r.get("choices", [{}])[0].get("message", {}).get("content", "") or "")
+        except Exception:
+            content = ""
+    if _db_upsert_conversation_soap_note is not None and content.strip():
+        try:
+            _db_upsert_conversation_soap_note(conv_id, content, meta)
+        except Exception:
+            pass
+    return {"conv_id": conv_id, "soap": content, "metadata": meta}
+
+
+@app.post("/v1/phenotyping/daily")
+async def upsert_phenotyping_daily(req: PhenotypingDailyRequest, request: Request, user_id: Optional[str] = None):
+    actor = require_actor(request)
+    target_user_id = actor["id"]
+    if actor.get("role") in ("DOCTOR", "ADMIN") and user_id:
+        target_user_id = str(user_id).strip()
+    elif user_id and str(user_id).strip() != str(actor["id"]):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if _db_upsert_phenotyping_daily_metrics is None:
+        raise HTTPException(status_code=500, detail="Phenotyping DB not available")
+    day = (req.day or "").strip()
+    if not day:
+        day = datetime.date.today().isoformat()
+    try:
+        row = _db_upsert_phenotyping_daily_metrics(target_user_id, day, int(req.steps or 0), int(req.sleep_minutes or 0))
+        return {
+            "user_id": str(row.get("user_id")),
+            "day": str(row.get("day")),
+            "steps": int(row.get("steps") or 0),
+            "sleep_minutes": int(row.get("sleep_minutes") or 0),
+            "stealth_score": float(row.get("stealth_score") or 0),
+            "updated_at": row.get("updated_at").isoformat() if row.get("updated_at") else "",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e) or "Invalid payload")
+
+
+@app.get("/v1/phenotyping/daily")
+async def list_phenotyping_daily(request: Request, user_id: Optional[str] = None, limit: int = 14):
+    actor = require_actor(request)
+    target_user_id = actor["id"]
+    if actor.get("role") in ("DOCTOR", "ADMIN") and user_id:
+        target_user_id = str(user_id).strip()
+    elif user_id and str(user_id).strip() != str(actor["id"]):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if _db_list_phenotyping_daily_metrics is None:
+        raise HTTPException(status_code=500, detail="Phenotyping DB not available")
+    rows = _db_list_phenotyping_daily_metrics(target_user_id, int(limit or 14))
+    out = []
+    for r in rows:
+        out.append(
+            {
+                "user_id": str(r.get("user_id")),
+                "day": str(r.get("day")),
+                "steps": int(r.get("steps") or 0),
+                "sleep_minutes": int(r.get("sleep_minutes") or 0),
+                "stealth_score": float(r.get("stealth_score") or 0),
+                "updated_at": r.get("updated_at").isoformat() if r.get("updated_at") else "",
+            }
+        )
+    return {"user_id": str(target_user_id), "items": out}
 
 
 @app.post("/v1/offboarding")

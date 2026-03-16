@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 import { geminiService } from '@/lib/gemini-service'
+import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 
 // Determine context based on the conversation or user input
 function determineContext(userMessage: string, conversationHistory?: any[]): string {
@@ -34,6 +35,20 @@ export async function POST(request: NextRequest) {
         { error: 'Message is required' },
         { status: 400 }
       )
+    }
+
+    const safetyHits = shouldBlock(String(userMessage), Array.isArray(conversationHistory) ? conversationHistory : [])
+    if (safetyHits.length) {
+      return NextResponse.json({
+        response: buildBlockResponse(safetyHits),
+        metadata: {
+          timestamp: new Date().toISOString(),
+          mode: 'safety',
+          blocked: true,
+          blocked_categories: Array.from(new Set(safetyHits.map(h => h.category))).sort(),
+        },
+        conversation_id: conversation_id || null,
+      })
     }
     
     // Determine context based on user message
@@ -176,6 +191,44 @@ NGUYÊN TẮC QUAN TRỌNG:
     if (!resp.ok) {
       try {
         if (modeUsed === 'gpu') {
+          if (process.env.GEMINI_API_KEY) {
+            try {
+              const startGemini = Date.now()
+              const personaForGemini = (typeof persona === 'string' && persona.trim()) ? persona.trim() : (typeof role === 'string' && role.trim() ? role.trim() : '')
+              const category = String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation'
+              const out = await geminiService.generateFromConfig({
+                category: category as any,
+                tier: modeHeader,
+                question: String(userMessage),
+                persona: personaForGemini,
+                messages: Array.isArray(conversationHistory) ? conversationHistory : []
+              })
+              const durationGemini = Date.now() - startGemini
+              const content = String(out?.text || '').trim()
+              if (content) {
+                return NextResponse.json({
+                  response: content,
+                  context: determinedContext,
+                  model_info: {
+                    model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
+                    provider: 'Gemini'
+                  },
+                  metadata: {
+                    context: determinedContext,
+                    prompt_length: String(userMessage).length,
+                    response_length: content.length,
+                    timestamp: new Date().toISOString(),
+                    mode: 'gpu',
+                    tier: modeHeader,
+                    fallback: true,
+                    provider: 'gemini',
+                    duration_ms: durationGemini
+                  },
+                  conversation_id: conversation_id || null
+                })
+              }
+            } catch {}
+          }
           const fallbackUrl = cpuFallback
           const retry = await fetch(fallbackUrl, {
             method: 'POST',
@@ -211,15 +264,50 @@ NGUYÊN TẮC QUAN TRỌNG:
     let data
     try {
       const responseText = await resp.text()
-      console.log('Raw response:', responseText)
-      
       if (!responseText || responseText.trim() === '') {
         throw new Error('Empty response from server')
       }
       
       data = JSON.parse(responseText)
     } catch (parseError) {
-      console.error('JSON parsing error:', parseError)
+      if (modeUsed === 'gpu' && process.env.GEMINI_API_KEY) {
+        try {
+          const startGemini = Date.now()
+          const personaForGemini = (typeof persona === 'string' && persona.trim()) ? persona.trim() : (typeof role === 'string' && role.trim() ? role.trim() : '')
+          const category = String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation'
+          const out = await geminiService.generateFromConfig({
+            category: category as any,
+            tier: modeHeader,
+            question: String(userMessage),
+            persona: personaForGemini,
+            messages: Array.isArray(conversationHistory) ? conversationHistory : []
+          })
+          const durationGemini = Date.now() - startGemini
+          const content = String(out?.text || '').trim()
+          if (content) {
+            return NextResponse.json({
+              response: content,
+              context: determinedContext,
+              model_info: {
+                model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
+                provider: 'Gemini'
+              },
+              metadata: {
+                context: determinedContext,
+                prompt_length: String(userMessage).length,
+                response_length: content.length,
+                timestamp: new Date().toISOString(),
+                mode: 'gpu',
+                tier: modeHeader,
+                fallback: true,
+                provider: 'gemini',
+                duration_ms: durationGemini
+              },
+              conversation_id: conversation_id || null
+            })
+          }
+        } catch {}
+      }
       return NextResponse.json(
         { error: 'Invalid JSON response from server', details: parseError instanceof Error ? parseError.message : 'Unknown parsing error' },
         { status: 502 }
