@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
-import { Drawer, DrawerContent } from "@/components/ui/drawer"
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Menu, X } from "lucide-react"
 
 type Message = {
@@ -526,16 +526,19 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
           {isMobile ? (
             <Drawer open={showSidebar} onOpenChange={setShowSidebar} direction="left">
               <DrawerContent className="data-[vaul-drawer-direction=left]:w-full data-[vaul-drawer-direction=left]:max-w-none data-[vaul-drawer-direction=left]:border-r p-0">
-                <div className="h-[100dvh] bg-white flex flex-col">
-                  <div className="p-4 border-b flex items-center justify-between gap-2">
-                    <div className="text-sm font-semibold">Hội thoại</div>
-                    <button className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button" onClick={() => setShowSidebar(false)}>
-                      <X className="h-4 w-4 text-slate-700" />
+                <div className="sr-only">
+                  <DrawerTitle>Lịch sử tâm sự</DrawerTitle>
+                </div>
+                <div className="h-[100dvh] bg-white dark:bg-slate-900 flex flex-col">
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Lịch sử tâm sự</div>
+                    <button className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition" type="button" onClick={() => setShowSidebar(false)}>
+                      <X className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                     </button>
                   </div>
-                  <div className="p-4 flex items-center justify-between gap-2">
-                    <button className="text-sm px-4 py-2 rounded-xl bg-blue-600 text-white" type="button" onClick={createConversation}>Mới</button>
-                    <button className="text-sm px-4 py-2 rounded-xl border" type="button" onClick={refreshLocalConversations}>Tải lại</button>
+                  <div className="p-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700">
+                    <button className="flex-1 text-sm px-4 py-2.5 rounded-lg bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 font-medium transition" type="button" onClick={createConversation}>Tâm sự mới</button>
+                    <button className="text-sm px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 hover:border-slate-300 dark:hover:border-slate-600 transition" type="button" onClick={refreshLocalConversations}>⟲</button>
                   </div>
                   <div className="px-4 pb-6 overflow-y-auto flex-1 space-y-2">
                     {conversations.length ? (
@@ -544,14 +547,14 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                           key={c.id}
                           type="button"
                           onClick={() => { openConversation(c.id); setShowSidebar(false) }}
-                          className={`w-full text-left px-4 py-3 rounded-2xl border ${conversationId === c.id ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:bg-slate-50"}`}
+                          className={`w-full text-left px-4 py-3 rounded-lg border transition ${conversationId === c.id ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30" : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50"}`}
                         >
-                          <div className="text-sm font-medium truncate">{c.title || "Tâm sự"}</div>
-                          <div className="text-xs text-muted-foreground">{c.last_active ? new Date(c.last_active).toLocaleString("vi-VN") : ""}</div>
+                          <div className="text-sm font-medium truncate text-slate-900 dark:text-slate-50">{c.title || "Tâm sự"}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{c.last_active ? new Date(c.last_active).toLocaleString("vi-VN") : "Vừa mới"}</div>
                         </button>
                       ))
                     ) : (
-                      <div className="text-sm text-muted-foreground py-3">Chưa có hội thoại.</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400 py-6 text-center">Chưa có hội thoại nào. Bắt đầu tâm sự mới!</div>
                     )}
                   </div>
                 </div>
