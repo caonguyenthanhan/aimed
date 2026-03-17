@@ -4,40 +4,40 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated color palette for medical app with calming blues and trustworthy colors */
-  --background: #ffffff;
-  --foreground: #4b5563;
-  --card: #fefce8;
-  --card-foreground: #4b5563;
+  /* Modern & Clean color palette for medical app - Blue/Teal healthcare aesthetic */
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --card: #ffffff;
+  --card-foreground: #1e293b;
   --popover: #ffffff;
-  --popover-foreground: #4b5563;
-  --primary: #0077be;
+  --popover-foreground: #1e293b;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #fefce8;
-  --secondary-foreground: #4b5563;
-  --muted: #f8fafc;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #50c878;
+  --accent: #14b8a6;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
   --input: #ffffff;
-  --ring: #0077be;
-  --chart-1: #60a5fa;
-  --chart-2: #34d399;
-  --chart-3: #fbbf24;
+  --ring: #2563eb;
+  --chart-1: #2563eb;
+  --chart-2: #14b8a6;
+  --chart-3: #10b981;
   --chart-4: #f87171;
-  --chart-5: #a78bfa;
+  --chart-5: #8b5cf6;
   --radius: 0.5rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #4b5563;
-  --sidebar-primary: #fefce8;
-  --sidebar-primary-foreground: #4b5563;
-  --sidebar-accent: #3b82f6;
+  --sidebar-foreground: #1e293b;
+  --sidebar-primary: #f1f5f9;
+  --sidebar-primary-foreground: #1e293b;
+  --sidebar-accent: #2563eb;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #e2e8f0;
-  --sidebar-ring: #3b82f6;
+  --sidebar-ring: #2563eb;
 }
 
 .dark {
@@ -47,32 +47,32 @@
   --card-foreground: #f1f5f9;
   --popover: #1e293b;
   --popover-foreground: #f1f5f9;
-  --primary: #60a5fa;
+  --primary: #3b82f6;
   --primary-foreground: #0f172a;
   --secondary: #334155;
   --secondary-foreground: #f1f5f9;
   --muted: #334155;
   --muted-foreground: #94a3b8;
-  --accent: #0ea5e9;
-  --accent-foreground: #f1f5f9;
+  --accent: #06d6a0;
+  --accent-foreground: #0f172a;
   --destructive: #ef4444;
   --destructive-foreground: #f1f5f9;
   --border: #334155;
   --input: #334155;
-  --ring: #60a5fa;
-  --chart-1: #60a5fa;
-  --chart-2: #34d399;
-  --chart-3: #fbbf24;
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #06d6a0;
+  --chart-3: #10b981;
   --chart-4: #f87171;
   --chart-5: #a78bfa;
   --sidebar: #1e293b;
   --sidebar-foreground: #f1f5f9;
   --sidebar-primary: #334155;
   --sidebar-primary-foreground: #f1f5f9;
-  --sidebar-accent: #60a5fa;
+  --sidebar-accent: #3b82f6;
   --sidebar-accent-foreground: #0f172a;
   --sidebar-border: #334155;
-  --sidebar-ring: #60a5fa;
+  --sidebar-ring: #3b82f6;
 }
 
 @theme inline {
@@ -137,13 +137,23 @@ body {
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.glass-panel-dark {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .hero-gradient {
-  background: radial-gradient(circle at top right, rgba(0, 119, 190, 0.08) 0%, transparent 40%), radial-gradient(circle at bottom left, rgba(0, 119, 190, 0.08) 0%, transparent 40%), #ffffff;
+  background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.08) 0%, transparent 40%), radial-gradient(circle at bottom left, rgba(20, 184, 166, 0.06) 0%, transparent 40%), #f8fafc;
+}
+
+.hero-gradient-dark {
+  background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1) 0%, transparent 40%), radial-gradient(circle at bottom left, rgba(6, 214, 160, 0.08) 0%, transparent 40%), #0f172a;
 }
 
 .text-glow {
