@@ -17,7 +17,7 @@ import { sanitizeTtsText } from "@/lib/tts-text"
 import { UnifiedComposer } from "@/components/unified-composer"
 import { LlmChatResponseSchema } from "@/lib/llm-schema"
 import type { LlmMessage } from "@/types/llm"
-import { Drawer, DrawerContent } from "@/components/ui/drawer"
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 
 interface Message {
   id: string
@@ -1250,6 +1250,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       {isMobile && (
         <Drawer open={showSidebar} onOpenChange={setShowSidebar} direction="left">
           <DrawerContent className="data-[vaul-drawer-direction=left]:w-full data-[vaul-drawer-direction=left]:max-w-none data-[vaul-drawer-direction=left]:border-r p-0">
+            <DrawerTitle className="sr-only">Lịch sử hội thoại</DrawerTitle>
             <div className="h-[100dvh] bg-white flex flex-col">
               <div className="flex items-center justify-between px-4 py-3 border-b">
                 <span className="text-sm font-semibold text-slate-800">Lịch sử hội thoại</span>
