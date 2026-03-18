@@ -578,57 +578,62 @@ export default function SpeechChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800" suppressHydrationWarning>
+    <div className="min-h-screen bg-white dark:bg-slate-950 hero-gradient dark:hero-gradient-dark" suppressHydrationWarning>
       {/* Header */}
-      <div className="hidden sm:block bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+      <div className="hidden sm:block bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link 
                 href="/"
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
-                <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-400" />
               </Link>
-              <div className="flex items-center space-x-2">
-                <MessageCircle className="h-6 w-6 text-blue-600" />
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Trò chuyện bằng giọng nói
-                </h1>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center">
+                  <Mic className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">
+                    Tư vấn Giọng nói
+                  </h1>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Giao tiếp tự nhiên với trợ lý y tế</p>
+                </div>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+            <div className="flex items-center space-x-3">
+              <label className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-slate-50 transition">
                 <input
                   type="checkbox"
                   checked={autoPlayResponse}
                   onChange={(e) => setAutoPlayResponse(e.target.checked)}
-                  className="rounded"
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span>Tự động phát phản hồi</span>
+                <span className="font-medium">Tự động phát</span>
               </label>
               
-              <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
+              <label className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-slate-50 transition">
                 <input
                   type="checkbox"
                   checked={useOptimizedAPI}
                   onChange={(e) => setUseOptimizedAPI(e.target.checked)}
-                  className="rounded"
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
-                <span>API tối ưu</span>
+                <span className="font-medium">API tối ưu</span>
               </label>
             </div>
           </div>
           
           {/* Chunking Info */}
           {lastChunkingInfo && (
-            <div className="max-w-4xl mx-auto px-4 py-2">
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                <div className="flex items-center space-x-2 text-sm text-green-700 dark:text-green-300">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="font-medium">Tối ưu hóa đã được áp dụng:</span>
-                  <span>
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2">
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
+                <div className="flex items-center space-x-3 text-sm text-emerald-700 dark:text-emerald-300">
+                  <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="font-semibold">Tối ưu hóa được áp dụng:</span>
+                  <span className="font-mono">
                     STT: {lastChunkingInfo.speech_to_text ? '✓' : '✗'} | 
                     TTS: {lastChunkingInfo.text_to_speech ? '✓' : '✗'}
                     {lastChunkingInfo.chunks_processed && ` | ${lastChunkingInfo.chunks_processed} đoạn`}
@@ -641,36 +646,43 @@ export default function SpeechChatPage() {
       </div>
 
       {/* Chat Messages */}
-      <div className="max-w-4xl mx-auto px-4 py-6 pb-44 sm:pb-6">
-        <div className="sm:hidden mb-4">
-          <div className="text-lg font-semibold text-slate-900">Stream</div>
-          <div className="mt-2 flex flex-wrap gap-2">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 pb-44 sm:pb-8">
+        {/* Mobile Header */}
+        <div className="sm:hidden mb-6">
+          <div className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-3">Tư vấn Giọng nói</div>
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setAutoPlayResponse(v => !v)}
-              className={`text-xs px-3 py-1.5 rounded-full border ${autoPlayResponse ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700 border-slate-200"}`}
+              className={`text-xs px-4 py-2 rounded-lg border font-medium transition ${autoPlayResponse ? "bg-blue-600 text-white border-blue-600" : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-50 border-slate-200 dark:border-slate-700"}`}
             >
-              Auto phát
+              {autoPlayResponse ? '🔊 Tự động phát' : '🔇 Tắt phát'}
             </button>
             <button
               type="button"
               onClick={() => setUseOptimizedAPI(v => !v)}
-              className={`text-xs px-3 py-1.5 rounded-full border ${useOptimizedAPI ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-700 border-slate-200"}`}
+              className={`text-xs px-4 py-2 rounded-lg border font-medium transition ${useOptimizedAPI ? "bg-emerald-600 text-white border-emerald-600" : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-50 border-slate-200 dark:border-slate-700"}`}
             >
-              API tối ưu
+              {useOptimizedAPI ? '⚡ API tối ưu' : '⏱️ API thường'}
             </button>
           </div>
         </div>
         <div className="space-y-6 mb-6">
           {messages.length === 0 ? (
-            <div className="text-center py-12">
-              <Mic className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-600 dark:text-gray-300 mb-2">
-                Bắt đầu trò chuyện bằng giọng nói
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-950/30 mb-6">
+                <Mic className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-50 mb-3">
+                Chào bạn
               </h2>
-              <p className="text-gray-500 dark:text-gray-400">
-                Nhấn nút microphone để bắt đầu ghi âm câu hỏi của bạn
+              <p className="text-slate-600 dark:text-slate-400 max-w-xs mx-auto mb-8">
+                Nhấn nút microphone bên dưới để bắt đầu tư vấn sức khỏe bằng giọng nói
               </p>
+              <div className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
+                <span>Ghi âm tự động xử lý</span>
+              </div>
             </div>
           ) : (
             messages.map((message) => (
@@ -679,10 +691,10 @@ export default function SpeechChatPage() {
                 className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${
+                  className={`max-w-xs lg:max-w-md px-5 py-4 rounded-2xl transition-all ${
                     message.isUser
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-md'
+                      ? 'bg-blue-600 dark:bg-blue-600 text-white shadow-lg'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-50 border border-slate-200 dark:border-slate-700 shadow-md'
                   }`}
                 >
                   {/* Display image if present */}
@@ -700,31 +712,31 @@ export default function SpeechChatPage() {
                   <p className="text-sm leading-relaxed">{message.content}</p>
                   
                   {!message.isUser && (
-                    <div className="flex justify-end mt-2 space-x-1">
+                    <div className="flex justify-end mt-3 space-x-2">
                       {/* Audio Control Buttons */}
                       {isPlayingAudio === message.id ? (
                         <button
                           onClick={() => handlePauseAudio(message.id)}
-                          className="p-1 rounded-full bg-blue-500 text-white transition-colors duration-200 hover:bg-blue-600"
+                          className="p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-all duration-200 active:scale-95 shadow-sm"
                           title="Tạm dừng"
                         >
-                          <Pause className="h-3 w-3" />
+                          <Pause className="h-4 w-4" />
                         </button>
                       ) : isPausedAudio === message.id ? (
                         <button
                           onClick={() => handleResumeAudio(message.id)}
-                          className="p-1 rounded-full bg-green-500 text-white transition-colors duration-200 hover:bg-green-600"
+                          className="p-2 rounded-lg bg-green-500 text-white hover:bg-green-600 transition-all duration-200 active:scale-95 shadow-sm"
                           title="Tiếp tục"
                         >
-                          <Play className="h-3 w-3" />
+                          <Play className="h-4 w-4" />
                         </button>
                       ) : (
                         <button
                           onClick={() => handleTextToSpeech(message.id, message.content)}
-                          className="p-1 rounded-full bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors duration-200"
+                          className="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 transition-all duration-200 active:scale-95"
                           title="Nghe tin nhắn"
                         >
-                          <Volume2 className="h-3 w-3" />
+                          <Volume2 className="h-4 w-4" />
                         </button>
                       )}
                       
@@ -732,10 +744,10 @@ export default function SpeechChatPage() {
                       {(isPlayingAudio === message.id || isPausedAudio === message.id) && (
                         <button
                           onClick={handleStopAudio}
-                          className="p-1 rounded-full bg-red-500 text-white transition-colors duration-200 hover:bg-red-600"
+                          className="p-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-all duration-200 active:scale-95 shadow-sm"
                           title="Dừng"
                         >
-                          <Square className="h-3 w-3" />
+                          <Square className="h-4 w-4" />
                         </button>
                       )}
                     </div>
@@ -747,14 +759,14 @@ export default function SpeechChatPage() {
           
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-white dark:bg-gray-700 rounded-2xl px-4 py-3 shadow-md">
-                <div className="flex items-center space-x-2">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-5 py-4 shadow-md border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center space-x-3">
+                  <div className="flex space-x-1.5">
+                    <div className="w-2.5 h-2.5 bg-slate-400 dark:bg-slate-500 rounded-full animate-bounce"></div>
+                    <div className="w-2.5 h-2.5 bg-slate-400 dark:bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2.5 h-2.5 bg-slate-400 dark:bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Đang xử lý...</span>
+                  <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Đang xử lý...</span>
                 </div>
               </div>
             </div>
@@ -771,7 +783,7 @@ export default function SpeechChatPage() {
           <button
             onClick={startCamera}
             disabled={isLoading || isRecording}
-            className="w-12 h-12 rounded-full bg-green-600 text-white hover:bg-green-700 shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+            className="w-12 h-12 rounded-full bg-green-600 dark:bg-green-600 text-white hover:bg-green-700 dark:hover:bg-green-700 shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
             title="Chụp ảnh"
           >
             <Camera className="h-6 w-6 mx-auto" />
@@ -781,30 +793,40 @@ export default function SpeechChatPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isLoading || isRecording}
-            className="w-12 h-12 rounded-full bg-purple-600 text-white hover:bg-purple-700 shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+            className="w-12 h-12 rounded-full bg-purple-600 dark:bg-purple-600 text-white hover:bg-purple-700 dark:hover:bg-purple-700 shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
             title="Tải ảnh lên"
           >
             <Upload className="h-6 w-6 mx-auto" />
           </button>
 
-          {/* Recording Button */}
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            disabled={isLoading}
-            className={`w-16 h-16 rounded-full shadow-lg transition-all duration-200 ${
-              isRecording
-                ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            } disabled:opacity-50 disabled:cursor-not-allowed active:scale-95`}
-            title={isRecording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm'}
+          {/* Recording Button with Listening Effect */}
+          <div className="relative">
+            {isRecording && (
+              <>
+                {/* Outer pulse ring */}
+                <div className="absolute inset-0 w-16 h-16 rounded-full bg-red-500 opacity-0 animate-ping" style={{ animationDuration: '1.5s' }}></div>
+                {/* Middle pulse ring */}
+                <div className="absolute inset-2 w-14 h-14 rounded-full bg-red-500 opacity-20"></div>
+              </>
+            )}
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={isLoading}
+              className={`relative w-16 h-16 rounded-full shadow-lg transition-all duration-200 font-semibold ${
+                isRecording
+                  ? 'bg-red-600 dark:bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-700 animate-pulse'
+                  : 'bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700'
+              } disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex items-center justify-center`}
+              title={isRecording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm'}
           >
             <Mic className="h-8 w-8 mx-auto" />
           </button>
         </div>
         
         {isRecording && (
-          <div className="absolute -top-12 left-1/2 transform -translate-x-1/2">
-            <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+          <div className="absolute -top-14 left-1/2 transform -translate-x-1/2">
+            <div className="bg-red-600 dark:bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-lg flex items-center gap-2">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
               Đang ghi âm...
             </div>
           </div>
@@ -812,17 +834,17 @@ export default function SpeechChatPage() {
 
         {/* Captured Image Preview */}
         {capturedImage && (
-          <div className="absolute -top-32 left-1/2 transform -translate-x-1/2">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-2 shadow-lg border">
+          <div className="absolute -top-36 left-1/2 transform -translate-x-1/2">
+            <div className="bg-white dark:bg-slate-900 rounded-lg p-3 shadow-lg border border-slate-200 dark:border-slate-700">
               <div className="relative">
                 <img 
                   src={capturedImage} 
                   alt="Captured" 
-                  className="w-24 h-24 object-cover rounded"
+                  className="w-24 h-24 object-cover rounded-lg"
                 />
                 <button
                   onClick={clearCapturedImage}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-md transition"
                   title="Xóa ảnh"
                 >
                   <X className="h-3 w-3" />
