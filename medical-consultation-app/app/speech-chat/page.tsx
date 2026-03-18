@@ -860,7 +860,7 @@ export default function SpeechChatPage() {
       </div>
 
       {/* Hidden File Input */}
-       <input
+      <input
          ref={fileInputRef}
          type="file"
          accept="image/*"
