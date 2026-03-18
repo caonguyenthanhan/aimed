@@ -70,7 +70,7 @@ export default function AccountPage() {
         const avatar = String(data?.avatar_url || "").trim()
         const links = { google: !!data?.social_links?.google, facebook: !!data?.social_links?.facebook }
         setProfile({
-          full_name: name,
+          full_name: name || "Người dùng",
           email,
           email_verified: !!data?.email_verified,
           phone,
@@ -341,134 +341,143 @@ export default function AccountPage() {
   }, [profile.joined_at])
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-slate-800">Hồ sơ</h1>
-      <p className="text-slate-600 mt-1">Quản lý thông tin và cài đặt tài khoản</p>
-      <div className="mt-6 grid md:grid-cols-4 gap-6">
-        <aside className="md:col-span-1 space-y-2">
-          <a href="#profile" className="block px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Thông tin chung</a>
-          <a href="#security" className="block px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Bảo mật</a>
-          <a href="#settings" className="block px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Cài đặt</a>
-          <a href="#special" className="block px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Thông tin đặc thù</a>
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50">Hồ sơ tài khoản</h1>
+        <p className="text-slate-600 dark:text-slate-400 mt-2">Quản lý thông tin cá nhân và cài đặt bảo mật</p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <aside className="lg:col-span-1 order-2 lg:order-1">
+          <div className="sticky top-24 space-y-2">
+            <a href="#profile" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Thông tin chung</a>
+            <a href="#security" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Bảo mật</a>
+            <a href="#settings" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Cài đặt</a>
+            <a href="#special" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Thông tin đặc thù</a>
+          </div>
         </aside>
-        <main className="md:col-span-3 space-y-6">
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-          {success && <p className="text-green-600 text-sm">{success}</p>}
-          <section id="profile" className="bg-white border rounded-xl p-6 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full bg-blue-600 text-white flex items-center justify-center overflow-hidden">
-                {avatarPreview ? <img src={avatarPreview} alt="avatar" className="h-full w-full object-cover" /> : <span className="text-xl font-bold">{initialFromName(profile.full_name)}</span>}
+        <main className="lg:col-span-4 order-1 lg:order-2 space-y-6">
+          {error && <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">{error}</div>}
+          {success && <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-sm">{success}</div>}
+          <section id="profile" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-6">Thông tin cá nhân</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 pb-6 border-b border-slate-200 dark:border-slate-700">
+              <div className="h-20 w-20 rounded-full bg-blue-600 dark:bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-md overflow-hidden">
+                {avatarPreview ? <img src={avatarPreview} alt="avatar" className="h-full w-full object-cover" /> : <span className="text-2xl font-bold">{initialFromName(profile.full_name)}</span>}
               </div>
-              <div className="space-y-1">
-                <div className="text-sm text-slate-500">{joinInfo}</div>
-                <button onClick={() => setEditingProfile(v => !v)} className="px-3 py-1.5 rounded-md bg-slate-800 text-white text-sm">{editingProfile ? "Lưu" : "Chỉnh sửa"}</button>
-                {editingProfile && (
-                  <button onClick={saveProfile} disabled={loading} className="ml-2 px-3 py-1.5 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50">{loading ? "Đang lưu..." : "Xác nhận lưu"}</button>
-                )}
+              <div className="flex-1">
+                <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">{joinInfo}</div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setEditingProfile(v => !v)} className="px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-700 transition">{editingProfile ? "Hủy" : "Chỉnh sửa"}</button>
+                  {editingProfile && (
+                    <button onClick={saveProfile} disabled={loading} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition">{loading ? "Đang lưu..." : "Lưu thay đổi"}</button>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="mt-4 grid md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm text-slate-700">Ảnh đại diện</label>
-                <input type="file" accept="image/*" onChange={onAvatarChange} className="mt-1 w-full rounded-xl border px-3 py-2" />
-                {avatarUploading && <div className="text-xs text-slate-500 mt-1">Đang xử lý ảnh...</div>}
-                {avatarError && <div className="text-xs text-red-600 mt-1">{avatarError}</div>}
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Ảnh đại diện</label>
+                <input type="file" accept="image/*" onChange={onAvatarChange} className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                {avatarUploading && <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Đang xử lý ảnh...</div>}
+                {avatarError && <div className="text-xs text-red-600 dark:text-red-400 mt-1">{avatarError}</div>}
               </div>
               <div>
-                <label className="text-sm text-slate-700">Họ và tên</label>
-                <input value={profile.full_name} onChange={(e) => setProfile(p => ({ ...p, full_name: e.target.value }))} disabled={!editingProfile} className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100" placeholder="Họ và tên" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Họ và tên</label>
+                <input value={profile.full_name} onChange={(e) => setProfile(p => ({ ...p, full_name: e.target.value }))} disabled={!editingProfile} className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50" placeholder="Họ và tên" />
               </div>
               <div>
-                <label className="text-sm text-slate-700">Tên hiển thị</label>
-                <input value={profile.nickname || ""} onChange={(e) => setProfile(p => ({ ...p, nickname: e.target.value }))} disabled={!editingProfile} className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100" placeholder="Biệt danh" />
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Tên hiển thị</label>
+                <input value={profile.nickname || ""} onChange={(e) => setProfile(p => ({ ...p, nickname: e.target.value }))} disabled={!editingProfile} className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50" placeholder="Biệt danh" />
               </div>
-              <div className="md:col-span-2">
-                <label className="text-sm text-slate-700">Giới thiệu</label>
-                <textarea value={profile.bio || ""} onChange={(e) => setProfile(p => ({ ...p, bio: e.target.value }))} disabled={!editingProfile} className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100" rows={3} placeholder="Mô tả ngắn" />
+              <div className="sm:col-span-2">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Giới thiệu</label>
+                <textarea value={profile.bio || ""} onChange={(e) => setProfile(p => ({ ...p, bio: e.target.value }))} disabled={!editingProfile} className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50" rows={3} placeholder="Mô tả ngắn về bản thân" />
               </div>
             </div>
           </section>
-          <section id="security" className="bg-white border rounded-xl p-6 shadow-sm">
-            <div className="grid md:grid-cols-2 gap-4">
+          <section id="security" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-6">Bảo mật</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 pb-6 border-b border-slate-200 dark:border-slate-700">
               <div>
-                <label className="text-sm text-slate-700">Email</label>
-                <div className="mt-1 flex items-center justify-between rounded-xl border px-3 py-2">
-                  <span className="text-slate-700">{profile.email || "Chưa có"}</span>
-                  <span className={`text-xs ${profile.email_verified ? "text-green-600" : "text-yellow-600"}`}>{profile.email_verified ? "Đã xác thực" : "Chưa xác thực"}</span>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Email</label>
+                <div className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-between">
+                  <span className="text-sm text-slate-900 dark:text-slate-50">{profile.email || "Chưa có"}</span>
+                  <span className={`text-xs font-medium px-2 py-1 rounded ${profile.email_verified ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"}`}>{profile.email_verified ? "Đã xác thực" : "Chưa xác thực"}</span>
                 </div>
               </div>
               <div>
-                <label className="text-sm text-slate-700">Số điện thoại</label>
-                <div className="mt-1 rounded-xl border px-3 py-2 text-slate-700">{maskPhone(profile.phone) || "Chưa có"}</div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Số điện thoại</label>
+                <div className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-50 text-sm">{maskPhone(profile.phone) || "Chưa có"}</div>
               </div>
-              <div className="md:col-span-2 flex items-center gap-2">
-                <button onClick={() => setEditingSecurity(v => !v)} className="px-3 py-1.5 rounded-md bg-slate-800 text-white text-sm">{editingSecurity ? "Đóng" : "Đổi mật khẩu"}</button>
-                {editingSecurity && (
-                  <div className="flex-1 flex items-center gap-2">
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300" placeholder="Mật khẩu mới" />
-                    <button onClick={saveSecurity} disabled={loading} className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50">{loading ? "Đang lưu..." : "Lưu"}</button>
+            </div>
+            <div className="space-y-3">
+              <button onClick={() => setEditingSecurity(v => !v)} className="px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-700 transition">{editingSecurity ? "Hủy" : "Đổi mật khẩu"}</button>
+              {editingSecurity && (
+                <div className="flex flex-col sm:flex-row gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Mật khẩu mới" />
+                  <button onClick={saveSecurity} disabled={loading} className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition whitespace-nowrap">{loading ? "Đang lưu..." : "Xác nhận"}</button>
+                </div>
+              )}
+            </div>
+          </section>
+          <section id="settings" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-6">Cài đặt tài khoản</h2>
+            <div className="space-y-6">
+              <div className="pb-6 border-b border-slate-200 dark:border-slate-700">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-3">Liên kết mạng xã hội</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className={`rounded-lg border px-4 py-3 ${profile.social_links?.google ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"}`}>
+                    <div className="text-sm font-medium text-slate-900 dark:text-slate-50">Google</div>
+                    <div className={`text-xs mt-1 ${profile.social_links?.google ? "text-green-700 dark:text-green-300" : "text-slate-600 dark:text-slate-400"}`}>{profile.social_links?.google ? "✓ Đã liên kết" : "Chưa liên kết"}</div>
                   </div>
-                )}
-              </div>
-            </div>
-          </section>
-          <section id="settings" className="bg-white border rounded-xl p-6 shadow-sm">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-slate-700">Liên kết mạng xã hội</label>
-                <div className="mt-1 grid grid-cols-2 gap-2">
-                  <div className={`rounded-xl border px-3 py-2 ${profile.social_links?.google ? "border-green-300 bg-green-50" : "border-gray-200"}`}>Google {profile.social_links?.google ? "đã liên kết" : "chưa liên kết"}</div>
-                  <div className={`rounded-xl border px-3 py-2 ${profile.social_links?.facebook ? "border-green-300 bg-green-50" : "border-gray-200"}`}>Facebook {profile.social_links?.facebook ? "đã liên kết" : "chưa liên kết"}</div>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Quản lý phiên đăng nhập</label>
-                <div className="mt-1 flex items-center justify-between rounded-xl border px-3 py-2">
-                  <span className="text-slate-700">Thiết bị đang đăng nhập</span>
-                  <button onClick={logoutAll} disabled={loading} className="px-3 py-1.5 rounded-md bg-red-600 text-white text-sm disabled:opacity-50">Đăng xuất tất cả</button>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <button onClick={logout} className="px-3 py-2 rounded-md bg-slate-800 text-white text-sm">Đăng xuất</button>
-            </div>
-            <div className="mt-6 grid md:grid-cols-2 gap-4">
-              <div className="md:col-span-2">
-                <label className="text-sm text-slate-700">Trung tâm đồng ý (Consent)</label>
-                <div className="mt-2 space-y-2 rounded-xl border p-4">
-                  <label className="flex items-center justify-between gap-3">
-                    <span className="text-sm text-slate-700">Cho phép bác sĩ xem điểm số</span>
-                    <input type="checkbox" checked={shareScores} onChange={(e) => setShareScores(e.target.checked)} className="h-4 w-4" />
-                  </label>
-                  <label className="flex items-center justify-between gap-3">
-                    <span className="text-sm text-slate-700">Cho phép bác sĩ xem nội dung chat</span>
-                    <input type="checkbox" checked={shareChatContent} onChange={(e) => setShareChatContent(e.target.checked)} className="h-4 w-4" />
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <button onClick={saveConsent} disabled={loading || !token} className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50">{loading ? "Đang lưu..." : "Lưu đồng ý"}</button>
-                    {!consentLoaded && <span className="text-xs text-slate-500">Chưa tải được cấu hình từ server</span>}
+                  <div className={`rounded-lg border px-4 py-3 ${profile.social_links?.facebook ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"}`}>
+                    <div className="text-sm font-medium text-slate-900 dark:text-slate-50">Facebook</div>
+                    <div className={`text-xs mt-1 ${profile.social_links?.facebook ? "text-green-700 dark:text-green-300" : "text-slate-600 dark:text-slate-400"}`}>{profile.social_links?.facebook ? "✓ Đã liên kết" : "Chưa liên kết"}</div>
                   </div>
                 </div>
               </div>
-              <div className="md:col-span-2">
-                <label className="text-sm text-slate-700">Clinical Offboarding</label>
-                <div className="mt-2 flex items-center justify-between rounded-xl border p-4">
-                  <span className="text-sm text-slate-700">Xóa sạch dấu vết hội thoại lâm sàng của tài khoản</span>
-                  <button onClick={offboard} disabled={loading || !token} className="px-3 py-2 rounded-md bg-red-600 text-white text-sm disabled:opacity-50">Offboarding</button>
+              <div className="pb-6 border-b border-slate-200 dark:border-slate-700">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-3">Phiên đăng nhập</label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                  <span className="text-sm text-slate-700 dark:text-slate-300">Đăng xuất khỏi tất cả thiết bị</span>
+                  <button onClick={logoutAll} disabled={loading} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition whitespace-nowrap">{loading ? "Đang xử lý..." : "Đăng xuất tất cả"}</button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-3">Trung tâm đồng ý (Consent)</label>
+                <div className="space-y-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg mb-4">
+                  <label className="flex items-center justify-between gap-3 cursor-pointer">
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Cho phép bác sĩ xem điểm số</span>
+                    <input type="checkbox" checked={shareScores} onChange={(e) => setShareScores(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 cursor-pointer">
+                    <span className="text-sm text-slate-700 dark:text-slate-300">Cho phép bác sĩ xem nội dung chat</span>
+                    <input type="checkbox" checked={shareChatContent} onChange={(e) => setShareChatContent(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={saveConsent} disabled={loading || !token} className="px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-700 disabled:opacity-50 transition">{loading ? "Đang lưu..." : "Lưu đồng ý"}</button>
+                  {!consentLoaded && <span className="text-xs text-slate-500 dark:text-slate-400 self-center">Chưa tải được cấu hình từ server</span>}
                 </div>
               </div>
             </div>
           </section>
-          <section id="special" className="bg-white border rounded-xl p-6 shadow-sm">
-            <div className="grid md:grid-cols-2 gap-4">
+          <section id="special" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-6">Thông tin đặc thù</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="text-sm text-slate-700">Gói dịch vụ</label>
-                <div className="mt-1 rounded-xl border px-3 py-2 text-slate-700">Free</div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Gói dịch vụ</label>
+                <div className="px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium">Free</div>
               </div>
               <div>
-                <label className="text-sm text-slate-700">Ngày gia hạn tiếp theo</label>
-                <div className="mt-1 rounded-xl border px-3 py-2 text-slate-700">Chưa thiết lập</div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2">Gia hạn tiếp theo</label>
+                <div className="px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-50">Chưa thiết lập</div>
               </div>
+            </div>
+            <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-3">Clinical Offboarding</label>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">Xóa tất cả dữ liệu hội thoại lâm sàng và đăng xuất khỏi tài khoản</p>
+              <button onClick={offboard} disabled={loading || !token} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50 transition">Xóa và Offboarding</button>
             </div>
           </section>
         </main>

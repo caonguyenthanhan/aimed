@@ -17,7 +17,7 @@ import { sanitizeTtsText } from "@/lib/tts-text"
 import { UnifiedComposer } from "@/components/unified-composer"
 import { LlmChatResponseSchema } from "@/lib/llm-schema"
 import type { LlmMessage } from "@/types/llm"
-import { Drawer, DrawerContent } from "@/components/ui/drawer"
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 
 interface Message {
   id: string
@@ -1166,7 +1166,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [messages, conversationId])
   return (
-    <div className="flex h-screen overflow-hidden hero-gradient" suppressHydrationWarning style={{ paddingTop: headerPad }}>
+    <div className="flex h-screen overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning style={{ paddingTop: headerPad }}>
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
         <DialogContent>
           <DialogHeader>
@@ -1182,21 +1182,21 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         </DialogContent>
       </Dialog>
       {!isMobile && showSidebar && (
-        <div className="w-64 glass-panel bg-gray-50/50 p-0 flex-shrink-0 h-full flex flex-col rounded-r-2xl backdrop-blur-md">
-          <div className="flex items-center justify-between px-3 py-2">
-            <span className="text-sm font-medium text-gray-700">Hội thoại</span>
-            <div className="flex items-center space-x-2">
-              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center">
-                <Search className="h-4 w-4 text-gray-700" />
+        <div className="w-64 glass-panel dark:glass-panel-dark bg-white dark:bg-slate-900 p-0 flex-shrink-0 h-full flex flex-col rounded-r-2xl border-r border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">Lịch sử hội thoại</span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
+                <Search className="h-4 w-4 text-slate-600 dark:text-slate-400" />
               </button>
-              <button onClick={beginNewConversation} className="h-8 w-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow hover:bg-blue-600">
+              <button onClick={beginNewConversation} className="h-8 w-8 rounded-lg bg-blue-600 dark:bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 dark:hover:bg-blue-700 transition shadow-sm">
                 <Plus className="h-4 w-4" />
               </button>
-              <button onClick={fetchConversations} className="h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center">
-                <RefreshCcw className="h-4 w-4 text-gray-700" />
+              <button onClick={fetchConversations} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
+                <RefreshCcw className="h-4 w-4 text-slate-600 dark:text-slate-400" />
               </button>
-              <button onClick={() => setShowSidebar(false)} className="h-8 w-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center">
-                <ChevronLeft className="h-4 w-4 text-gray-700" />
+              <button onClick={() => setShowSidebar(false)} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
+                <ChevronLeft className="h-4 w-4 text-slate-600 dark:text-slate-400" />
               </button>
             </div>
           </div>
@@ -1250,6 +1250,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       {isMobile && (
         <Drawer open={showSidebar} onOpenChange={setShowSidebar} direction="left">
           <DrawerContent className="data-[vaul-drawer-direction=left]:w-full data-[vaul-drawer-direction=left]:max-w-none data-[vaul-drawer-direction=left]:border-r p-0">
+            <DrawerTitle className="sr-only">Lịch sử hội thoại</DrawerTitle>
             <div className="h-[100dvh] bg-white flex flex-col">
               <div className="flex items-center justify-between px-4 py-3 border-b">
                 <span className="text-sm font-semibold text-slate-800">Lịch sử hội thoại</span>
@@ -1332,34 +1333,34 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       {!disclaimerDismissed && (
         isDisclaimerCollapsed ? (
           <div className="mx-4 mb-3">
-            <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5 shadow-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-amber-500 rounded-md flex items-center justify-center">
+            <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-full px-4 py-2 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 bg-amber-500 dark:bg-amber-600 rounded-md flex items-center justify-center flex-shrink-0">
                   <AlertTriangle className="h-3 w-3 text-white" />
                 </div>
-                <span className="text-[11px] font-medium text-amber-800">Lưu ý quan trọng</span>
+                <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">Lưu ý quan trọng</span>
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => setIsDisclaimerCollapsed(false)} className="text-[11px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded hover:bg-amber-200">Mở</button>
-                <button onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} className="text-[11px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded hover:bg-amber-200">Ẩn</button>
+                <button onClick={() => setIsDisclaimerCollapsed(false)} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Mở</button>
+                <button onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Ẩn</button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 m-4 mb-3 shadow-sm">
-            <div className="flex items-start space-x-3">
-              <div className="w-6 h-6 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 m-4 mb-3 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-6 h-6 bg-amber-500 dark:bg-amber-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                 <AlertTriangle className="h-4 w-4 text-white" />
               </div>
               <div className="text-sm flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="text-amber-800 font-medium">Lưu ý quan trọng</p>
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => setIsDisclaimerCollapsed(true)} className="text-[11px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded hover:bg-amber-200">Thu nhỏ</button>
-                    <button onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} className="text-[11px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded hover:bg-amber-200">Ẩn</button>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <p className="text-amber-800 dark:text-amber-200 font-semibold">Lưu ý quan trọng</p>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => setIsDisclaimerCollapsed(true)} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Thu nhỏ</button>
+                    <button onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Ẩn</button>
                   </div>
                 </div>
-                <p className="text-amber-700 text-xs leading-relaxed mt-1">
+                <p className="text-amber-700 dark:text-amber-300 text-xs leading-relaxed">
                   Thông tin này chỉ mang tính chất tham khảo. Vui lòng tham khảo ý kiến bác sĩ chuyên khoa để được chẩn đoán và điều trị chính xác.
                 </p>
               </div>

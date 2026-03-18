@@ -50,18 +50,18 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
 
   return (
     <div
-      className="flex-shrink-0 p-4 glass-panel border-t border-slate-200 relative z-10"
+      className="flex-shrink-0 p-4 glass-panel dark:glass-panel-dark border-t border-slate-200 dark:border-slate-700 relative z-10"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       onDragOver={props.onDragOver}
       onDrop={props.onDrop}
     >
       <div className="max-w-3xl mx-auto px-2">
-        <div className="mb-2 -mx-2 px-2 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mb-3 -mx-2 px-2 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {props.suggestedQuestions.slice(0, 4).map((q, i) => (
             <button
               key={i}
               onClick={() => props.onSuggestedQuestion(q)}
-              className="shrink-0 px-3 py-1.5 rounded-2xl bg-gray-100 text-gray-700 text-[11px] hover:bg-blue-100 border border-gray-200 hover:border-blue-200 transition-all duration-200"
+              className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200 font-medium"
             >
               {q}
             </button>
@@ -74,11 +74,11 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
               <img
                 src={`data:${props.selectedImage.mime || "image/*"};base64,${props.selectedImage.base64}`}
                 alt={props.selectedImage.name || "Ảnh xem trước"}
-                className="h-24 w-24 md:h-28 md:w-28 rounded-xl object-cover shadow border border-gray-200"
+                className="h-24 w-24 md:h-28 md:w-28 rounded-lg object-cover shadow-md border border-slate-200 dark:border-slate-700"
               />
               <button
                 onClick={props.onRemoveImage}
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-gray-800 text-white flex items-center justify-center shadow hover:bg-red-600"
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md hover:bg-red-700 transition"
                 title="Xóa ảnh"
                 aria-label="Xóa ảnh"
               >
@@ -90,16 +90,16 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
 
         {props.selectedDocName && (
           <div className="mb-3">
-            <div className="relative inline-block bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 pr-8 shadow-sm">
-              <div className="flex items-center space-x-2">
-                <div className="p-1.5 bg-blue-100 rounded-lg">
-                  <span className="text-xs font-bold text-blue-600">DOC</span>
+            <div className="relative inline-block bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg px-3 py-2 pr-8 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">DOC</span>
                 </div>
-                <span className="text-sm text-blue-800 font-medium truncate max-w-[150px]">{props.selectedDocName}</span>
+                <span className="text-sm text-blue-700 dark:text-blue-300 font-medium truncate max-w-[150px]">{props.selectedDocName}</span>
               </div>
               <button
                 onClick={props.onRemoveDoc}
-                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-gray-800 text-white flex items-center justify-center shadow hover:bg-red-600"
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md hover:bg-red-700 transition"
                 title="Xóa tài liệu"
                 aria-label="Xóa tài liệu"
               >
@@ -109,7 +109,7 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
           </div>
         )}
 
-        <div className="rounded-[24px] bg-white shadow-[0px_4px_12px_rgba(0,0,0,0.1)] px-4 py-2 flex items-center gap-2 hover:scale-[1.02] transition-transform">
+        <div className="rounded-xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-2 transition-all">
           <textarea
             value={props.value}
             onChange={(e) => props.onValueChange(e.target.value)}
@@ -120,37 +120,43 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
               }
             }}
             placeholder="Nhập câu hỏi của bạn..."
-            className="flex-1 border-0 focus:ring-0 focus:outline-none text-sm bg-transparent resize-none py-2 max-h-32 overflow-y-auto"
-            style={{ WebkitTapHighlightColor: "transparent", minHeight: "40px" }}
+            className="flex-1 border-0 focus:ring-0 focus:outline-none text-sm bg-transparent dark:text-slate-50 resize-none py-3 max-h-32 overflow-y-auto placeholder-slate-400 dark:placeholder-slate-500"
+            style={{ WebkitTapHighlightColor: "transparent", minHeight: "44px" }}
             disabled={props.isLoading}
             rows={1}
           />
           <button
             onClick={props.onSubmit}
             disabled={!canSend}
-            className="px-5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm active:scale-95"
+            className={`flex-shrink-0 p-2.5 rounded-lg transition-all duration-200 ${
+              canSend
+                ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-95"
+                : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+            }`}
             style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
+            aria-label="Gửi tin nhắn"
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={props.onToggleTools}
-              className="px-3 py-2 rounded-2xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all duration-200 shadow-sm"
+              className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 font-semibold text-sm"
+              aria-label="Bật/Tắt công cụ"
             >
               +
             </button>
             {props.showTools && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <input ref={props.fileInputRef} type="file" accept="image/*" className="hidden" onChange={props.onImageChange} />
                 <button
                   onClick={() => props.fileInputRef.current?.click()}
-                  className="px-3 py-2 rounded-2xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
+                  className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 text-sm"
                 >
-                  Thêm ảnh
+                  Ảnh
                 </button>
                 <input
                   ref={props.docInputRef}
@@ -161,44 +167,45 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                 />
                 <button
                   onClick={() => props.docInputRef.current?.click()}
-                  className="px-3 py-2 rounded-2xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
+                  className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 text-sm"
                 >
-                  Thêm PDF/DOC
+                  PDF/Doc
                 </button>
-                {props.selectedImage?.name && <span className="text-xs text-gray-600">Ảnh: {props.selectedImage.name}</span>}
-                {props.selectedDocName && <span className="text-xs text-gray-600">Tài liệu: {props.selectedDocName}</span>}
               </div>
             )}
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <select
               value={props.selectedModel}
               onChange={(e) => props.onSelectedModelChange(e.target.value as UnifiedComposerModel)}
-              className="px-3 py-2 border border-gray-200 rounded-2xl text-sm bg-white"
+              className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50"
             >
               <option value="flash">flash</option>
               <option value="pro">pro</option>
             </select>
             <button
               onClick={props.onStartNewConversation}
-              className="px-3 py-2 rounded-2xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
+              className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 text-sm"
+              title="Bắt đầu hội thoại mới"
             >
               new
             </button>
             <button
               onClick={props.onToggleRecording}
               disabled={props.isLoading}
-              className={`px-3 py-2 rounded-2xl transition-all duration-200 shadow-md active:scale-95 ${
-                props.isRecording ? "bg-red-500 text-white hover:bg-red-600" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
+                props.isRecording 
+                  ? "bg-red-600 text-white hover:bg-red-700 shadow-md" 
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
               }`}
               title={props.isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm"}
             >
-              <Mic className={`h-4 w-4 ${props.isRecording ? "animate-pulse" : ""}`} />
+              <Mic className={`h-5 w-5 ${props.isRecording ? "animate-pulse" : ""}`} />
             </button>
             <button
               onClick={props.onGotoSpeechChat}
-              className="px-3 py-2 rounded-2xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all duration-200 shadow-sm"
-              title="Chuyển sang Speech-to-Speech"
+              className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200"
+              title="Chuyển sang Voice Chat"
             >
               <img src="/icon-speech-to-speech.png" alt="Speech-to-Speech" className="h-5 w-5" />
             </button>

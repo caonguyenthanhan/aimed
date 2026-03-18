@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
-import { Drawer, DrawerContent } from "@/components/ui/drawer"
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Menu, X } from "lucide-react"
 
 type Message = {
@@ -526,16 +526,19 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
           {isMobile ? (
             <Drawer open={showSidebar} onOpenChange={setShowSidebar} direction="left">
               <DrawerContent className="data-[vaul-drawer-direction=left]:w-full data-[vaul-drawer-direction=left]:max-w-none data-[vaul-drawer-direction=left]:border-r p-0">
-                <div className="h-[100dvh] bg-white flex flex-col">
-                  <div className="p-4 border-b flex items-center justify-between gap-2">
-                    <div className="text-sm font-semibold">Hội thoại</div>
-                    <button className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button" onClick={() => setShowSidebar(false)}>
-                      <X className="h-4 w-4 text-slate-700" />
+                <div className="sr-only">
+                  <DrawerTitle>Lịch sử tâm sự</DrawerTitle>
+                </div>
+                <div className="h-[100dvh] bg-white dark:bg-slate-900 flex flex-col">
+                  <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Lịch sử tâm sự</div>
+                    <button className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition" type="button" onClick={() => setShowSidebar(false)}>
+                      <X className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                     </button>
                   </div>
-                  <div className="p-4 flex items-center justify-between gap-2">
-                    <button className="text-sm px-4 py-2 rounded-xl bg-blue-600 text-white" type="button" onClick={createConversation}>Mới</button>
-                    <button className="text-sm px-4 py-2 rounded-xl border" type="button" onClick={refreshLocalConversations}>Tải lại</button>
+                  <div className="p-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700">
+                    <button className="flex-1 text-sm px-4 py-2.5 rounded-lg bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 font-medium transition" type="button" onClick={createConversation}>Tâm sự mới</button>
+                    <button className="text-sm px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 hover:border-slate-300 dark:hover:border-slate-600 transition" type="button" onClick={refreshLocalConversations}>⟲</button>
                   </div>
                   <div className="px-4 pb-6 overflow-y-auto flex-1 space-y-2">
                     {conversations.length ? (
@@ -544,14 +547,14 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                           key={c.id}
                           type="button"
                           onClick={() => { openConversation(c.id); setShowSidebar(false) }}
-                          className={`w-full text-left px-4 py-3 rounded-2xl border ${conversationId === c.id ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:bg-slate-50"}`}
+                          className={`w-full text-left px-4 py-3 rounded-lg border transition ${conversationId === c.id ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30" : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50"}`}
                         >
-                          <div className="text-sm font-medium truncate">{c.title || "Tâm sự"}</div>
-                          <div className="text-xs text-muted-foreground">{c.last_active ? new Date(c.last_active).toLocaleString("vi-VN") : ""}</div>
+                          <div className="text-sm font-medium truncate text-slate-900 dark:text-slate-50">{c.title || "Tâm sự"}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{c.last_active ? new Date(c.last_active).toLocaleString("vi-VN") : "Vừa mới"}</div>
                         </button>
                       ))
                     ) : (
-                      <div className="text-sm text-muted-foreground py-3">Chưa có hội thoại.</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400 py-6 text-center">Chưa có hội thoại nào. Bắt đầu tâm sự mới!</div>
                     )}
                   </div>
                 </div>
@@ -574,28 +577,28 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                     <button className="text-xs px-2 py-1 border rounded" type="button" onClick={() => { setRenamingId(null); setRenameValue("") }}>Hủy</button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm font-semibold truncate">{conversationId ? loadLocalTitle(conversationId) : "Tâm sự"}</div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">{conversationId ? loadLocalTitle(conversationId) : "Tâm sự"}</div>
                     {conversationId ? (
                       <>
-                        <button className="text-xs px-2 py-1 border rounded" type="button" onClick={() => { setRenamingId(conversationId); setRenameValue(loadLocalTitle(conversationId)) }}>Đổi tên</button>
-                        <button className="text-xs px-2 py-1 border rounded text-red-600" type="button" onClick={() => deleteConversation(conversationId)}>Xóa</button>
+                        <button className="text-xs px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 hover:border-blue-300 dark:hover:border-blue-600 transition" type="button" onClick={() => { setRenamingId(conversationId); setRenameValue(loadLocalTitle(conversationId)) }}>✏️ Đổi tên</button>
+                        <button className="text-xs px-3 py-1.5 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:border-red-300 dark:hover:border-red-700 transition" type="button" onClick={() => deleteConversation(conversationId)}>🗑️ Xóa</button>
                       </>
                     ) : null}
                   </div>
                 )}
-                <div className="text-xs text-muted-foreground">Chia sẻ điều bạn đang nghĩ, mình luôn lắng nghe.</div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">Chia sẻ cảm xúc, tâm sự với trợ lý thông minh</div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 {isMobile ? (
-                  <button className="h-9 w-9 rounded-full border bg-white flex items-center justify-center" type="button" onClick={() => setShowSidebar(true)} aria-label="Mở lịch sử">
-                    <Menu className="h-4 w-4 text-slate-700" />
+                  <button className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-blue-300 dark:hover:border-blue-600 transition" type="button" onClick={() => setShowSidebar(true)} aria-label="Mở lịch sử">
+                    <Menu className="h-4 w-4 text-slate-700 dark:text-slate-300" />
                   </button>
                 ) : null}
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as any)}
-                  className="text-xs px-2 py-1 border rounded"
+                  className="text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium"
                 >
                   <option value="flash">flash</option>
                   <option value="pro">pro</option>
@@ -603,65 +606,88 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 <select
                   value={friendStyle}
                   onChange={(e) => setFriendStyle(e.target.value as any)}
-                  className="text-xs px-2 py-1 border rounded"
+                  className="text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium"
                 >
                   <option value="standard">gọn</option>
                   <option value="deep">sâu</option>
                 </select>
-                <button className="text-xs px-2 py-1 border rounded" type="button" onClick={() => setVoiceMode(v => !v)}>
-                  {voiceMode ? "Voice" : "Chat"}
+                <button 
+                  className="text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium hover:border-blue-300 dark:hover:border-blue-600 transition" 
+                  type="button" 
+                  onClick={() => setVoiceMode(v => !v)}
+                >
+                  {voiceMode ? "💬 Chat" : "🎤 Voice"}
                 </button>
                 {voiceMode ? (
                   <button
-                    className={`text-xs px-2 py-1 rounded ${isRecording ? "bg-red-600 text-white" : "bg-blue-600 text-white"}`}
+                    className={`text-xs px-3 py-2 rounded-lg font-medium transition-all ${isRecording ? "bg-red-600 dark:bg-red-600 text-white shadow-md active:scale-95" : "bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700"}`}
                     type="button"
                     onClick={() => { if (isRecording) void stopRecording(); else void startRecording() }}
                   >
-                    {isRecording ? "Dừng" : "Ghi âm"}
+                    {isRecording ? "⏹ Dừng" : "🎙 Ghi âm"}
                   </button>
                 ) : null}
                 {voiceMode && lastAudioUrl ? (
-                  <a className="text-xs px-2 py-1 border rounded" href={lastAudioUrl} target="_blank" rel="noreferrer">Nghe</a>
+                  <a className="text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium hover:border-blue-300 dark:hover:border-blue-600 transition" href={lastAudioUrl} target="_blank" rel="noreferrer">▶ Nghe</a>
                 ) : null}
               </div>
             </div>
 
-            <div className="px-4 pt-3 -mx-4 px-4 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="px-4 py-3 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b border-slate-200 dark:border-slate-700">
               {suggestedQuestions.slice(0, 4).map((q) => (
-                <button key={q} type="button" className="shrink-0 text-[11px] px-3 py-1.5 rounded-full border bg-white hover:bg-slate-50" onClick={() => setInput(q)}>
+                <button 
+                  key={q} 
+                  type="button" 
+                  className="shrink-0 text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all font-medium" 
+                  onClick={() => setInput(q)}
+                >
                   {q}
                 </button>
               ))}
               {voiceMode && isRecording ? (
                 <div className="flex items-end gap-1 h-6 ml-2">
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[0] || 6))) }px` }} className="w-1 bg-green-500 rounded-sm transition-all duration-50"></div>
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[1] || 10))) }px` }} className="w-1 bg-green-500 rounded-sm transition-all duration-50"></div>
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[2] || 16))) }px` }} className="w-1 bg-green-500 rounded-sm transition-all duration-50"></div>
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[3] || 10))) }px` }} className="w-1 bg-green-500 rounded-sm transition-all duration-50"></div>
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[4] || 6))) }px` }} className="w-1 bg-green-500 rounded-sm transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[0] || 6))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[1] || 10))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[2] || 16))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[3] || 10))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[4] || 6))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
                 </div>
               ) : null}
             </div>
 
-            <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-              {messages.map((m) => (
-                <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
-                      m.role === "user" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-900"
-                    }`}
-                  >
-                    {m.content}
-                    <div className={`text-[11px] mt-1 ${m.role === "user" ? "text-white/80" : "text-slate-500"}`}>
-                      {new Date(m.ts || nowTs()).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                    </div>
+            <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto bg-white dark:bg-slate-950">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center">
+                    <Heart className="h-8 w-8 text-blue-600 dark:text-blue-400" />
                   </div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Người Bạn Lắng Nghe</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xs">Không gian an toàn để bạn chia sẻ cảm xúc và suy nghĩ của mình</p>
                 </div>
-              ))}
-              <div ref={endRef} />
+              ) : (
+                <>
+                  {messages.map((m) => (
+                    <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                          m.role === "user" 
+                            ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md" 
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-50 border border-slate-200 dark:border-slate-700"
+                        }`}
+                      >
+                        {m.content}
+                        <div className={`text-xs mt-2 opacity-70 ${m.role === "user" ? "text-white" : "text-slate-600 dark:text-slate-400"}`}>
+                          {new Date(m.ts || nowTs()).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={endRef} />
+                </>
+              )}
             </div>
 
-            <div className="p-3 border-t bg-white flex items-end gap-2">
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-end gap-2">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -672,14 +698,18 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                   }
                 }}
                 placeholder="Bạn đang nghĩ gì, nói với mình nhé..."
-                className="flex-1 border rounded-xl px-3 py-2 text-sm resize-none max-h-40"
+                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 text-sm resize-none max-h-40 text-slate-900 dark:text-slate-50 placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={1}
                 disabled={isLoading}
               />
               <button
                 onClick={() => void send()}
                 disabled={!canSend}
-                className="px-4 py-2 text-sm rounded-xl bg-blue-600 text-white disabled:opacity-50"
+                className={`px-5 py-3 text-sm font-medium rounded-lg transition-all ${
+                  canSend 
+                    ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-700 active:scale-95" 
+                    : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                }`}
                 type="button"
               >
                 {isLoading ? "..." : "Gửi"}
