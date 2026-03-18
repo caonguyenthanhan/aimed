@@ -677,7 +677,7 @@ export default function SpeechChatPage() {
                 Chào bạn
               </h2>
               <p className="text-slate-600 dark:text-slate-400 max-w-xs mx-auto mb-8">
-                Nhấn nút microphone bên dưới để bắt đầu tư vấn sức khỏe bằng giọng nói
+                Nh���n nút microphone bên dưới để bắt đầu tư vấn sức khỏe bằng giọng nói
               </p>
               <div className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                 <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
@@ -818,9 +818,10 @@ export default function SpeechChatPage() {
                   : 'bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700'
               } disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex items-center justify-center`}
               title={isRecording ? 'Dừng ghi âm' : 'Bắt đầu ghi âm'}
-          >
-            <Mic className="h-8 w-8 mx-auto" />
-          </button>
+            >
+              <Mic className="h-8 w-8 mx-auto" />
+            </button>
+          </div>
         </div>
         
         {isRecording && (
@@ -914,6 +915,6 @@ export default function SpeechChatPage() {
 
        {/* Hidden Canvas for Image Capture */}
        <canvas ref={canvasRef} className="hidden" />
-     </div>
-   )
+    </div>
+  )
 }
