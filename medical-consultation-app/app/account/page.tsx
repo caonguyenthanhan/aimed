@@ -483,26 +483,6 @@ export default function AccountPage() {
         </main>
       </div>
     </div>
-          <section id="security" className="bg-white border rounded-xl p-6 shadow-sm">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm text-slate-700">Email</label>
-                <div className="mt-1 flex items-center justify-between rounded-xl border px-3 py-2">
-                  <span className="text-slate-700">{profile.email || "Chưa có"}</span>
-                  <span className={`text-xs ${profile.email_verified ? "text-green-600" : "text-yellow-600"}`}>{profile.email_verified ? "Đã xác thực" : "Chưa xác thực"}</span>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Số điện thoại</label>
-                <div className="mt-1 rounded-xl border px-3 py-2 text-slate-700">{maskPhone(profile.phone) || "Chưa có"}</div>
-              </div>
-              <div className="md:col-span-2 flex items-center gap-2">
-                <button onClick={() => setEditingSecurity(v => !v)} className="px-3 py-1.5 rounded-md bg-slate-800 text-white text-sm">{editingSecurity ? "Đóng" : "Đổi mật khẩu"}</button>
-                {editingSecurity && (
-                  <div className="flex-1 flex items-center gap-2">
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-blue-300" placeholder="Mật khẩu mới" />
-                    <button onClick={saveSecurity} disabled={loading} className="px-3 py-2 rounded-md bg-blue-600 text-white text-sm disabled:opacity-50">{loading ? "Đang lưu..." : "Lưu"}</button>
-                  </div>
                 )}
               </div>
             </div>
