@@ -16,6 +16,17 @@ export function geminiToolDeclarations() {
       },
     },
     {
+      name: "speak",
+      description: "Đọc to (TTS) một đoạn văn bản ngắn cho người dùng.",
+      parameters: {
+        type: "OBJECT",
+        properties: {
+          text: { type: "STRING", description: "Nội dung cần đọc to" },
+        },
+        required: ["text"],
+      },
+    },
+    {
       name: "open_screening",
       description: "Mở trang sàng lọc tâm lý (/sang-loc).",
       parameters: { type: "OBJECT", properties: {} },
@@ -40,6 +51,10 @@ export function toolCallsToActions(calls: AgentToolCall[]): AgentAction[] {
     if (!name) continue
     if (name === "navigate") {
       out.push({ type: "navigate", args: { path: String(c?.args?.path || "").trim() } } as any)
+      continue
+    }
+    if (name === "speak") {
+      out.push({ type: "speak", args: { text: String(c?.args?.text || "").trim() } } as any)
       continue
     }
     if (name === "open_screening") out.push({ type: "navigate", args: { path: "/sang-loc" } } as any)

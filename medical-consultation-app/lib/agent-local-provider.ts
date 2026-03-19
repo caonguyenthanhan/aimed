@@ -71,12 +71,16 @@ export async function runLocalAgent(opts: {
     "Schema JSON:",
     "{",
     "  \"response\": \"string\",",
-    "  \"actions\": [ { \"type\": \"navigate\", \"args\": { \"path\": \"/...\" } } ]",
+    "  \"actions\": [",
+    "    { \"type\": \"navigate\", \"args\": { \"path\": \"/...\" } },",
+    "    { \"type\": \"speak\", \"args\": { \"text\": \"...\" } }",
+    "  ]",
     "}",
     "Quy tắc actions:",
     "- Nếu cần điều hướng, dùng type=navigate và path bắt đầu bằng /.",
     "- Chỉ dùng path nằm trong allowlist.",
     `Allowlist: ${allow.join(", ")}`,
+    "- Nếu cần đọc to, dùng type=speak với text ngắn gọn.",
     "- Nếu không cần hành động, actions = [].",
   ].join("\n")
 
@@ -124,4 +128,3 @@ export async function runLocalAgent(opts: {
 
   return { text, model, json: tryJson }
 }
-

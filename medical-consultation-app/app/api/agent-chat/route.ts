@@ -92,10 +92,18 @@ export async function POST(req: Request) {
       const json = local.json
       const actions = normalizeActions(json?.actions)
         .map((a) => {
-          if (a.type !== "navigate") return null
-          const p = String(a.args?.path || "").trim()
-          if (!isAllowedPath(p)) return null
-          return { type: "navigate", args: { path: p } }
+          if (a.type === "navigate") {
+            const p = String(a.args?.path || "").trim()
+            if (!isAllowedPath(p)) return null
+            return { type: "navigate", args: { path: p } }
+          }
+          if (a.type === "speak") {
+            const t = String((a as any)?.args?.text || "").trim()
+            if (!t) return null
+            const text = t.length > 800 ? t.slice(0, 800) : t
+            return { type: "speak", args: { text } }
+          }
+          return null
         })
         .filter(Boolean) as any
 
@@ -167,6 +175,12 @@ export async function POST(req: Request) {
           const p = String(a.args?.path || "").trim()
           if (!isAllowedPath(p)) return null
           return { ...a, args: { path: p } }
+        }
+        if (a.type === "speak") {
+          const t = String((a as any)?.args?.text || "").trim()
+          if (!t) return null
+          const text = t.length > 800 ? t.slice(0, 800) : t
+          return { type: "speak", args: { text } }
         }
         return null
       })

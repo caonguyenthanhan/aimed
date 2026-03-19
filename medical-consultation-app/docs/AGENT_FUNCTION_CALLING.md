@@ -32,6 +32,7 @@ API trả JSON:
 Tool declarations hiện có:
 
 - `navigate({ path })`
+- `speak({ text })`
 - `open_screening()`
 - `open_therapy()`
 - `open_reminders()`

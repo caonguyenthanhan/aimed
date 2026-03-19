@@ -74,8 +74,17 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     })
   }
 
-  const executeAgentActions = async (actions: AgentAction[]) => {
+  const executeAgentActions = async (actions: AgentAction[], opts?: { speakMessageId?: string; fallbackSpeakText?: string }) => {
     for (const a of actions) {
+      if (a.type === "speak") {
+        const mid = String(opts?.speakMessageId || "").trim()
+        const t = String((a as any)?.args?.text || "").trim() || String(opts?.fallbackSpeakText || "").trim()
+        if (mid && t) {
+          await handleTextToSpeech(mid, t)
+          return
+        }
+        continue
+      }
       if (a.type === "open_screening") {
         toast({ title: "Đang mở", description: "/sang-loc" })
         router.push("/sang-loc")
@@ -390,7 +399,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       }
       await fetchConversations()
       if (agentActions.length) {
-        await executeAgentActions(agentActions)
+        await executeAgentActions(agentActions, { speakMessageId: aiMessage.id, fallbackSpeakText: aiResponse })
       }
     } catch (error) {
       console.error("Error getting AI response:", error)

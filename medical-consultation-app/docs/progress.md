@@ -6,3 +6,4 @@
 ## 2026-03-20
 
 - Thêm agent provider local (OpenAI-compatible): ép output JSON `{response, actions}` và parse/lọc allowlist trước khi điều hướng.
+- Mở rộng agent action/tool: `speak` để kích hoạt TTS (tool nặng) từ agent.

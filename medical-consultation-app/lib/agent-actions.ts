@@ -8,6 +8,12 @@ export const AgentActionSchema = z.discriminatedUnion("type", [
     }),
   }),
   z.object({
+    type: z.literal("speak"),
+    args: z.object({
+      text: z.string().min(1),
+    }),
+  }),
+  z.object({
     type: z.literal("open_screening"),
     args: z.object({}).optional(),
   }),
@@ -56,4 +62,3 @@ export function isAllowedPath(path: string) {
   ]
   return allowPrefixes.some((pre) => p === pre || p.startsWith(`${pre}/`))
 }
-
