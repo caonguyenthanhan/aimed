@@ -851,13 +851,28 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const resp = await fetch('/api/backend/v1/conversations', {
         headers: { 'Authorization': `Bearer ${authToken}` }
       })
+      
+      // Check if response is OK and is JSON
+      if (!resp.ok) {
+        setServerUnavailable(true)
+        setIsLoadingConversations(false)
+        return
+      }
+      
+      const contentType = resp.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        setServerUnavailable(true)
+        setIsLoadingConversations(false)
+        return
+      }
+      
       const data = await resp.json()
       const serverItems = Array.isArray(data?.conversations) ? data.conversations : []
       const sorted = serverItems.slice().sort((a: any, b: any) => (a.last_active > b.last_active ? -1 : 1))
       setConversations(sorted)
       setServerUnavailable(false)
     } catch (e) {
-      console.error('Load conversations error:', e)
+      // Silently handle error - server is likely unavailable
       setServerUnavailable(true)
     } finally {
       setIsLoadingConversations(false)
@@ -1043,7 +1058,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               {
                 id: '1',
                 content:
-                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
+                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. B��n có câu hỏi gì không?',
                 isUser: false,
                 timestamp: new Date(),
               },
