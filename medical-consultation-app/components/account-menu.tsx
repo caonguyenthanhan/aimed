@@ -180,6 +180,15 @@ export default function AccountMenu({
             </a>
           </DropdownMenuItem>
 
+          {userRole === "doctor" ? (
+            <DropdownMenuItem asChild>
+              <a href="/doctor/profile" className="flex items-center gap-2 cursor-pointer">
+                <Settings className="h-4 w-4" />
+                <span>Hồ sơ bác sĩ</span>
+              </a>
+            </DropdownMenuItem>
+          ) : null}
+
           <DropdownMenuItem asChild>
             <a href="/account?tab=accounts" className="flex items-center gap-2 cursor-pointer">
               <Users className="h-4 w-4" />

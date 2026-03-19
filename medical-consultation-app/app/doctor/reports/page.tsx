@@ -3,10 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Download, Calendar, BarChart3, TrendingUp, FileText } from 'lucide-react'
+import { demoReports, type DoctorReport } from "@/lib/doctor-demo"
 
 export default function DoctorReportsPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
+  const [reports, setReports] = useState<DoctorReport[]>([])
+
+  const STORAGE_KEY = "mcs_doctor_reports_v1"
 
   useEffect(() => {
     setMounted(true)
@@ -21,44 +25,49 @@ export default function DoctorReportsPage() {
 
   if (!mounted) return null
 
-  const reports = [
-    {
-      id: 1,
-      title: 'Báo cáo hàng tháng - Tháng 3',
-      date: '2024-03-15',
-      type: 'Hàng tháng',
-      patients: 24,
-      sessions: 45,
-      status: 'Hoàn tất',
-    },
-    {
-      id: 2,
-      title: 'Báo cáo hàng tháng - Tháng 2',
-      date: '2024-02-28',
-      type: 'Hàng tháng',
-      patients: 22,
-      sessions: 42,
-      status: 'Hoàn tất',
-    },
-    {
-      id: 3,
-      title: 'Báo cáo quý - Quý I 2024',
-      date: '2024-03-31',
-      type: 'Quý',
-      patients: 24,
-      sessions: 130,
-      status: 'Đang soạn',
-    },
-    {
-      id: 4,
-      title: 'Báo cáo năm - 2023',
-      date: '2024-01-15',
-      type: 'Năm',
-      patients: 18,
-      sessions: 312,
-      status: 'Hoàn tất',
-    },
-  ]
+  useEffect(() => {
+    const loadLocal = () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (!raw) return []
+        const arr = JSON.parse(raw)
+        return Array.isArray(arr) ? (arr as any[]) : []
+      } catch {
+        return []
+      }
+    }
+    const local = loadLocal()
+    const merged = [...local, ...demoReports].filter(Boolean)
+    merged.sort((a: any, b: any) => String(b?.date || "").localeCompare(String(a?.date || "")))
+    setReports(merged as any)
+  }, [])
+
+  const downloadReport = (r: any) => {
+    try {
+      const content =
+        String(r?.content || "").trim() ||
+        [
+          `Tiêu đề: ${r?.title || ""}`,
+          `Loại: ${r?.type || ""}`,
+          `Ngày: ${r?.date || ""}`,
+          `Bệnh nhân: ${r?.patients ?? ""}`,
+          `Phiên tư vấn: ${r?.sessions ?? ""}`,
+          `Trạng thái: ${r?.status || ""}`,
+          r?.range?.from && r?.range?.to ? `Khoảng: ${r.range.from} → ${r.range.to}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${String(r?.title || "bao-cao").replace(/[^\w\s-]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() || "bao-cao"}.txt`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch {}
+  }
 
   const stats = [
     {
@@ -162,7 +171,11 @@ export default function DoctorReportsPage() {
                   }`}>
                     {report.status}
                   </span>
-                  <button className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-950/50 transition">
+                  <button
+                    type="button"
+                    onClick={() => downloadReport(report as any)}
+                    className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-950/50 transition"
+                  >
                     <Download size={18} />
                   </button>
                 </div>
@@ -178,7 +191,11 @@ export default function DoctorReportsPage() {
         <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
           Tạo báo cáo tùy chỉnh dựa trên khoảng thời gian và bệnh nhân bạn chọn
         </p>
-        <button className="px-6 py-2.5 rounded-lg bg-blue-600 dark:bg-blue-600 text-white font-semibold hover:bg-blue-700 dark:hover:bg-blue-700 transition">
+        <button
+          type="button"
+          onClick={() => router.push("/doctor/reports/new")}
+          className="px-6 py-2.5 rounded-lg bg-blue-600 dark:bg-blue-600 text-white font-semibold hover:bg-blue-700 dark:hover:bg-blue-700 transition"
+        >
           Tạo báo cáo mới
         </button>
       </div>

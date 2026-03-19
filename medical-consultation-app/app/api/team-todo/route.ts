@@ -8,10 +8,17 @@ import {
   TEAM_TODO_DOC_ID,
 } from "@/lib/team-todo"
 
+function isDbEnabled() {
+  return !!String(process.env.DATABASE_URL || "").trim()
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!requireTeamTodoAuth(req)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isDbEnabled()) {
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 })
     }
     await ensureTeamTodoSchema()
     await ensureTeamTodoSeed()
@@ -47,7 +54,7 @@ export async function POST(req: NextRequest) {
       client.release()
     }
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }
 
@@ -55,6 +62,9 @@ export async function GET(req: NextRequest) {
   try {
     if (!requireTeamTodoAuth(req)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isDbEnabled()) {
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 })
     }
     await ensureTeamTodoSchema()
     await ensureTeamTodoSeed()
@@ -68,7 +78,7 @@ export async function GET(req: NextRequest) {
       updated_by: doc.updated_by || null,
     })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }
 
@@ -76,6 +86,9 @@ export async function PUT(req: NextRequest) {
   try {
     if (!requireTeamTodoAuth(req)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (!isDbEnabled()) {
+      return NextResponse.json({ error: "Database not configured" }, { status: 503 })
     }
     await ensureTeamTodoSchema()
     await ensureTeamTodoSeed()
@@ -150,6 +163,6 @@ export async function PUT(req: NextRequest) {
       client.release()
     }
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Users, FileText, BarChart3, Clock, AlertCircle, TrendingUp } from 'lucide-react'
+import { demoConsultations } from "@/lib/doctor-demo"
 
 export default function DoctorDashboard() {
   const router = useRouter()
@@ -80,14 +81,12 @@ export default function DoctorDashboard() {
         <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-4">Tư vấn gần đây</h2>
           <div className="space-y-4">
-            {[
-              { patient: 'Nguyễn Minh Anh', time: '2 giờ trước', status: 'Đã hoàn tất', type: 'Tâm lý' },
-              { patient: 'Trần Linh Đan', time: '4 giờ trước', status: 'Đang xử lý', type: 'Sức khỏe' },
-              { patient: 'Phạm Văn A', time: '1 ngày trước', status: 'Chờ xác nhận', type: 'Tâm lý' },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between p-4 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
+            {demoConsultations.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => router.push(`/tu-van?id=${encodeURIComponent(item.conversationId)}`)}
+                className="w-full text-left flex items-center justify-between p-4 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
               >
                 <div className="flex-1">
                   <p className="font-medium text-slate-900 dark:text-slate-50">{item.patient}</p>
@@ -105,7 +104,7 @@ export default function DoctorDashboard() {
                     {item.status}
                   </span>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -115,13 +114,25 @@ export default function DoctorDashboard() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-6 shadow-sm">
             <h3 className="font-bold text-slate-900 dark:text-slate-50 mb-4">Hành động nhanh</h3>
             <div className="space-y-2">
-              <button className="w-full px-4 py-3 rounded-lg bg-blue-600 dark:bg-blue-600 text-white font-medium hover:bg-blue-700 dark:hover:bg-blue-700 transition">
+              <button
+                type="button"
+                onClick={() => router.push("/doctor/patients")}
+                className="w-full px-4 py-3 rounded-lg bg-blue-600 dark:bg-blue-600 text-white font-medium hover:bg-blue-700 dark:hover:bg-blue-700 transition"
+              >
                 Xem danh sách bệnh nhân
               </button>
-              <button className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              <button
+                type="button"
+                onClick={() => router.push("/doctor/reports/new")}
+                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
                 Viết báo cáo
               </button>
-              <button className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+              <button
+                type="button"
+                onClick={() => router.push("/thong-ke")}
+                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+              >
                 Xem thống kê
               </button>
             </div>

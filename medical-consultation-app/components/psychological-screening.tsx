@@ -11,6 +11,9 @@ import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AiChatBox } from "./ai-chat-box"
 import dynamic from "next/dynamic"
+import { getScreeningHistory, saveScreeningResult, setPendingScreeningContext } from "@/lib/screening-store"
+import { upsertUserState } from "@/lib/user-state-client"
+import { appendTherapyEvent } from "@/lib/therapy-store"
 
 const PDFReportGenerator = dynamic(() => import("./pdf-report-generator").then(mod => ({ default: mod.PDFReportGenerator })), {
   ssr: false,
@@ -803,8 +806,6 @@ const asrsAssessment: Assessment = {
   ],
 }
 
-const LAST_SCREENING_KEY = "mcs_last_screening_v1"
-
 export function PsychologicalScreening() {
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null)
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -823,16 +824,19 @@ export function PsychologicalScreening() {
         return total + (option?.score || 0)
       }, 0)
       const interp = selectedAssessment.interpretation.find((it) => score >= it.min && score <= it.max)
-      localStorage.setItem(
-        LAST_SCREENING_KEY,
-        JSON.stringify({
-          assessment_id: selectedAssessment.id,
-          title: selectedAssessment.title,
-          score,
-          level: interp?.level || "",
-          ts: Date.now(),
-        })
-      )
+      const result = {
+        assessment_id: selectedAssessment.id,
+        title: selectedAssessment.title,
+        score,
+        level: interp?.level || "",
+        description: interp?.description || "",
+        recommendations: Array.isArray(interp?.recommendations) ? interp?.recommendations : [],
+        ts: Date.now(),
+      }
+      saveScreeningResult(result)
+      appendTherapyEvent("screening", { assessment_id: result.assessment_id, title: result.title, score: result.score, level: result.level, ts: result.ts })
+      void upsertUserState("screening_last", "last", result)
+      void upsertUserState("screening_history", String(result.ts), result)
     } catch {}
   }, [showResults, selectedAssessment, answers])
 
@@ -888,6 +892,13 @@ export function PsychologicalScreening() {
   if (showResults && selectedAssessment) {
     const score = calculateScore()
     const interpretation = getInterpretation(score)
+    const history = (() => {
+      try {
+        return getScreeningHistory().slice(0, 5)
+      } catch {
+        return []
+      }
+    })()
     const maxScore = selectedAssessment.questions.reduce((sum, q) => {
       const m = Math.max(...q.options.map(o => o.score))
       return sum + m
@@ -936,7 +947,24 @@ export function PsychologicalScreening() {
                 </div>
 
                 <div className="space-y-3">
-                  <Button onClick={() => router.push('/tam-su')} variant="outline" className="w-full">
+                  <Button
+                    onClick={() => {
+                      try {
+                        setPendingScreeningContext({
+                          assessment_id: selectedAssessment.id,
+                          title: selectedAssessment.title,
+                          score,
+                          level: interpretation?.level || "",
+                          description: interpretation?.description || "",
+                          recommendations: Array.isArray(interpretation?.recommendations) ? interpretation?.recommendations : [],
+                          ts: Date.now(),
+                        })
+                      } catch {}
+                      router.push("/tam-su")
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
                     <MessageCircle className="h-4 w-4 mr-2" />
                     {showAiSupport ? "Ẩn" : "Tâm sự"} với AI
                   </Button>
@@ -957,6 +985,28 @@ export function PsychologicalScreening() {
                     hãy tham khảo ý kiến của chuyên gia y tế.
                   </AlertDescription>
                 </Alert>
+
+                {history.length ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Lịch sử sàng lọc gần đây</CardTitle>
+                      <CardDescription>5 lần gần nhất trên thiết bị này</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {history.map((h) => (
+                        <div key={String(h.ts)} className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium truncate">{h.title}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(h.ts).toLocaleString("vi-VN")} • {h.level || "—"}
+                            </div>
+                          </div>
+                          <div className="text-sm font-semibold shrink-0">{h.score}</div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                ) : null}
 
                 {/* Action buttons with improved spacing and visibility */}
                 <div className="space-y-3 pt-4 border-t">

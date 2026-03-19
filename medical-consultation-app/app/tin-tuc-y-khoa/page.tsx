@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { getCarePlan, getLastScreening } from "@/lib/screening-store"
 
 type WebSearchItem = {
   title: string
@@ -11,18 +12,9 @@ type WebSearchItem = {
   displayLink?: string
 }
 
-const LAST_SCREENING_KEY = "mcs_last_screening_v1"
 const RIGHT_RATIO_KEY = "mcs_news_right_ratio_v1"
 const DEFAULT_QUERY = "tin-tuc-y-khoa"
 const DEFAULT_GOOGLE_NEWS_URL = `https://www.google.com.vn/search?tbm=nws&q=${encodeURIComponent(DEFAULT_QUERY)}`
-
-type LastScreening = {
-  assessment_id?: string
-  title?: string
-  score?: number
-  level?: string
-  ts?: number
-}
 
 type KnowledgeEntity = {
   id: string
@@ -177,44 +169,40 @@ export default function TinTucYKhoaPage() {
       }
     } catch {}
 
-    let last: LastScreening | null = null
-    try {
-      const raw = localStorage.getItem(LAST_SCREENING_KEY)
-      if (raw) last = JSON.parse(raw) as LastScreening
-    } catch {}
+    const plan = (() => {
+      try {
+        return getCarePlan()
+      } catch {
+        return null
+      }
+    })()
+    const last = (() => {
+      try {
+        return getLastScreening()
+      } catch {
+        return null
+      }
+    })()
 
-    const level = String(last?.level || "").toLowerCase()
-    const negative =
-      level.includes("nặng") ||
-      level.includes("trung bình") ||
-      level.includes("cao") ||
-      level.includes("nguy cơ")
-
-    if (negative) {
+    if (plan?.severity === "high") {
       setNotice("Nếu bạn đang thấy căng thẳng hoặc lo lắng, hãy đọc chậm lại, hít thở sâu, và ưu tiên nội dung mang tính trấn an. Bạn không cần phải xử lý mọi thông tin tiêu cực ngay lúc này.")
       setTopics([
-        "kỹ thuật thở giảm lo âu",
-        "vệ sinh giấc ngủ",
-        "thiền định mindfulness",
-        "cách giảm stress",
-        "tư vấn tâm lý khi cần",
+        ...(Array.isArray(plan?.suggestedArticles) ? plan.suggestedArticles : []),
         DEFAULT_QUERY,
       ])
-      setQ("kỹ thuật thở giảm lo âu")
-      void runSearch("kỹ thuật thở giảm lo âu")
+      const first = (Array.isArray(plan?.suggestedArticles) ? plan.suggestedArticles[0] : "") || "kỹ thuật thở giảm lo âu"
+      setQ(first)
+      void runSearch(first)
       return
     }
 
     if (last?.level) {
-      setNotice(`Gợi ý theo kết quả sàng lọc gần nhất: ${last.level} (${last.score ?? "?"}).`)
+      setNotice(`Gợi ý theo kết quả sàng lọc gần nhất: ${last.title} • ${last.level} (${last.score ?? "?"}).`)
     } else {
       setNotice("")
     }
     setTopics([
-      "khuyến cáo y khoa mới",
-      "tiêm chủng và phòng bệnh",
-      "dinh dưỡng và vận động",
-      "y tế cộng đồng",
+      ...(Array.isArray(plan?.suggestedArticles) ? plan.suggestedArticles.slice(0, 4) : ["khuyến cáo y khoa mới", "tiêm chủng và phòng bệnh", "dinh dưỡng và vận động", "y tế cộng đồng"]),
       DEFAULT_QUERY,
     ])
     setQ(DEFAULT_QUERY)

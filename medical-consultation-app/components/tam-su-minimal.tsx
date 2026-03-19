@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Menu, X } from "lucide-react"
+import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
+import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 
 type Message = {
   id: string
@@ -120,6 +122,29 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
     ts: nowTs(),
   }), [])
 
+  const [headerPad, setHeaderPad] = useState<string>("6rem")
+  useEffect(() => {
+    const updatePad = () => {
+      try {
+        const el = typeof window !== "undefined" ? (document.querySelector("[data-site-header]") as HTMLElement | null) : null
+        const bottom = el ? el.getBoundingClientRect().bottom : 64
+        const extra = 16
+        setHeaderPad(`${Math.round(bottom + extra)}px`)
+      } catch {}
+    }
+    updatePad()
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", updatePad)
+      window.addEventListener("scroll", updatePad, { passive: true } as any)
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("resize", updatePad)
+        window.removeEventListener("scroll", updatePad)
+      }
+    }
+  }, [])
+
   const [messages, setMessages] = useState<Message[]>([
     greetingMsg,
   ])
@@ -210,6 +235,43 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
       setMessages([greetingMsg])
     }
   }, [initialConversationId, greetingMsg])
+
+  const buildScreeningSeed = (r: ScreeningResult) => {
+    const parts: string[] = []
+    const title = String(r?.title || "").trim()
+    const level = String(r?.level || "").trim()
+    const desc = String(r?.description || "").trim()
+    const score = Number(r?.score)
+    const recs = Array.isArray(r?.recommendations) ? r.recommendations.map((s) => String(s || "").trim()).filter(Boolean) : []
+    if (title) parts.push(`Mình thấy bạn vừa hoàn thành ${title}.`)
+    if (level) parts.push(`Mức: ${level}.`)
+    if (Number.isFinite(score)) parts.push(`Điểm: ${score}.`)
+    if (desc) parts.push(desc)
+    if (recs.length) parts.push(`Gợi ý: ${recs.slice(0, 2).join(" • ")}.`)
+    parts.push("Bạn muốn bắt đầu từ điều gì đang khó nhất với bạn lúc này?")
+    return parts.join(" ").replace(/\s+/g, " ").trim()
+  }
+
+  useEffect(() => {
+    if (initialConversationId) return
+    try {
+      const pending = consumePendingScreeningContext()
+      const last = pending || getLastScreening()
+      if (!last) return
+      const age = Date.now() - Number(last.ts || 0)
+      if (!pending && !(age >= 0 && age <= 6 * 60 * 60 * 1000)) return
+      const content = buildScreeningSeed(last)
+      if (!content) return
+      setMessages([
+        {
+          id: `seed-${Date.now().toString(16)}`,
+          role: "assistant",
+          content,
+          ts: nowTs(),
+        },
+      ])
+    } catch {}
+  }, [initialConversationId])
 
   useEffect(() => {
     try {
@@ -355,6 +417,17 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         provider,
         temperature: friendStyle === "deep" ? 0.9 : 0.75,
         max_tokens: friendStyle === "deep" ? 1200 : 800,
+        systemPrompt: (() => {
+          try {
+            const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null
+            if (role !== "doctor") return undefined
+            const priv = loadLocalDoctorPrivate()
+            const p = String(priv?.assistantPrompt || "").trim()
+            return p ? p : undefined
+          } catch {
+            return undefined
+          }
+        })(),
       }
       const headers: Record<string, string> = { "Content-Type": "application/json" }
       if (authToken) headers["Authorization"] = `Bearer ${authToken}`
@@ -489,9 +562,9 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] bg-gradient-to-br from-slate-50 via-white to-indigo-50">
-      <div className="max-w-6xl mx-auto p-4">
-        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden flex min-h-[72vh]">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50" style={{ paddingTop: headerPad }}>
+      <div className="max-w-6xl mx-auto p-4 w-full h-full">
+        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden flex h-full">
           {!isMobile && showSidebar ? (
             <div className="w-72 border-r bg-white flex flex-col">
               <div className="p-3 border-b flex items-center justify-between gap-2">

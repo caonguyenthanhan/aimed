@@ -1,6 +1,6 @@
 {
   "title": "TODO LIST - TRIỂN KHAI KLTN MULTI-AGENT Y TẾ & TÂM LÝ",
-  "strategy": "Phát triển nhanh với Gemini API -> Tích hợp Fine-tuned GPU LLM sau",
+  "strategy": "Phát triển theo 5 Epic: UI/UX -> Data Flow -> Doctor Workspace -> Clinical Ethics -> Safety & Self-Care",
   "duration": "16 Tuần",
   "team": [
     "Thành An (AI/Data/Prompt/GraphRAG)",
@@ -28,126 +28,162 @@
   ],
   "sprints": [
     {
-      "id": 1,
-      "name": "GIAI ĐOẠN 1: HỆ THỐNG ĐỊNH DANH & PHÂN QUYỀN ĐẠO ĐỨC (AUTH & ETHICS)",
-      "goal": "Tạo ranh giới an toàn và thực thi quyền riêng tư tuyệt đối.",
+      "id": "epic1",
+      "name": "EPIC 1: HOÀN THIỆN UI/UX & TRẢI NGHIỆM NGƯỜI DÙNG",
+      "goal": "Giải quyết các lỗi giao diện gây đứt gãy Liên minh Trị liệu.",
       "tasks": [
         {
-          "id": "p1t1",
+          "id": "e1_1",
           "type": "AI IDE",
-          "text": "Authentication (NeonDB + FastAPI): Roles PATIENT, DOCTOR, ADMIN.",
+          "text": "Header/Công cụ: Thêm logic tự động đóng Menu khi nhảy trang (sử dụng hook `usePathname`).",
           "completed": false
         },
         {
-          "id": "p1t2",
+          "id": "e1_2",
           "type": "AI IDE",
-          "text": "Granular Consent Center: Bệnh nhân tùy chỉnh mức độ chia sẻ dữ liệu (Điểm số vs Nội dung chat).",
-          "completed": false
-        },
-        {
-          "id": "p1t3",
-          "type": "AI IDE",
-          "text": "Clinical Offboarding: Xóa sạch dấu vết hội thoại lâm sàng khi ngắt kết nối chuyên gia.",
+          "text": "Trang `/tam-su`: Sửa lỗi cuộn trang với hội thoại dài (Thêm `messagesEndRef` auto-scroll để mạch tâm sự không bị gián đoạn).",
           "completed": false
         }
       ]
     },
     {
-      "id": 2,
-      "name": "GIAI ĐOẠN 2: HỆ THẦN KINH LƯU TRỮ & CẢM BIẾN (KNOWLEDGE & PHENOTYPING)",
-      "goal": "Chuẩn bị \"sách giáo khoa\" và \"giác quan\" cho bộ não.",
+      "id": "epic2",
+      "name": "EPIC 2: LUỒNG DỮ LIỆU LÂM SÀNG & CHĂM SÓC BẬC THANG",
+      "goal": "Đảm bảo luân chuyển dữ liệu người dùng mượt mà, ghi nhận lộ trình điều trị.",
       "tasks": [
         {
-          "id": "p2t1",
+          "id": "e2_1",
           "type": "Hybrid",
-          "text": "GraphRAG Setup (Neo4j): Ingest dữ liệu y khoa từ ViHealthQA.",
+          "text": "Trang `/tu-van`: Xử lý triệt để lỗi kết nối database (Tối ưu Connection Pool cho Serverless).",
           "completed": false
         },
         {
-          "id": "p2t2",
+          "id": "e2_2",
           "type": "AI IDE",
-          "text": "Clinical Memory (Zep): Metadata extraction & Automatic Summarization.",
+          "text": "Sàng lọc: Viết API lưu lại lịch sử làm bài kiểm tra vào hồ sơ bệnh nhân để ghi nhận tiến trình điều trị.",
           "completed": false
         },
         {
-          "id": "p2t3",
+          "id": "e2_3",
+          "type": "AI IDE",
+          "text": "Sàng lọc -> Tâm sự: Truyền kết quả bài kiểm tra vào LLM Context để AI chủ động dùng làm câu mở đầu câu chuyện.",
+          "completed": false
+        },
+        {
+          "id": "e2_4",
+          "type": "AI IDE",
+          "text": "Tính năng trị liệu: Nâng cấp giao diện và luồng tương tác (hiện tại còn thô sơ).",
+          "completed": false
+        },
+        {
+          "id": "e2_5",
+          "type": "AI IDE",
+          "text": "Nhắc nhở: Lập trình chức năng thêm/sửa/xóa và kích hoạt hoạt động cho hệ thống nhắc nhở.",
+          "completed": false
+        },
+        {
+          "id": "e2_6",
           "type": "Hybrid",
-          "text": "Digital Phenotyping Integration (Mobile): Thu thập dữ liệu bước chân/ngủ làm biến số Stealth Assessment.",
+          "text": "Hệ sinh thái dữ liệu chéo: Lấy kết quả kiểm tra để tự động đề xuất bài viết (tin tức), đề xuất hoạt động trị liệu và nhắc nhở.",
           "completed": false
         }
       ]
     },
     {
-      "id": 3,
-      "name": "GIAI ĐOẠN 3: ĐIỀU PHỐI, AN TOÀN & BÀN GIAO (ROUTING & CLINICAL HANDOVER)",
-      "goal": "Xây dựng lớp vỏ bảo vệ và hỗ trợ bác sĩ.",
+      "id": "epic3",
+      "name": "EPIC 3: KHÔNG GIAN BÁC SĨ & CÁ NHÂN HÓA",
+      "goal": "Cung cấp công cụ mạnh mẽ cho Bác sĩ và hỗ trợ sức khỏe tinh thần cho y bác sĩ.",
       "tasks": [
         {
-          "id": "p3t1",
+          "id": "e3_1",
           "type": "AI IDE",
-          "text": "Deterministic Safety Layer: Chặn từ khóa nguy hiểm trong <200ms.",
+          "text": "Trang giới thiệu Bác sĩ: Tạo phân hệ thông tin Public/Private. Thêm chế độ 'Preview' để bác sĩ xem trước giao diện hiển thị cho người dùng.",
           "completed": false
         },
         {
-          "id": "p3t2",
+          "id": "e3_2",
           "type": "AI IDE",
-          "text": "SOAP Note Generator: Tự động tạo báo cáo tóm tắt bệnh án từ Memory cho Bác sĩ.",
+          "text": "Hẹn lịch Bác sĩ: Xây dựng chức năng cho phép người dùng đặt lịch hẹn khám.",
           "completed": false
         },
         {
-          "id": "p3t3",
+          "id": "e3_3",
+          "type": "Hybrid",
+          "text": "Prompt Cá nhân hóa: Thêm khu vực để bác sĩ tự nhập Prompt, giúp Trợ lý AI phụ trách đón bệnh nhân mang văn phong riêng của bác sĩ đó.",
+          "completed": false
+        },
+        {
+          "id": "e3_4",
           "type": "AI IDE",
-          "text": "Smart Routing & Fallback: GPU Server -> Gemini -> Local CPU.",
+          "text": "Công cụ Bác sĩ: Bổ sung chức năng 'Tư vấn' và 'Tâm sự' vào header của trang Doctor (Hỗ trợ sức khỏe tâm thần cho chính y bác sĩ).",
           "completed": false
         }
       ]
     },
     {
-      "id": 4,
-      "name": "GIAI ĐOẠN 4: TỐI ƯU HÓA MOBILE & TRỊ LIỆU KỸ THUẬT SỐ (DIGITAL THERAPEUTICS)",
-      "goal": "Tăng tính tuân thủ và hiện diện đúng lúc (JITAI).",
+      "id": "epic4",
+      "name": "EPIC 4: ĐẠO ĐỨC LÂM SÀNG & QUẢN LÝ DỮ LIỆU",
+      "goal": "Hoàn thiện Dashboard, quản lý hồ sơ và bảo mật thông tin PII (HIPAA).",
       "tasks": [
         {
-          "id": "p4t1",
+          "id": "e4_1",
           "type": "AI IDE",
-          "text": "Responsive Refactor: Bottom Sheet Menu, Touch-first UI.",
+          "text": "Doctor Dashboard: Kích hoạt và xử lý logic cho các nút 'Hành động nhanh'.",
           "completed": false
         },
         {
-          "id": "p4t2",
+          "id": "e4_2",
           "type": "AI IDE",
-          "text": "Mood Tracker & Journaling: Module ghi chép cá nhân hóa.",
+          "text": "Doctor Dashboard: Xử lý sự kiện click mục 'Tư vấn gần đây' để mở popup/trang xem lại toàn bộ quá trình.",
           "completed": false
         },
         {
-          "id": "p4t3",
+          "id": "e4_3",
           "type": "AI IDE",
-          "text": "PWA & Push Notifications: Nhắc nhở bài tập hành vi (Behavioral Activation).",
+          "text": "Quản lý Bệnh nhân (`/doctor/patients`): Bổ sung dữ liệu demo chuẩn y khoa để test giao diện xem chi tiết hồ sơ.",
+          "completed": false
+        },
+        {
+          "id": "e4_4",
+          "type": "AI IDE",
+          "text": "Quản lý Báo cáo (`/doctor/reports`): Bổ sung form và logic cho phép tạo báo cáo y khoa mới.",
+          "completed": false
+        },
+        {
+          "id": "e4_5",
+          "type": "Hybrid",
+          "text": "Diễn đàn Y khoa: Thêm trang để bác sĩ hỏi và chia sẻ chuyên môn. Cài đặt AI/Regex quét nội dung để tự động ẩn thông tin cá nhân (PII) của bệnh nhân.",
           "completed": false
         }
       ]
     },
     {
-      "id": "dod",
-      "name": "IV. TIÊU CHÍ NGHIỆM THU (DEFINITION OF DONE)",
-      "goal": "Giữ nguyên các tiêu chí cũ và bổ sung.",
+      "id": "epic5",
+      "name": "EPIC 5: TỰ CHĂM SÓC, GAME HÓA & AN TOÀN LÂM SÀNG",
+      "goal": "Tăng cường tương tác người dùng bằng tâm lý học thực chứng và bảo vệ an toàn sinh mạng.",
       "tasks": [
         {
-          "id": "d1",
-          "type": "Manual",
-          "text": "Handover Test: Bác sĩ mở hồ sơ bệnh nhân, thấy bản tóm tắt định dạng SOAP rõ ràng, không lỗi font.",
+          "id": "e5_1",
+          "type": "Hybrid",
+          "text": "Khủng hoảng khẩn cấp (SOS Mode): Thiết lập Agent phân tích từ khóa tự sát/xâm hại. Nếu có, trigger giao diện UI đỏ và hotline khẩn cấp (111).",
           "completed": false
         },
         {
-          "id": "d2",
-          "type": "Manual",
-          "text": "Privacy Test: Sau khi nhấn \"Offboarding\", kiểm tra DB/Zep đảm bảo nội dung chat của user đó đã biến mất hoàn toàn.",
+          "id": "e5_2",
+          "type": "AI IDE",
+          "text": "Thẻ Trị liệu (Therapeutic Cards): Xây dựng tính năng rút thẻ thông điệp Chánh niệm/CBT hàng ngày thay vì bói toán ngẫu nhiên.",
           "completed": false
         },
         {
-          "id": "d3",
-          "type": "Manual",
-          "text": "Sensor Sync Test: Dữ liệu số bước chân từ Mobile được hiển thị đúng trên Dashboard cá nhân.",
+          "id": "e5_3",
+          "type": "AI IDE",
+          "text": "Bánh xe Cuộc đời (Wheel of Life): Xây dựng module đánh giá đa chiều cuộc sống (Sự nghiệp, Mối quan hệ, Sức khỏe) cho bệnh nhân.",
+          "completed": false
+        },
+        {
+          "id": "e5_4",
+          "type": "Hybrid",
+          "text": "Hành trình Tâm trí (Patient Insight): Xây dựng biểu đồ hiển thị diễn biến điểm số PHQ-9/GAD-7 và tần suất sử dụng ứng dụng cho riêng người bệnh.",
           "completed": false
         }
       ]

@@ -7,6 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { readLocal, writeLocal } from "@/lib/local-store"
 import { getUserState, upsertUserState } from "@/lib/user-state-client"
+import { getCarePlan, getLastScreening } from "@/lib/screening-store"
+import { upsertReminder } from "@/lib/reminders-store"
+import { appendTherapyEvent, createPlanFromCarePlan, getTherapyPlan, isTaskDone, listTherapyEvents, saveTherapyPlan, setTaskDone, type TherapyPlan } from "@/lib/therapy-store"
 
 type MoodEntry = {
   id: string
@@ -54,6 +57,8 @@ export function DtxTriLieu() {
   const [journalTitle, setJournalTitle] = useState("")
   const [journalContent, setJournalContent] = useState("")
   const [journalItems, setJournalItems] = useState<JournalEntry[]>([])
+  const [therapyPlan, setTherapyPlanState] = useState<TherapyPlan | null>(null)
+  const [, setEventsTick] = useState(0)
 
   const tagCandidates = useMemo(
     () => ["Ngủ kém", "Áp lực", "Lo âu", "Buồn", "Cô đơn", "Vận động", "Ăn uống", "Gia đình", "Công việc", "Học tập"],
@@ -65,6 +70,11 @@ export function DtxTriLieu() {
     const j = readLocal<JournalEntry[]>(JOURNAL_KEY, [])
     setMoodItems(Array.isArray(m) ? m : [])
     setJournalItems(Array.isArray(j) ? j : [])
+    try {
+      setTherapyPlanState(getTherapyPlan())
+    } catch {
+      setTherapyPlanState(null)
+    }
   }, [])
 
   useEffect(() => {
@@ -102,6 +112,8 @@ export function DtxTriLieu() {
     setMoodItems(next)
     writeLocal(MOOD_KEY, next)
     void upsertUserState(REMOTE_NS, "mood_entries", next)
+    appendTherapyEvent("mood_saved", { ts: entry.ts, mood: entry.mood, tags: entry.tags, note: entry.note })
+    setEventsTick((x) => x + 1)
     setMoodNote("")
     setMoodTags([])
   }
@@ -122,6 +134,8 @@ export function DtxTriLieu() {
     setJournalItems(next)
     writeLocal(JOURNAL_KEY, next)
     void upsertUserState(REMOTE_NS, "journal_entries", next)
+    appendTherapyEvent("journal_saved", { ts: entry.ts, title: entry.title })
+    setEventsTick((x) => x + 1)
     setJournalTitle("")
     setJournalContent("")
   }
@@ -134,6 +148,30 @@ export function DtxTriLieu() {
   }
 
   const mood7 = useMemo(() => moodItems.slice(0, 7), [moodItems])
+  const carePlan = useMemo(() => {
+    try {
+      return getCarePlan()
+    } catch {
+      return null
+    }
+  }, [])
+  const lastScreening = useMemo(() => {
+    try {
+      return getLastScreening()
+    } catch {
+      return null
+    }
+  }, [])
+
+  const eventLabel = (t: string) => {
+    if (t === "screening") return "Sàng lọc"
+    if (t === "plan_created") return "Tạo kế hoạch"
+    if (t === "task_done") return "Hoàn thành hoạt động"
+    if (t === "mood_saved") return "Lưu tâm trạng"
+    if (t === "journal_saved") return "Lưu nhật ký"
+    if (t === "reminder_fired") return "Nhắc nhở"
+    return t
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
@@ -144,11 +182,184 @@ export function DtxTriLieu() {
         </div>
       </div>
 
-      <Tabs defaultValue="mood">
+      {carePlan || lastScreening ? (
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Gợi ý theo sàng lọc</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {lastScreening ? (
+              <div className="rounded-xl border p-3 text-sm">
+                <div className="font-medium">{lastScreening.title}</div>
+                <div className="text-muted-foreground">
+                  {new Date(lastScreening.ts).toLocaleString("vi-VN")} • {lastScreening.level || "—"} • {lastScreening.score}
+                </div>
+              </div>
+            ) : null}
+            {carePlan ? (
+              <div className="space-y-2">
+                <div className="text-sm font-medium">{carePlan.focus}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {carePlan.suggestedTherapy.slice(0, 4).map((x) => (
+                    <div key={x.title} className="rounded-xl border p-3">
+                      <div className="text-sm font-medium">{x.title}</div>
+                      <div className="text-xs text-muted-foreground">{x.desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => {
+                      try {
+                        for (const r of carePlan.suggestedReminders) {
+                          upsertReminder({ id: r.id, enabled: r.enabled, time: r.time, message: r.message, last_fired_day: "" })
+                        }
+                      } catch {}
+                      try {
+                        window.location.href = "/nhac-nho"
+                      } catch {}
+                    }}
+                  >
+                    Thiết lập nhắc nhở
+                  </Button>
+                  <Button variant="outline" className="rounded-xl" onClick={() => { try { window.location.href = "/tam-su" } catch {} }}>
+                    Tâm sự với AI
+                  </Button>
+                  <Button variant="outline" className="rounded-xl" onClick={() => { try { window.location.href = "/tin-tuc-y-khoa" } catch {} }}>
+                    Xem bài gợi ý
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <Tabs defaultValue="plan">
         <TabsList className="w-full justify-between">
+          <TabsTrigger value="plan" className="flex-1">Kế hoạch</TabsTrigger>
           <TabsTrigger value="mood" className="flex-1">Tâm trạng</TabsTrigger>
           <TabsTrigger value="journal" className="flex-1">Nhật ký</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="plan" className="space-y-4">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Kế hoạch điều trị cá nhân</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {therapyPlan ? (
+                <div className="rounded-xl border p-3 text-sm">
+                  <div className="font-medium">{therapyPlan.focus}</div>
+                  <div className="text-muted-foreground">
+                    {therapyPlan.screening?.title ? `${therapyPlan.screening.title} • ` : ""}
+                    {therapyPlan.screening?.level ? `${therapyPlan.screening.level} • ` : ""}
+                    {Number.isFinite(therapyPlan.screening?.score) ? `${therapyPlan.screening.score} • ` : ""}
+                    {therapyPlan.created_at ? new Date(therapyPlan.created_at).toLocaleString("vi-VN") : ""}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Chưa có kế hoạch. Tạo nhanh từ kết quả sàng lọc để bắt đầu theo dõi.
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  className="rounded-xl"
+                  onClick={() => {
+                    if (!carePlan) return
+                    const plan = createPlanFromCarePlan(carePlan)
+                    saveTherapyPlan(plan)
+                    setTherapyPlanState(plan)
+                    appendTherapyEvent("plan_created", { plan_id: plan.id, screening_ts: plan.screening?.ts })
+                    setEventsTick((x) => x + 1)
+                    try {
+                      for (const r of carePlan.suggestedReminders) {
+                        upsertReminder({ id: r.id, enabled: r.enabled, time: r.time, message: r.message, last_fired_day: "" })
+                      }
+                    } catch {}
+                  }}
+                  disabled={!carePlan}
+                >
+                  Tạo kế hoạch từ sàng lọc
+                </Button>
+                <Button variant="outline" className="rounded-xl" onClick={() => { try { window.location.href = "/nhac-nho" } catch {} }}>
+                  Mở nhắc nhở
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {therapyPlan ? (
+            <Card className="border-0 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Hoạt động hôm nay</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {therapyPlan.tasks.map((t) => {
+                  const done = isTaskDone(t.id)
+                  return (
+                    <div key={t.id} className="rounded-xl border p-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">{t.title}</div>
+                        <div className="text-xs text-muted-foreground">{t.desc}</div>
+                        {t.href ? (
+                          <button
+                            type="button"
+                            className="text-xs mt-2 underline text-slate-700"
+                            onClick={() => { try { window.location.href = t.href || "/tri-lieu" } catch {} }}
+                          >
+                            Mở
+                          </button>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTaskDone(t.id, !done)
+                          appendTherapyEvent("task_done", { task_id: t.id, done: !done })
+                          setEventsTick((x) => x + 1)
+                        }}
+                        className={`h-9 px-4 rounded-xl text-sm border shrink-0 active:scale-[0.99] ${
+                          done ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-800 border-slate-200"
+                        }`}
+                      >
+                        {done ? "Đã làm" : "Làm"}
+                      </button>
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Lịch sử điều trị</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {(() => {
+                const events = listTherapyEvents(20)
+                if (!events.length) return <div className="text-sm text-muted-foreground">Chưa có lịch sử.</div>
+                return (
+                  <div className="space-y-2">
+                    {events.map((e) => (
+                      <div key={e.id} className="rounded-xl border p-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium">{eventLabel(e.type)}</div>
+                          <div className="text-xs text-muted-foreground">{new Date(e.ts).toLocaleString("vi-VN")}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="mood" className="space-y-4">
           <Card className="border-0 shadow-sm">

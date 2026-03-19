@@ -1,21 +1,70 @@
-# TODO LIST - TRIỂN KHAI KLTN MULTI-AGENT Y TẾ & TÂM LÝ
+📋 BẢNG KẾ HOẠCH TỔNG THỂ (MASTER TODO LIST)
 
-SSOT: `data/team-todo.json`
+Dự án: Hệ thống Can thiệp Sức khỏe Tâm thần Kỹ thuật số Đa tác tử
+Quy hoạch: 5 Epic (Giai đoạn) cốt lõi
 
-File này là bản tham chiếu. Nội dung hiển thị trong hệ thống Team TODO được sinh từ JSON.
+🎯 EPIC 1: HOÀN THIỆN UI/UX & TRẢI NGHIỆM NGƯỜI DÙNG
 
-* [ ] 🧑‍💻 **\[Manual]** Xuất và Deploy mô hình Llama 3.1 fine-tuned (GGUF/vLLM).  
-* [ ] 🤖 **\[AI IDE]** Cập nhật LangGraph: Đổi LLM từ Gemini sang Local GPU Server.  
-* [ ] 🤖 **\[AI IDE]** Thêm Giao diện Quản lý Đồng ý (Consent) bên phía Bệnh nhân: Nút \[Cho phép Bác sĩ xem dữ liệu biểu đồ cảm xúc]. *(Nếu không cho phép, Doctor Dashboard sẽ bị che data bệnh nhân này).*  
-* [ ] 🤖 **\[AI IDE]** Cài đặt luồng Offboarding: Viết hàm Python xóa lịch sử trong Zep khi User ngắt kết nối.  
-* [ ] 🧑‍💻 **\[Manual]** Kiểm thử thuật toán Smart Routing: Chuyển đổi mượt mà giữa **GPU Server** và **Gemini API / Local CPU**.
+Mục tiêu: Giải quyết các lỗi giao diện gây đứt gãy Liên minh Trị liệu.
 
-## **SPRINT 6: Testing, Đo lường & Viết Báo cáo KLTN (Tuần 14-16)**
+[ ] 🤖 [AI IDE] Header/Công cụ: Thêm logic tự động đóng Menu khi nhảy trang (sử dụng hook usePathname).
 
-*Mục tiêu: Đóng gói dự án, đánh giá và viết luận văn.*
+[ ] 🤖 [AI IDE] Trang /tam-su: Sửa lỗi không tự cuộn trang với hội thoại dài (Thêm messagesEndRef auto-scroll để mạch tâm sự không bị gián đoạn).
 
-* [ ] 🧑‍💻 **\[Manual]** Đóng vai (Role-play) Testing: Đóng vai Bác sĩ setup level -> Đóng vai bệnh nhân chat để xem AI phản ứng có đúng theo cấu hình của Bác sĩ không.  
-* [ ] 🤝 **\[Hybrid]** Đo lường các chỉ số: TTFB, Tỷ lệ Fallback, Độ trễ của GraphRAG.  
-* [ ] 🤝 **\[Hybrid]** Viết Báo cáo KLTN theo Đề cương. Nhấn mạnh "Không gian Bác sĩ" và "Luồng Setup Level" ở Chương 2 & 3.  
-* [ ] 🤖 **\[AI IDE]** Đóng gói dự án (Docker Compose).  
-* [ ] 🧑‍💻 **\[Manual]** Làm Slide thuyết trình và Quay sẵn Video Demo (1 video đóng vai bệnh nhân, 1 video đóng vai bác sĩ).
+🔄 EPIC 2: LUỒNG DỮ LIỆU LÂM SÀNG & CHĂM SÓC BẬC THANG
+
+Mục tiêu: Đảm bảo luân chuyển dữ liệu người dùng mượt mà, ghi nhận lộ trình điều trị.
+
+[ ] 🤝 [Hybrid] Trang /tu-van: Xử lý triệt để lỗi kết nối database (Tối ưu Connection Pool cho Serverless).
+
+[ ] 🤖 [AI IDE] Sàng lọc (1/3): Viết API lưu lại lịch sử làm bài kiểm tra vào hồ sơ bệnh nhân để ghi nhận tiến trình điều trị.
+
+[ ] 🤖 [AI IDE] Sàng lọc (2/3): Truyền kết quả bài kiểm tra vào LLM Context khi user nhảy sang trang /tam-su để AI chủ động dùng làm câu mở đầu.
+
+[ ] 🤖 [AI IDE] Sàng lọc (3/3) - Hệ sinh thái chéo: Lấy kết quả kiểm tra để tự động đề xuất bài viết (tin tức y khoa), đề xuất hoạt động trị liệu và nhắc nhở.
+
+[ ] 🤖 [AI IDE] Tính năng Trị liệu: Nâng cấp giao diện và luồng tương tác (tái cấu trúc UI hiện tại đang thô sơ).
+
+[ ] 🤖 [AI IDE] Tính năng Nhắc nhở: Lập trình chức năng thêm/sửa/xóa và module chạy ngầm kích hoạt thông báo nhắc nhở.
+
+👨‍⚕️ EPIC 3: KHÔNG GIAN BÁC SĨ & CÁ NHÂN HÓA
+
+Mục tiêu: Cung cấp công cụ mạnh mẽ cho Bác sĩ và hỗ trợ sức khỏe tinh thần cho y bác sĩ.
+
+[ ] 🤖 [AI IDE] Trang giới thiệu Bác sĩ: Tạo phân hệ thông tin Public/Private. Thêm chế độ "Preview" để bác sĩ xem trước UI hiển thị cho bệnh nhân.
+
+[ ] 🤖 [AI IDE] Hẹn lịch: Xây dựng chức năng cho phép bệnh nhân đặt lịch hẹn trực tiếp với bác sĩ.
+
+[ ] 🤝 [Hybrid] Prompt Cá nhân hóa: Thêm form để bác sĩ tự nhập Prompt, giúp Trợ lý AI phụ trách đón bệnh nhân mang văn phong riêng của bác sĩ đó.
+
+[ ] 🤖 [AI IDE] Chăm sóc Bác sĩ: Bổ sung chức năng "Tư vấn" và "Tâm sự" vào header của trang Doctor (Bác sĩ cũng cần được hỗ trợ tâm lý).
+
+🛡️ EPIC 4: ĐẠO ĐỨC LÂM SÀNG & QUẢN LÝ DỮ LIỆU
+
+Mục tiêu: Hoàn thiện Dashboard, quản lý hồ sơ và bảo mật thông tin PII (HIPAA).
+
+[ ] 🤖 [AI IDE] Doctor Dashboard: Kích hoạt và kết nối API cho các nút "Hành động nhanh".
+
+[ ] 🤖 [AI IDE] Doctor Dashboard: Xử lý sự kiện click mục "Tư vấn gần đây" để mở modal/trang xem lại toàn bộ lịch sử tư vấn.
+
+[ ] 🤖 [AI IDE] Quản lý Bệnh nhân (/doctor/patients): Bổ sung dữ liệu demo chuẩn y khoa để test giao diện xem chi tiết hồ sơ.
+
+[ ] 🤖 [AI IDE] Quản lý Báo cáo (/doctor/reports): Xây dựng form và logic cho phép bác sĩ tạo báo cáo y khoa mới.
+
+[ ] 🤝 [Hybrid] Diễn đàn Y khoa: Tạo không gian ẩn danh để bác sĩ hỏi/chia sẻ chuyên môn. Cài đặt thuật toán (AI/Regex) tự động quét và che mờ thông tin cá nhân (PII) của bệnh nhân.
+
+🌱 EPIC 5: TỰ CHĂM SÓC, GAME HÓA & AN TOÀN LÂM SÀNG
+
+Mục tiêu: Tăng cường tương tác bằng tâm lý học thực chứng và bảo vệ an toàn sinh mạng.
+
+[ ] 🚨 [Hybrid] Khủng hoảng khẩn cấp (SOS Mode): Thiết lập Agent phân tích từ khóa tự sát/xâm hại (từ text/audio). Kích hoạt màn hình đỏ cảnh báo và hiển thị Hotline (VD: 111) ngay lập tức.
+
+[ ] 🤖 [AI IDE] Thẻ Trị liệu (Therapeutic Cards): Xây dựng module "Rút thẻ mỗi ngày" với các thông điệp Chánh niệm/CBT (Thay thế cho Tarot).
+
+[ ] 🤖 [AI IDE] Bánh xe Cuộc đời (Wheel of Life): Xây dựng module radar chart để bệnh nhân tự đánh giá đa chiều (Sự nghiệp, Tình cảm, Sức khỏe).
+
+[ ] 🤝 [Hybrid] Hành trình Tâm trí (Patient Insight): Xây dựng Dashboard riêng cho bệnh nhân chứa biểu đồ diễn biến điểm số PHQ-9/GAD-7 qua các tuần.
+
+Chú thích:
+🤖 [AI IDE]: Dùng công cụ AI Code (Cursor, Windsurf) để sinh code tự động phần lớn.
+🤝 [Hybrid]: Kết hợp AI viết nháp và tinh chỉnh kiến trúc logic kỹ bằng tay.

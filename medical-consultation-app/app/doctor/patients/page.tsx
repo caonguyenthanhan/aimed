@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Filter, Phone, Mail, Calendar, FileText } from 'lucide-react'
+import { demoPatients } from "@/lib/doctor-demo"
 
 export default function DoctorPatientsPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeOnly, setActiveOnly] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -22,43 +24,9 @@ export default function DoctorPatientsPage() {
 
   if (!mounted) return null
 
-  const patients = [
-    {
-      id: 1,
-      name: 'Nguyễn Minh Anh',
-      age: 28,
-      phone: '0912-345-678',
-      email: 'minh.nguyen@gmail.com',
-      lastVisit: '2024-03-15',
-      status: 'Hoạt động',
-      sessions: 5,
-    },
-    {
-      id: 2,
-      name: 'Trần Linh Đan',
-      age: 25,
-      phone: '0913-456-789',
-      email: 'linh.tran@gmail.com',
-      lastVisit: '2024-03-14',
-      status: 'Hoạt động',
-      sessions: 3,
-    },
-    {
-      id: 3,
-      name: 'Phạm Văn A',
-      age: 32,
-      phone: '0914-567-890',
-      email: 'phama@gmail.com',
-      lastVisit: '2024-03-10',
-      status: 'Chưa tham gia',
-      sessions: 1,
-    },
-  ]
-
-  const filteredPatients = patients.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.email.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredPatients = demoPatients
+    .filter((p) => (!activeOnly ? true : p.status === "Hoạt động"))
+    .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.email.toLowerCase().includes(searchQuery.toLowerCase()))
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -84,9 +52,13 @@ export default function DoctorPatientsPage() {
             className="w-full pl-12 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-900 dark:text-slate-50 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+        <button
+          type="button"
+          onClick={() => setActiveOnly((v) => !v)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+        >
           <Filter size={18} />
-          Bộ lọc
+          {activeOnly ? "Chỉ hoạt động" : "Tất cả"}
         </button>
       </div>
 
@@ -143,7 +115,11 @@ export default function DoctorPatientsPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-sm px-4 py-2 rounded-lg bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-950/50 transition">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/doctor/patients/${patient.id}`)}
+                      className="text-sm px-4 py-2 rounded-lg bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-950/50 transition"
+                    >
                       Xem chi tiết
                     </button>
                   </td>

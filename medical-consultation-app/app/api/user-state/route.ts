@@ -3,6 +3,10 @@ import { getNeonPool } from "@/lib/neon-db"
 
 let ensured = false
 
+function isDbEnabled() {
+  return !!String(process.env.DATABASE_URL || "").trim()
+}
+
 async function ensureSchema() {
   if (ensured) return
   const pool = getNeonPool()
@@ -29,6 +33,14 @@ function getOwnerId(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    if (!isDbEnabled()) {
+      const url = new URL(request.url)
+      const namespace = (url.searchParams.get("namespace") || "").trim()
+      const key = (url.searchParams.get("key") || "").trim()
+      if (!namespace) return NextResponse.json({ error: "Missing namespace" }, { status: 400 })
+      if (key) return NextResponse.json({ item: null, disabled: true })
+      return NextResponse.json({ items: [], disabled: true })
+    }
     const ownerId = getOwnerId(request)
     if (!ownerId) return NextResponse.json({ error: "Missing x-device-id" }, { status: 400 })
     const url = new URL(request.url)
@@ -53,12 +65,15 @@ export async function GET(request: NextRequest) {
     )
     return NextResponse.json({ items: rows })
   } catch (e: any) {
-    return NextResponse.json({ error: "Internal server error", details: String(e?.message || "") }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isDbEnabled()) {
+      return NextResponse.json({ ok: false, disabled: true })
+    }
     const ownerId = getOwnerId(request)
     if (!ownerId) return NextResponse.json({ error: "Missing x-device-id" }, { status: 400 })
     const body = await request.json().catch(() => null)
@@ -81,12 +96,15 @@ export async function POST(request: NextRequest) {
     )
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ error: "Internal server error", details: String(e?.message || "") }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
+    if (!isDbEnabled()) {
+      return NextResponse.json({ ok: false, disabled: true })
+    }
     const ownerId = getOwnerId(request)
     if (!ownerId) return NextResponse.json({ error: "Missing x-device-id" }, { status: 400 })
     const url = new URL(request.url)
@@ -102,7 +120,7 @@ export async function DELETE(request: NextRequest) {
     )
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ error: "Internal server error", details: String(e?.message || "") }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 

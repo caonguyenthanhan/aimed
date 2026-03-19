@@ -18,6 +18,7 @@ import { UnifiedComposer } from "@/components/unified-composer"
 import { LlmChatResponseSchema } from "@/lib/llm-schema"
 import type { LlmMessage } from "@/types/llm"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
+import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 
 interface Message {
   id: string
@@ -234,7 +235,18 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         user_id: userId,
         conversationHistory,
         messages: conversationHistory,
-        provider
+        provider,
+        systemPrompt: (() => {
+          try {
+            const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null
+            if (role !== "doctor") return undefined
+            const priv = loadLocalDoctorPrivate()
+            const p = String(priv?.assistantPrompt || "").trim()
+            return p ? p : undefined
+          } catch {
+            return undefined
+          }
+        })(),
       }
 
       const response = await fetch('/api/llm-chat', {

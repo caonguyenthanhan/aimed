@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper, Smile, BookOpenText, Bell, Menu, X, Stethoscope, Users, FileText, BarChart3 } from 'lucide-react'
+import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper, Smile, BookOpenText, Bell, Menu, X, Stethoscope, Users, FileText, BarChart3, Calendar } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import AccountMenu from './account-menu'
 const ComputeToggle = dynamic(() => import('./compute-toggle'), { ssr: false })
@@ -17,6 +17,7 @@ export default function SiteHeader() {
   const [toolsOpen, setToolsOpen] = useState(false)
   
   useEffect(() => { setMounted(true) }, [])
+  useEffect(() => { setToolsOpen(false) }, [pathname])
   useEffect(() => {
     try {
       const t = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
@@ -68,15 +69,25 @@ export default function SiteHeader() {
     { href: '/doctor', label: 'Bảng điều khiển', icon: Home },
     { href: '/doctor/patients', label: 'Bệnh nhân', icon: Users },
     { href: '/doctor/reports', label: 'Báo cáo', icon: FileText },
+    { href: '/doctor/appointments', label: 'Lịch hẹn', icon: Calendar },
+    { href: '/doctor/forum', label: 'Chia sẻ', icon: Users },
   ]
 
-  const toolItems = [
+  const toolItemsBase = [
     { href: '/tra-cuu', label: 'Tra cứu', icon: Search },
     { href: '/sang-loc', label: 'Sàng lọc', icon: Activity },
     { href: '/tri-lieu', label: 'Trị liệu', icon: BookOpenText },
     { href: '/nhac-nho', label: 'Nhắc nhở', icon: Bell },
     { href: '/tin-tuc-y-khoa', label: 'Tin tức', icon: Newspaper },
   ]
+  const toolItems =
+    userRole === "doctor"
+      ? [
+          { href: "/tu-van", label: "Tư vấn", icon: MessageSquare },
+          { href: "/tam-su", label: "Tâm sự", icon: Smile },
+          ...toolItemsBase,
+        ]
+      : toolItemsBase
 
   const mainItems = userRole === 'doctor' ? doctorItems : patientItems
   const navItems = mainItems
