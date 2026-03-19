@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, lazy, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import { ChevronRight, CheckCircle, AlertCircle, Info, MessageCircle, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,7 +10,12 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AiChatBox } from "./ai-chat-box"
-import { PDFReportGenerator } from "./pdf-report-generator"
+import dynamic from "next/dynamic"
+
+const PDFReportGenerator = dynamic(() => import("./pdf-report-generator").then(mod => ({ default: mod.PDFReportGenerator })), {
+  ssr: false,
+  loading: () => <div className="p-4 text-slate-600">Đang tải...</div>
+})
 
 interface Question {
   id: string
