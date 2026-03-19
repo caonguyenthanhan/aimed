@@ -28,7 +28,7 @@ function determineContext(userMessage: string, conversationHistory?: any[]): str
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider, user_api_key, access_pass } = await request.json()
+    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider, access_pass } = await request.json()
     const auth = request.headers.get('authorization') || ''
     const referer = request.headers.get('referer') || ''
     
@@ -161,8 +161,9 @@ NGUYÊN TẮC QUAN TRỌNG:
     if (useGemini) {
       const expectedPass = String(process.env.AGENT_KEY_PASS || '').trim()
       const passOk = expectedPass && String(access_pass || '').trim() === expectedPass
-      const keyOverride = typeof user_api_key === 'string' && user_api_key.trim() ? user_api_key.trim() : ''
-      const keyToUse = keyOverride || String(process.env.GEMINI_API_KEY || '').trim()
+      const accessSecret = String(access_pass || '').trim()
+      const systemKey = String(process.env.GEMINI_API_KEY || '').trim()
+      const keyToUse = passOk ? systemKey : (accessSecret || systemKey)
       if (!keyToUse) {
         return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 })
       }
@@ -209,7 +210,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           tier: modeHeader,
           fallback: false,
           provider: 'gemini',
-          access: keyOverride ? 'user_key' : (passOk ? 'pass' : 'system_key'),
+          access: passOk ? 'pass' : (accessSecret ? 'user_key' : 'system_key'),
           duration_ms: durationGemini
         },
         conversation_id: sid

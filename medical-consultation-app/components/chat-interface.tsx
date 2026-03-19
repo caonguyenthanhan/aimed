@@ -36,8 +36,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [headerPad, setHeaderPad] = useState<string>('6rem')
   const [agentMode, setAgentMode] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
-  const [authApiKey, setAuthApiKey] = useState("")
-  const [authPass, setAuthPass] = useState("")
+  const [authSecret, setAuthSecret] = useState("")
   const [liveMode, setLiveMode] = useState(false)
   const liveSessionRef = useRef<any>(null)
   const liveAudioContextRef = useRef<AudioContext | null>(null)
@@ -73,15 +72,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } catch {}
   }, [])
 
-  useEffect(() => {
-    try {
-      const k = localStorage.getItem("mcs_user_gemini_key_v1") || ""
-      const p = localStorage.getItem("mcs_agent_access_pass_v1") || ""
-      setAuthApiKey(k)
-      setAuthPass(p)
-    } catch {}
-  }, [])
-
   const toggleAgentMode = () => {
     setAgentMode((prev) => {
       const next = !prev
@@ -104,23 +94,29 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } catch {}
   }
 
-  const hasUserGeminiKey = () => {
-    try {
-      const k = localStorage.getItem("mcs_user_gemini_key_v1") || ""
-      return !!String(k).trim()
-    } catch {
-      return false
-    }
-  }
+  const secretKeyOf = (uid?: string | null) => `mcs_gemini_secret_v1:${String(uid || "anon")}`
 
-  const hasAccessPass = () => {
+  useEffect(() => {
     try {
-      const p = localStorage.getItem("mcs_agent_access_pass_v1") || ""
-      return !!String(p).trim()
+      const uid = typeof window !== "undefined" ? (localStorage.getItem("userId") || "") : ""
+      const k = localStorage.getItem(secretKeyOf(uid || "anon")) || ""
+      setAuthSecret(String(k || ""))
     } catch {
-      return false
+      setAuthSecret("")
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    try {
+      const uid = typeof window !== "undefined" ? (localStorage.getItem("userId") || "") : ""
+      const k = localStorage.getItem(secretKeyOf(uid || "anon")) || ""
+      setAuthSecret(String(k || ""))
+    } catch {
+      setAuthSecret("")
+    }
+  }, [userId])
+
+  const hasSecret = () => !!String(authSecret || "").trim()
 
   const canUseSystemGemini = () => {
     try {
@@ -132,7 +128,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   const ensureGeminiQuota = () => {
-    if (hasUserGeminiKey() || hasAccessPass()) return true
+    if (hasSecret()) return true
     if (canUseSystemGemini()) return true
     setAuthOpen(true)
     toast({ title: "Cần API Key", description: "Bạn đã dùng hết 5 lượt miễn phí. Hãy nhập API key hoặc pass." })
@@ -141,10 +137,22 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const saveAuth = () => {
     try {
-      localStorage.setItem("mcs_user_gemini_key_v1", String(authApiKey || "").trim())
-      localStorage.setItem("mcs_agent_access_pass_v1", String(authPass || "").trim())
-    } catch {}
+      const uid = typeof window !== "undefined" ? (localStorage.getItem("userId") || "") : ""
+      const key = secretKeyOf(uid || "anon")
+      const v = String(authSecret || "").trim()
+      if (v) localStorage.setItem(key, v)
+      else localStorage.removeItem(key)
+    } catch {
+    }
     setAuthOpen(false)
+  }
+
+  const clearAuth = () => {
+    try {
+      const uid = typeof window !== "undefined" ? (localStorage.getItem("userId") || "") : ""
+      localStorage.removeItem(secretKeyOf(uid || "anon"))
+    } catch {}
+    setAuthSecret("")
   }
 
   const stopLiveMode = async () => {
@@ -173,28 +181,21 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   const startLiveMode = async () => {
-    if (!hasUserGeminiKey() && !hasAccessPass()) {
+    if (!hasSecret()) {
       setAuthOpen(true)
       return
     }
     let apiKey = ""
     try {
-      apiKey = String(localStorage.getItem("mcs_user_gemini_key_v1") || "").trim()
+      apiKey = String(authSecret || "").trim()
     } catch {}
-    if (!apiKey) {
-      const pass = (() => {
-        try { return String(localStorage.getItem("mcs_agent_access_pass_v1") || "").trim() } catch { return "" }
-      })()
-      if (!pass) {
-        setAuthOpen(true)
-        return
-      }
-      const r = await fetch("/api/live/access", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_pass: pass }),
-      }).then((x) => x.json()).catch(() => null)
-      apiKey = String(r?.api_key || "").trim()
+    const r = await fetch("/api/live/access", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ access_pass: apiKey }),
+    }).then((x) => x.json()).catch(() => null)
+    if (r?.ok && typeof r?.api_key === "string" && String(r.api_key).trim()) {
+      apiKey = String(r.api_key).trim()
     }
     if (!apiKey) {
       toast({ title: "Live mode", description: "Không lấy được API key để bật Live mode." })
@@ -508,14 +509,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         setIsLoading(false)
         return
       }
-      let user_api_key: string | undefined
-      let access_pass: string | undefined
-      try {
-        const k = localStorage.getItem("mcs_user_gemini_key_v1") || ""
-        const p = localStorage.getItem("mcs_agent_access_pass_v1") || ""
-        user_api_key = String(k || "").trim() || undefined
-        access_pass = String(p || "").trim() || undefined
-      } catch {}
+      const access_pass = String(authSecret || "").trim() || undefined
       const payload = {
         model: selectedModel,
         message: messageText,
@@ -524,7 +518,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         conversationHistory,
         messages: conversationHistory,
         provider,
-        user_api_key,
         access_pass,
         systemPrompt: (() => {
           try {
@@ -542,7 +535,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const response = await fetch(agentMode ? '/api/agent-chat' : '/api/llm-chat', {
         method: 'POST',
         headers: authToken ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type': 'application/json' },
-        body: JSON.stringify(agentMode ? { message: messageText, messages: conversationHistory, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", user_api_key, access_pass } : payload),
+        body: JSON.stringify(agentMode ? { message: messageText, messages: conversationHistory, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", access_pass } : payload),
       })
 
       if (!response.ok) {
@@ -1541,10 +1534,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             <div className="text-sm text-slate-700 dark:text-slate-300">
               Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
             </div>
-            <Input value={authApiKey} onChange={(e) => setAuthApiKey(e.target.value)} placeholder="Gemini API key (tuỳ chọn)" />
-            <Input value={authPass} onChange={(e) => setAuthPass(e.target.value)} placeholder="Pass (tuỳ chọn)" />
+            <Input type="password" value={authSecret} onChange={(e) => setAuthSecret(e.target.value)} placeholder="Nhập API key hoặc pass" />
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={clearAuth}>Xoá</Button>
             <Button variant="outline" onClick={() => setAuthOpen(false)}>Đóng</Button>
             <Button onClick={saveAuth}>Lưu</Button>
           </DialogFooter>
@@ -1880,6 +1873,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onToggleAgentMode={toggleAgentMode}
         isLiveMode={liveMode}
         onToggleLiveMode={toggleLiveMode}
+        onManageKey={() => setAuthOpen(true)}
       />
       </div>
     </div>

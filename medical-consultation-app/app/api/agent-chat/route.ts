@@ -17,7 +17,6 @@ export async function POST(req: Request) {
     const messages = Array.isArray(body?.messages) ? body.messages : []
     const tier = body?.tier === "pro" ? "pro" : "flash"
     const category = body?.category === "friend" ? "friend" : "consultation"
-    const userApiKey = String(body?.user_api_key || "").trim()
     const accessPass = String(body?.access_pass || "").trim()
 
     if (!message) return NextResponse.json({ error: "Message is required" }, { status: 400 })
@@ -134,7 +133,9 @@ export async function POST(req: Request) {
 
     const expectedPass = String(process.env.AGENT_KEY_PASS || "").trim()
     const passOk = expectedPass && accessPass && accessPass === expectedPass
-    const keyToUse = userApiKey || String(process.env.GEMINI_API_KEY || "").trim()
+    const systemKey = String(process.env.GEMINI_API_KEY || "").trim()
+    const access = passOk ? "pass" : (accessPass ? "user_key" : "system_key")
+    const keyToUse = passOk ? systemKey : (accessPass || systemKey)
     if (!keyToUse) {
       const actions = normalizeActions(ruleBasedActionsGuess())
       const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Thiếu cấu hình Gemini nên agent đang chạy local demo (rule-based)."
@@ -171,7 +172,7 @@ export async function POST(req: Request) {
         response: content,
         actions,
         conversation_id,
-        metadata: { mode: "cpu", provider: "gemini", access: userApiKey ? "user_key" : (passOk ? "pass" : "system_key"), fallback: "local_rule_based", gemini_error: geminiErr, duration_ms: Date.now() - started },
+        metadata: { mode: "cpu", provider: "gemini", access, fallback: "local_rule_based", gemini_error: geminiErr, duration_ms: Date.now() - started },
       })
       return NextResponse.json(out)
     }
@@ -209,7 +210,7 @@ export async function POST(req: Request) {
       response: content,
       actions,
       conversation_id,
-      metadata: { mode: "gpu", provider: "gemini", access: userApiKey ? "user_key" : (passOk ? "pass" : "system_key"), model: r.model, duration_ms: Date.now() - started },
+      metadata: { mode: "gpu", provider: "gemini", access, model: r.model, duration_ms: Date.now() - started },
     })
     return NextResponse.json(out)
   } catch (e: any) {
