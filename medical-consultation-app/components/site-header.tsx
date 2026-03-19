@@ -60,6 +60,7 @@ export default function SiteHeader() {
     { href: '/', label: 'Trang chủ', icon: Home },
     { href: '/tu-van', label: 'Tư vấn', icon: MessageSquare },
     { href: '/tam-su', label: 'Tâm sự', icon: Smile },
+    { href: '/gioi-thieu', label: 'Hướng dẫn', icon: BookOpenText },
   ]
 
   const doctorItems = [
@@ -77,12 +78,7 @@ export default function SiteHeader() {
   ]
 
   const mainItems = userRole === 'doctor' ? doctorItems : patientItems
-  
-  // Add introduction link to main items if not authenticated
-  const navItems = !authed ? [
-    { href: '/gioi-thieu', label: 'Giới Thiệu', icon: Users },
-    ...mainItems
-  ] : mainItems
+  const navItems = mainItems
 
   return (
     <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-3 sm:px-4">
