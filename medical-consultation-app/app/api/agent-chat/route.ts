@@ -146,7 +146,15 @@ export async function POST(req: Request) {
     }
 
     const toolDecl = geminiToolDeclarations()
-    const r = await geminiService.generateAgent({ category, tier, question: message, messages, tools: toolDecl }).catch(() => null)
+    let geminiErr: string | null = null
+    let r: Awaited<ReturnType<typeof geminiService.generateAgent>> | null = null
+    try {
+      r = await geminiService.generateAgent({ category, tier, question: message, messages, tools: toolDecl })
+    } catch (e: any) {
+      geminiErr = String(e?.message || e || "").trim() || "unknown_error"
+      if (geminiErr.length > 280) geminiErr = geminiErr.slice(0, 280)
+      r = null
+    }
     if (!r) {
       const actions = normalizeActions(ruleBasedActionsGuess())
       const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent (Gemini). Bạn thử lại giúp mình."
@@ -157,7 +165,7 @@ export async function POST(req: Request) {
         response: content,
         actions,
         conversation_id,
-        metadata: { mode: "cpu", provider: "gemini", fallback: "local_rule_based", duration_ms: Date.now() - started },
+        metadata: { mode: "cpu", provider: "gemini", fallback: "local_rule_based", gemini_error: geminiErr, duration_ms: Date.now() - started },
       })
       return NextResponse.json(out)
     }
