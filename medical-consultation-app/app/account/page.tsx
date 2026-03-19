@@ -1,6 +1,10 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import dynamic from "next/dynamic"
+import { saveCurrentSession } from "@/lib/account-manager"
+
+const AccountSwitcher = dynamic(() => import("@/components/account-switcher"), { ssr: false })
 
 type Profile = {
   full_name: string
@@ -32,6 +36,7 @@ function initialFromName(name: string) {
 
 export default function AccountPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [profile, setProfile] = useState<Profile>({ full_name: "" })
   const [editingProfile, setEditingProfile] = useState(false)
   const [editingSecurity, setEditingSecurity] = useState(false)
@@ -48,6 +53,11 @@ export default function AccountPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const token = useMemo(() => (typeof window !== "undefined" ? localStorage.getItem("authToken") : null), [])
+
+  useEffect(() => {
+    // Save current session when account page loads
+    saveCurrentSession()
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -350,6 +360,7 @@ export default function AccountPage() {
         <aside className="lg:col-span-1 order-2 lg:order-1">
           <div className="sticky top-24 space-y-2">
             <a href="#profile" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Thông tin chung</a>
+            <a href="#accounts" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Quản lý tài khoản</a>
             <a href="#security" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Bảo mật</a>
             <a href="#settings" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Cài đặt</a>
             <a href="#special" className="block px-4 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 text-sm font-medium text-slate-900 dark:text-slate-50 transition">Thông tin đặc thù</a>
@@ -358,6 +369,14 @@ export default function AccountPage() {
         <main className="lg:col-span-4 order-1 lg:order-2 space-y-6">
           {error && <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">{error}</div>}
           {success && <div className="p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 text-sm">{success}</div>}
+          
+          {/* Account Switcher Section */}
+          {searchParams.get('tab') === 'accounts' && (
+            <section id="accounts" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
+              <AccountSwitcher />
+            </section>
+          )}
+          
           <section id="profile" className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-6">Thông tin cá nhân</h2>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 pb-6 border-b border-slate-200 dark:border-slate-700">

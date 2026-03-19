@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper, Smile, BookOpenText, Bell, Menu, X, Stethoscope, Users, FileText, BarChart3 } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import AccountMenu from './account-menu'
 const ComputeToggle = dynamic(() => import('./compute-toggle'), { ssr: false })
 
 export default function SiteHeader() {
@@ -155,10 +156,12 @@ export default function SiteHeader() {
               <span className="hidden sm:inline">Đăng nhập</span>
             </Link>
           ) : (
-            <Link href="/account" className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-50 text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors duration-200 whitespace-nowrap">
-              <span className="hidden sm:inline">{userLabel}</span>
-              <span className="sm:hidden">👤</span>
-            </Link>
+            <AccountMenu
+              userLabel={userLabel}
+              userRole={userRole as 'doctor' | 'patient'}
+              userFullName={typeof window !== 'undefined' ? localStorage.getItem('userFullName') || undefined : undefined}
+              userEmail={typeof window !== 'undefined' ? localStorage.getItem('userEmail') || undefined : undefined}
+            />
           )}
         </div>
 
