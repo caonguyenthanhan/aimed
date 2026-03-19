@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import plan from "@/data/plan.json"
 
 type DocState = {
   id: string
@@ -823,6 +824,19 @@ export default function KeHoachPage() {
     return null
   }
 
+  const planSummary = useMemo(() => {
+    const tracks = Array.isArray((plan as any)?.tracks) ? ((plan as any).tracks as any[]) : []
+    return tracks
+      .map((t) => {
+        const items = Array.isArray(t?.items) ? (t.items as any[]) : []
+        const done = items.filter((x) => x?.status === "done").length
+        const total = items.length
+        const pct = total ? Math.round((done / total) * 100) : 0
+        return { id: String(t?.id || ""), name: String(t?.name || ""), total, done, pct }
+      })
+      .filter((t) => t.id && t.name)
+  }, [])
+
   useEffect(() => {
     if (!authed) return
     const titles = parsed.sections.map((s) => s.title)
@@ -857,6 +871,38 @@ export default function KeHoachPage() {
                 </Button>
               </>
             ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-background p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <div className="text-sm font-medium">{(plan as any)?.title || "Kế hoạch hệ thống"}</div>
+              <div className="text-xs text-muted-foreground">{(plan as any)?.strategy || ""}</div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {planSummary.map((t) => (
+                <a key={t.id} href={`/ke-hoach/${encodeURIComponent(t.id)}`} className="inline-flex">
+                  <Button variant="outline" className="rounded-xl">
+                    <LayoutList className="w-4 h-4 mr-2" />
+                    {t.id}
+                  </Button>
+                </a>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {planSummary.map((t) => (
+              <div key={`${t.id}-card`} className="rounded-xl border bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-semibold">{t.name}</div>
+                  <div className="text-xs text-muted-foreground">{t.done}/{t.total}</div>
+                </div>
+                <div className="mt-2">
+                  <Progress value={t.pct} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

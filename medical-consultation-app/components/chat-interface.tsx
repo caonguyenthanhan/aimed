@@ -67,6 +67,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [isPlayingAudio, setIsPlayingAudio] = useState<string | null>(null)
   const [isPausedAudio, setIsPausedAudio] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
+  const [sosOpen, setSosOpen] = useState(false)
+  const [sosHotlines, setSosHotlines] = useState<Array<{ label: string; number: string }>>([])
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -282,6 +284,15 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const snapshot = [...messages, userMessage, aiMessage]
       setMessages((prev) => [...prev, aiMessage])
       const md = (data as any)?.metadata
+      if (md && (md as any)?.sos) {
+        try {
+          const hs = Array.isArray((md as any)?.hotlines) ? (md as any).hotlines : []
+          setSosHotlines(hs.map((h: any) => ({ label: String(h?.label || ""), number: String(h?.number || "") })).filter((h: any) => h.label && h.number))
+        } catch {
+          setSosHotlines([])
+        }
+        setSosOpen(true)
+      }
       if (md && typeof window !== 'undefined') {
         try {
           const detail: any = { target: md.mode === 'gpu' ? 'gpu' : 'cpu' }
@@ -1194,6 +1205,25 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }, [messages, conversationId])
   return (
     <div className="flex h-screen overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning style={{ paddingTop: headerPad }}>
+      <Dialog open={sosOpen} onOpenChange={setSosOpen}>
+        <DialogContent className="border-red-300 bg-red-50">
+          <DialogHeader>
+            <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-slate-800">
+            <div>Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>
+            <div className="space-y-1">
+              {(sosHotlines.length ? sosHotlines : [{ label: "Cấp cứu", number: "115" }, { label: "Bảo vệ trẻ em", number: "111" }]).map((h) => (
+                <div key={`${h.label}-${h.number}`} className="font-medium">{h.label}: {h.number}</div>
+              ))}
+            </div>
+            <div>Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSosOpen(false)}>Đã hiểu</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
         <DialogContent>
           <DialogHeader>

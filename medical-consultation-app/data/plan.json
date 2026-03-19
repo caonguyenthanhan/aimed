@@ -1,0 +1,83 @@
+{
+  "title": "KẾ HOẠCH TRIỂN KHAI HỆ THỐNG (BE/FE/AI)",
+  "strategy": "Tập trung AI-first: An toàn lâm sàng → Luồng dữ liệu → Trải nghiệm → Workspace bác sĩ → Mở rộng.",
+  "tracks": [
+    {
+      "id": "FE",
+      "name": "Frontend (FE)",
+      "description": "UI/UX, điều hướng, trải nghiệm chat, các trang chức năng.",
+      "items": [
+        { "id": "FE-001", "epic": "EPIC 1", "title": "Header/Công cụ tự đóng khi chuyển trang", "status": "done" },
+        { "id": "FE-002", "epic": "EPIC 1", "title": "Trang /tam-su cuộn hội thoại dài ổn định", "status": "done" },
+        { "id": "FE-003", "epic": "EPIC 2", "title": "Trang /nhac-nho CRUD nhắc nhở + import gợi ý", "status": "done" },
+        { "id": "FE-004", "epic": "EPIC 2", "title": "Trang /tri-lieu: kế hoạch, checklist, lịch sử", "status": "done" },
+        { "id": "FE-005", "epic": "EPIC 3", "title": "Trang giới thiệu bác sĩ public + đặt hẹn từ public", "status": "done" },
+        { "id": "FE-006", "epic": "EPIC 4", "title": "Doctor dashboard: quick actions + click tư vấn gần đây", "status": "done" },
+        { "id": "FE-007", "epic": "EPIC 4", "title": "/doctor/patients: list + chi tiết demo", "status": "done" },
+        { "id": "FE-008", "epic": "EPIC 4", "title": "/doctor/reports: tạo báo cáo + download", "status": "done" },
+        { "id": "FE-009", "epic": "EPIC 4", "title": "/doctor/forum: đăng bài + list + chi tiết", "status": "done" },
+        { "id": "FE-010", "epic": "EPIC 5", "title": "SOS overlay: UI đỏ + hotline (text/voice)", "status": "done" },
+        { "id": "FE-011", "epic": "EPIC 5", "title": "Therapeutic Cards: rút thẻ mỗi ngày", "status": "done" },
+        { "id": "FE-012", "epic": "EPIC 5", "title": "Wheel of Life: radar chart + sliders", "status": "done" },
+        { "id": "FE-013", "epic": "EPIC 5", "title": "Patient Insight: chart PHQ-9/GAD-7 theo tuần", "status": "done" }
+      ],
+      "buildOrder": ["FE-001", "FE-002", "FE-003", "FE-004", "FE-010", "FE-011", "FE-012", "FE-013", "FE-005", "FE-006", "FE-007", "FE-008", "FE-009"]
+    },
+    {
+      "id": "BE",
+      "name": "Backend (BE)",
+      "description": "API routes, DB schema, persistence, auth proxy, server runtime.",
+      "items": [
+        { "id": "BE-001", "epic": "EPIC 2", "title": "Xử lý lỗi DB cho chat (/tu-van) không làm sập trải nghiệm", "status": "done" },
+        { "id": "BE-002", "epic": "EPIC 2", "title": "User-state API fallback khi thiếu DATABASE_URL", "status": "done" },
+        { "id": "BE-003", "epic": "EPIC 3", "title": "Doctor profile public/private API + schema", "status": "done" },
+        { "id": "BE-004", "epic": "EPIC 3", "title": "Appointments API (POST/GET/PATCH) + schema", "status": "done" },
+        { "id": "BE-005", "epic": "EPIC 4", "title": "Doctor forum API + schema + PII guard server-side", "status": "done" },
+        { "id": "BE-006", "epic": "EPIC 5", "title": "SOS Mode gate: hard-stop LLM và trả metadata sos", "status": "done" },
+        { "id": "BE-007", "epic": "Nâng cấp", "title": "Tối ưu Neon pool cho serverless (thay vì chỉ fallback)", "status": "todo" },
+        { "id": "BE-008", "epic": "Nâng cấp", "title": "Chuẩn hóa dữ liệu theo tài khoản (không theo device)", "status": "todo" },
+        { "id": "BE-009", "epic": "Nâng cấp", "title": "PWA push/periodic sync cho nhắc nhở khi app đóng", "status": "todo" }
+      ],
+      "buildOrder": ["BE-006", "BE-001", "BE-002", "BE-003", "BE-004", "BE-005", "BE-007", "BE-008", "BE-009"]
+    },
+    {
+      "id": "AI",
+      "name": "AI",
+      "description": "Prompting, safety policy, routing provider, personalization, future RAG/agents.",
+      "items": [
+        { "id": "AI-001", "epic": "EPIC 2", "title": "Dùng kết quả sàng lọc làm mở đầu hội thoại", "status": "done" },
+        { "id": "AI-002", "epic": "EPIC 3", "title": "Prompt cá nhân hóa cho bác sĩ (systemPrompt) trong chat", "status": "done" },
+        { "id": "AI-003", "epic": "EPIC 4", "title": "PII guard cho forum (client + server)", "status": "done" },
+        { "id": "AI-004", "epic": "EPIC 5", "title": "SOS agent keyword-based (text + voice) + escalation", "status": "done" },
+        { "id": "AI-005", "epic": "Nâng cấp", "title": "Risk scoring tốt hơn (ngữ cảnh, tần suất, lịch sử)", "status": "todo" },
+        { "id": "AI-006", "epic": "Nâng cấp", "title": "Mask/Rewrite tự động PII thay vì chỉ chặn", "status": "todo" },
+        { "id": "AI-007", "epic": "Nâng cấp", "title": "Doctor prompt theo bệnh nhân/ca tư vấn (template)", "status": "todo" }
+      ],
+      "buildOrder": ["AI-004", "AI-001", "AI-002", "AI-003", "AI-005", "AI-006", "AI-007"]
+    },
+    {
+      "id": "DATA",
+      "name": "Data Flow",
+      "description": "Luồng dữ liệu lâm sàng, history, care plan, đề xuất liên trang.",
+      "items": [
+        { "id": "DATA-001", "epic": "EPIC 2", "title": "Lưu lịch sử sàng lọc và đồng bộ best-effort", "status": "done" },
+        { "id": "DATA-002", "epic": "EPIC 2", "title": "Care plan dùng chung đa trang (tin tức/trị liệu/nhắc nhở)", "status": "done" },
+        { "id": "DATA-003", "epic": "EPIC 2", "title": "Ghi nhận lịch sử điều trị (mood/journal/task/reminder)", "status": "done" },
+        { "id": "DATA-004", "epic": "Nâng cấp", "title": "Hồ sơ điều trị theo bệnh nhân (timeline đa thiết bị)", "status": "todo" }
+      ],
+      "buildOrder": ["DATA-001", "DATA-002", "DATA-003", "DATA-004"]
+    },
+    {
+      "id": "CLINICAL",
+      "name": "Clinical & Ethics",
+      "description": "Chuẩn mực lâm sàng, an toàn, quy tắc nội dung và kiểm duyệt.",
+      "items": [
+        { "id": "CL-001", "epic": "EPIC 5", "title": "SOS Mode: escalation + hotline + lưu log", "status": "done" },
+        { "id": "CL-002", "epic": "EPIC 4", "title": "PII policy cho forum bác sĩ", "status": "done" },
+        { "id": "CL-003", "epic": "Nâng cấp", "title": "Quy trình kiểm duyệt/đánh dấu rủi ro + audit trail", "status": "todo" }
+      ],
+      "buildOrder": ["CL-001", "CL-002", "CL-003"]
+    }
+  ]
+}
+

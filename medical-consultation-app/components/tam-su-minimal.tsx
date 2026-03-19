@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { Menu, X } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
@@ -148,6 +150,8 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   const [messages, setMessages] = useState<Message[]>([
     greetingMsg,
   ])
+  const [sosOpen, setSosOpen] = useState(false)
+  const [sosHotlines, setSosHotlines] = useState<Array<{ label: string; number: string }>>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId || null)
@@ -434,6 +438,16 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
       const resp = await fetch("/api/tam-su-chat", { method: "POST", headers, body: JSON.stringify(payload) })
       if (!resp.ok) throw new Error(await resp.text())
       const data = await resp.json()
+      const md = (data as any)?.metadata
+      if (md && (md as any)?.sos) {
+        try {
+          const hs = Array.isArray((md as any)?.hotlines) ? (md as any).hotlines : []
+          setSosHotlines(hs.map((h: any) => ({ label: String(h?.label || ""), number: String(h?.number || "") })).filter((h: any) => h.label && h.number))
+        } catch {
+          setSosHotlines([])
+        }
+        setSosOpen(true)
+      }
       const content =
         (data as any)?.choices?.[0]?.message?.content ||
         (data as any)?.response ||
@@ -563,6 +577,25 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
 
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50" style={{ paddingTop: headerPad }}>
+      <Dialog open={sosOpen} onOpenChange={setSosOpen}>
+        <DialogContent className="border-red-300 bg-red-50">
+          <DialogHeader>
+            <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-slate-800">
+            <div>Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>
+            <div className="space-y-1">
+              {(sosHotlines.length ? sosHotlines : [{ label: "Cấp cứu", number: "115" }, { label: "Bảo vệ trẻ em", number: "111" }]).map((h) => (
+                <div key={`${h.label}-${h.number}`} className="font-medium">{h.label}: {h.number}</div>
+              ))}
+            </div>
+            <div>Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSosOpen(false)}>Đã hiểu</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="max-w-6xl mx-auto p-4 w-full h-full">
         <div className="rounded-2xl border bg-white shadow-sm overflow-hidden flex h-full">
           {!isMobile && showSidebar ? (

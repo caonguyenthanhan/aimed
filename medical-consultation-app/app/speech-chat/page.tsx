@@ -23,6 +23,8 @@ export default function SpeechChatPage() {
   const [autoPlayResponse, setAutoPlayResponse] = useState(true)
   const [useOptimizedAPI, setUseOptimizedAPI] = useState(true)
   const [lastChunkingInfo, setLastChunkingInfo] = useState<any>(null)
+  const [sosOpen, setSosOpen] = useState(false)
+  const [sosHotlines, setSosHotlines] = useState<Array<{ label: string; number: string }>>([])
   
   // Camera and Image states
   const [showCamera, setShowCamera] = useState(false)
@@ -166,6 +168,16 @@ export default function SpeechChatPage() {
         }
         
         setMessages(prev => [...prev, userMessage, aiMessage])
+
+        if (data?.metadata?.sos) {
+          try {
+            const hs = Array.isArray(data?.metadata?.hotlines) ? data.metadata.hotlines : []
+            setSosHotlines(hs.map((h: any) => ({ label: String(h?.label || ''), number: String(h?.number || '') })).filter((h: any) => h.label && h.number))
+          } catch {
+            setSosHotlines([])
+          }
+          setSosOpen(true)
+        }
         
         // Tự động phát âm thanh phản hồi nếu có và được bật
         if (autoPlayResponse && data.audio_url) {
@@ -579,6 +591,27 @@ export default function SpeechChatPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 hero-gradient dark:hero-gradient-dark" suppressHydrationWarning>
+      {sosOpen ? (
+        <div className="fixed inset-0 z-50 bg-red-700/95 text-white">
+          <div className="max-w-2xl mx-auto p-6 sm:p-10 space-y-5">
+            <div className="text-3xl font-bold">Khẩn cấp</div>
+            <div className="text-lg">Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>
+            <div className="space-y-2 text-xl font-semibold">
+              {(sosHotlines.length ? sosHotlines : [{ label: "Cấp cứu", number: "115" }, { label: "Bảo vệ trẻ em", number: "111" }]).map((h) => (
+                <div key={`${h.label}-${h.number}`}>{h.label}: {h.number}</div>
+              ))}
+            </div>
+            <div className="text-base">
+              Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn (tránh ban công/dao/thuốc).
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setSosOpen(false)} className="px-4 py-2 rounded-lg bg-white text-red-700 font-semibold">
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {/* Header */}
       <div className="hidden sm:block bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">

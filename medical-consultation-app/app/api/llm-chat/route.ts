@@ -5,6 +5,7 @@ import { geminiService } from '@/lib/gemini-service'
 import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 import { persistChatTurn } from '@/lib/chat-persistence'
 import crypto from 'crypto'
+import { assessSos, buildSosResponse } from '@/lib/sos-mode'
 
 // Determine context based on the conversation or user input
 function determineContext(userMessage: string, conversationHistory?: any[]): string {
@@ -37,6 +38,31 @@ export async function POST(request: NextRequest) {
         { error: 'Message is required' },
         { status: 400 }
       )
+    }
+
+    const sos = assessSos(String(userMessage), Array.isArray(conversationHistory) ? conversationHistory : [])
+    if (sos.triggered) {
+      const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+      const content = buildSosResponse(sos.hotlines)
+      try {
+        await persistChatTurn({
+          sessionId: sid,
+          kind: String(context) === 'speech_stream' ? 'speech_stream' : 'consultation',
+          userText: String(userMessage),
+          assistantText: content
+        })
+      } catch {}
+      return NextResponse.json({
+        response: content,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          mode: 'sos',
+          sos: true,
+          hotlines: sos.hotlines,
+          reasons: sos.reasons,
+        },
+        conversation_id: sid,
+      })
     }
 
     const safetyHits = shouldBlock(String(userMessage), Array.isArray(conversationHistory) ? conversationHistory : [])

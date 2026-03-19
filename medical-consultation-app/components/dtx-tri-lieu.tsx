@@ -7,9 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { readLocal, writeLocal } from "@/lib/local-store"
 import { getUserState, upsertUserState } from "@/lib/user-state-client"
-import { getCarePlan, getLastScreening } from "@/lib/screening-store"
+import { getCarePlan, getLastScreening, getScreeningHistory } from "@/lib/screening-store"
 import { upsertReminder } from "@/lib/reminders-store"
 import { appendTherapyEvent, createPlanFromCarePlan, getTherapyPlan, isTaskDone, listTherapyEvents, saveTherapyPlan, setTaskDone, type TherapyPlan } from "@/lib/therapy-store"
+import { getDeviceId } from "@/lib/device-id"
+import { getDailyCard, redrawToday, type TherapeuticCard } from "@/lib/therapeutic-cards"
 
 type MoodEntry = {
   id: string
@@ -28,6 +30,7 @@ type JournalEntry = {
 
 const MOOD_KEY = "mcs_mood_entries_v1"
 const JOURNAL_KEY = "mcs_journal_entries_v1"
+const WHEEL_KEY = "mcs_wheel_of_life_v1"
 const REMOTE_NS = "dtx"
 
 const nowTs = () => Date.now()
@@ -59,6 +62,8 @@ export function DtxTriLieu() {
   const [journalItems, setJournalItems] = useState<JournalEntry[]>([])
   const [therapyPlan, setTherapyPlanState] = useState<TherapyPlan | null>(null)
   const [, setEventsTick] = useState(0)
+  const [dailyCard, setDailyCard] = useState<{ day: string; card: TherapeuticCard | null }>(() => ({ day: "", card: null }))
+  const [wheel, setWheel] = useState<Record<string, number>>({})
 
   const tagCandidates = useMemo(
     () => ["Ngủ kém", "Áp lực", "Lo âu", "Buồn", "Cô đơn", "Vận động", "Ăn uống", "Gia đình", "Công việc", "Học tập"],
@@ -71,9 +76,22 @@ export function DtxTriLieu() {
     setMoodItems(Array.isArray(m) ? m : [])
     setJournalItems(Array.isArray(j) ? j : [])
     try {
+      const w = readLocal<Record<string, number>>(WHEEL_KEY, {})
+      setWheel(w && typeof w === "object" ? (w as any) : {})
+    } catch {
+      setWheel({})
+    }
+    try {
       setTherapyPlanState(getTherapyPlan())
     } catch {
       setTherapyPlanState(null)
+    }
+    try {
+      const seed = getDeviceId() || "device"
+      const dc = getDailyCard(seed)
+      setDailyCard({ day: dc.day, card: dc.card || null })
+    } catch {
+      setDailyCard({ day: "", card: null })
     }
   }, [])
 
@@ -84,6 +102,7 @@ export function DtxTriLieu() {
       if (cancelled) return
       const moodRemote = items.find((x: any) => x?.key === "mood_entries")?.value
       const journalRemote = items.find((x: any) => x?.key === "journal_entries")?.value
+      const wheelRemote = items.find((x: any) => x?.key === "wheel_of_life")?.value
       if (Array.isArray(moodRemote)) {
         setMoodItems(moodRemote as any)
         try { writeLocal(MOOD_KEY, moodRemote) } catch {}
@@ -92,8 +111,90 @@ export function DtxTriLieu() {
         setJournalItems(journalRemote as any)
         try { writeLocal(JOURNAL_KEY, journalRemote) } catch {}
       }
+      if (wheelRemote && typeof wheelRemote === "object") {
+        setWheel(wheelRemote as any)
+        try { writeLocal(WHEEL_KEY, wheelRemote) } catch {}
+      }
     })()
     return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    try { writeLocal(WHEEL_KEY, wheel) } catch {}
+    void upsertUserState(REMOTE_NS, "wheel_of_life", wheel)
+  }, [wheel])
+
+  const wheelDims = useMemo(
+    () => [
+      { key: "su_nghiep", label: "Sự nghiệp" },
+      { key: "tai_chinh", label: "Tài chính" },
+      { key: "suc_khoe", label: "Sức khỏe" },
+      { key: "tinh_cam", label: "Tình cảm" },
+      { key: "gia_dinh", label: "Gia đình" },
+      { key: "ban_be", label: "Bạn bè" },
+      { key: "phat_trien", label: "Phát triển" },
+      { key: "giai_tri", label: "Giải trí" },
+    ],
+    [],
+  )
+
+  const getWheelValue = (k: string) => {
+    const v = Number((wheel as any)?.[k])
+    if (!Number.isFinite(v)) return 5
+    return Math.max(0, Math.min(10, Math.round(v)))
+  }
+
+  const setWheelValue = (k: string, v: number) => {
+    setWheel((prev) => ({ ...(prev || {}), [k]: Math.max(0, Math.min(10, Math.round(v))) }))
+  }
+
+  const wheelPoints = useMemo(() => {
+    const size = 320
+    const cx = size / 2
+    const cy = size / 2
+    const r = 120
+    const axes = wheelDims.length
+    const pts: Array<{ x: number; y: number }> = []
+    for (let i = 0; i < axes; i++) {
+      const a = (-Math.PI / 2) + (2 * Math.PI * i) / axes
+      const v = getWheelValue(wheelDims[i].key) / 10
+      const x = cx + Math.cos(a) * r * v
+      const y = cy + Math.sin(a) * r * v
+      pts.push({ x, y })
+    }
+    return { size, cx, cy, r, pts }
+  }, [wheel, wheelDims])
+
+  const insight = useMemo(() => {
+    const hist = (() => {
+      try {
+        return getScreeningHistory()
+      } catch {
+        return []
+      }
+    })()
+    const phq = hist.filter((h) => String(h.assessment_id || "").toLowerCase().includes("phq") || String(h.title || "").toUpperCase().includes("PHQ"))
+    const gad = hist.filter((h) => String(h.assessment_id || "").toLowerCase().includes("gad") || String(h.title || "").toUpperCase().includes("GAD"))
+    const weekStart = (ts: number) => {
+      const d = new Date(ts)
+      const day = d.getDay()
+      const diff = (day + 6) % 7
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - diff)
+      return d.getTime()
+    }
+    const groupWeekly = (arr: any[]) => {
+      const map = new Map<number, any>()
+      for (const x of arr) {
+        const wk = weekStart(Number(x.ts || 0))
+        const prev = map.get(wk)
+        if (!prev || Number(x.ts || 0) > Number(prev.ts || 0)) map.set(wk, x)
+      }
+      const weeks = Array.from(map.keys()).sort((a, b) => a - b)
+      const last12 = weeks.slice(-12)
+      return last12.map((w) => ({ week: w, score: Number(map.get(w)?.score || 0), ts: Number(map.get(w)?.ts || 0) }))
+    }
+    return { phq: groupWeekly(phq), gad: groupWeekly(gad) }
   }, [])
 
   const toggleTag = (t: string) => {
@@ -240,6 +341,9 @@ export function DtxTriLieu() {
       <Tabs defaultValue="plan">
         <TabsList className="w-full justify-between">
           <TabsTrigger value="plan" className="flex-1">Kế hoạch</TabsTrigger>
+          <TabsTrigger value="cards" className="flex-1">Thẻ</TabsTrigger>
+          <TabsTrigger value="wheel" className="flex-1">Bánh xe</TabsTrigger>
+          <TabsTrigger value="insight" className="flex-1">Hành trình</TabsTrigger>
           <TabsTrigger value="mood" className="flex-1">Tâm trạng</TabsTrigger>
           <TabsTrigger value="journal" className="flex-1">Nhật ký</TabsTrigger>
         </TabsList>
@@ -357,6 +461,153 @@ export function DtxTriLieu() {
                   </div>
                 )
               })()}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cards" className="space-y-4">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Thẻ trị liệu mỗi ngày</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {dailyCard.card ? (
+                <div className="rounded-2xl border p-4">
+                  <div className="text-xs text-muted-foreground">{dailyCard.day}</div>
+                  <div className="text-lg font-semibold mt-1">{dailyCard.card.title}</div>
+                  <div className="text-sm text-slate-700 mt-2 whitespace-pre-wrap">{dailyCard.card.body}</div>
+                  <div className="mt-3 text-xs text-muted-foreground">#{dailyCard.card.tag}</div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Chưa có thẻ.</div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="rounded-xl"
+                  onClick={() => {
+                    try {
+                      const seed = getDeviceId() || "device"
+                      const dc = redrawToday(seed)
+                      setDailyCard({ day: dc.day, card: dc.card || null })
+                    } catch {}
+                  }}
+                >
+                  Rút lại hôm nay
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="wheel" className="space-y-4">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Bánh xe Cuộc đời</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-2xl border p-4 overflow-auto">
+                <svg width={wheelPoints.size} height={wheelPoints.size} viewBox={`0 0 ${wheelPoints.size} ${wheelPoints.size}`}>
+                  {[0.2, 0.4, 0.6, 0.8, 1].map((k) => (
+                    <circle
+                      key={k}
+                      cx={wheelPoints.cx}
+                      cy={wheelPoints.cy}
+                      r={wheelPoints.r * k}
+                      fill="none"
+                      stroke="rgba(100,116,139,0.25)"
+                      strokeWidth="1"
+                    />
+                  ))}
+                  {wheelDims.map((d, i) => {
+                    const a = (-Math.PI / 2) + (2 * Math.PI * i) / wheelDims.length
+                    const x = wheelPoints.cx + Math.cos(a) * wheelPoints.r
+                    const y = wheelPoints.cy + Math.sin(a) * wheelPoints.r
+                    return (
+                      <line
+                        key={d.key}
+                        x1={wheelPoints.cx}
+                        y1={wheelPoints.cy}
+                        x2={x}
+                        y2={y}
+                        stroke="rgba(100,116,139,0.25)"
+                        strokeWidth="1"
+                      />
+                    )
+                  })}
+                  <polygon
+                    points={wheelPoints.pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                    fill="rgba(59,130,246,0.25)"
+                    stroke="rgba(37,99,235,0.9)"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {wheelDims.map((d, idx) => (
+                  <div key={d.key} className="rounded-xl border p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-medium">{d.label}</div>
+                      <div className="text-sm font-semibold">{getWheelValue(d.key)}/10</div>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={10}
+                      step={1}
+                      value={getWheelValue(d.key)}
+                      onChange={(e) => setWheelValue(d.key, Number(e.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="insight" className="space-y-4">
+          <Card className="border-0 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Hành trình Tâm trí</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(!insight.phq.length && !insight.gad.length) ? (
+                <div className="text-sm text-muted-foreground">Chưa đủ dữ liệu PHQ-9/GAD-7 để vẽ biểu đồ.</div>
+              ) : (
+                <div className="rounded-2xl border p-4 overflow-auto">
+                  <svg width={640} height={260} viewBox="0 0 640 260">
+                    <rect x="0" y="0" width="640" height="260" fill="white" />
+                    {[0, 0.25, 0.5, 0.75, 1].map((k) => (
+                      <line key={k} x1={40} y1={20 + 200 * k} x2={620} y2={20 + 200 * k} stroke="rgba(100,116,139,0.2)" />
+                    ))}
+                    {(() => {
+                      const points = (arr: any[], maxY: number) => {
+                        const n = arr.length
+                        if (!n) return ""
+                        const xs = (i: number) => 40 + (580 * (n === 1 ? 0 : i / (n - 1)))
+                        const ys = (v: number) => 220 - (200 * (Math.max(0, Math.min(maxY, v)) / maxY))
+                        return arr.map((p: any, i: number) => `${xs(i)},${ys(Number(p.score || 0))}`).join(" ")
+                      }
+                      const phqPts = points(insight.phq, 27)
+                      const gadPts = points(insight.gad, 21)
+                      return (
+                        <>
+                          {phqPts ? <polyline points={phqPts} fill="none" stroke="rgba(37,99,235,0.9)" strokeWidth="2" /> : null}
+                          {gadPts ? <polyline points={gadPts} fill="none" stroke="rgba(16,185,129,0.9)" strokeWidth="2" /> : null}
+                        </>
+                      )
+                    })()}
+                    <text x="40" y="245" fontSize="12" fill="rgba(100,116,139,0.9)">Tuần →</text>
+                    <text x="610" y="25" fontSize="12" fill="rgba(100,116,139,0.9)" textAnchor="end">Điểm</text>
+                  </svg>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2 text-sm">
+                {insight.phq.length ? <div className="rounded-full border px-3 py-1">PHQ-9: {insight.phq[insight.phq.length - 1].score}</div> : null}
+                {insight.gad.length ? <div className="rounded-full border px-3 py-1">GAD-7: {insight.gad[insight.gad.length - 1].score}</div> : null}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

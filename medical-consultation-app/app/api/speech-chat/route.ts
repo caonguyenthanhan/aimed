@@ -71,6 +71,24 @@ export async function POST(request: NextRequest) {
     let aiResponse = chatData.response || 'Xin lỗi, tôi không thể trả lời câu hỏi này.'
     aiResponse = String(aiResponse || '').replace(/[\*\_`#]+/g, '').replace(/\s+/g, ' ').trim()
 
+    const sosMeta = chatData?.metadata && typeof chatData.metadata === 'object' ? chatData.metadata : null
+    if (sosMeta && (sosMeta as any)?.sos) {
+      return NextResponse.json({
+        success: true,
+        user_text: userText,
+        ai_response: aiResponse,
+        audio_url: null,
+        context: chatData.context,
+        metadata: {
+          ...(chatData?.metadata || {}),
+          speech_to_text_success: true,
+          ai_chat_success: true,
+          text_to_speech_success: false,
+          timestamp: new Date().toISOString()
+        }
+      })
+    }
+
     const qs = new URLSearchParams({ text: aiResponse, lang: 'vi' })
     const ttsResponse = await fetch(`${request.nextUrl.origin}/api/text-to-speech-stream?${qs.toString()}`)
 
