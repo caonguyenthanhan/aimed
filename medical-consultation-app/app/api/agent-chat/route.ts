@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { geminiService } from "@/lib/gemini-service"
+import { GeminiService, geminiService } from "@/lib/gemini-service"
 import { shouldBlock, buildBlockResponse } from "@/lib/safety"
 import { assessSos, buildSosResponse } from "@/lib/sos-mode"
 import { geminiToolDeclarations, toolCallsToActions } from "@/lib/agent-tools"
@@ -17,6 +17,8 @@ export async function POST(req: Request) {
     const messages = Array.isArray(body?.messages) ? body.messages : []
     const tier = body?.tier === "pro" ? "pro" : "flash"
     const category = body?.category === "friend" ? "friend" : "consultation"
+    const userApiKey = String(body?.user_api_key || "").trim()
+    const accessPass = String(body?.access_pass || "").trim()
 
     if (!message) return NextResponse.json({ error: "Message is required" }, { status: 400 })
 
@@ -130,7 +132,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ response: content, actions, conversation_id, metadata: { mode: "cpu", provider, duration_ms: Date.now() - started } }, { status: 200 })
     }
 
-    if (!String(process.env.GEMINI_API_KEY || "").trim()) {
+    const expectedPass = String(process.env.AGENT_KEY_PASS || "").trim()
+    const passOk = expectedPass && accessPass && accessPass === expectedPass
+    const keyToUse = userApiKey || String(process.env.GEMINI_API_KEY || "").trim()
+    if (!keyToUse) {
       const actions = normalizeActions(ruleBasedActionsGuess())
       const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Thiếu cấu hình Gemini nên agent đang chạy local demo (rule-based)."
       try {
@@ -149,7 +154,8 @@ export async function POST(req: Request) {
     let geminiErr: string | null = null
     let r: Awaited<ReturnType<typeof geminiService.generateAgent>> | null = null
     try {
-      r = await geminiService.generateAgent({ category, tier, question: message, messages, tools: toolDecl })
+      const svc = keyToUse === String(process.env.GEMINI_API_KEY || "").trim() ? geminiService : new GeminiService(keyToUse)
+      r = await svc.generateAgent({ category, tier, question: message, messages, tools: toolDecl })
     } catch (e: any) {
       geminiErr = String(e?.message || e || "").trim() || "unknown_error"
       if (geminiErr.length > 280) geminiErr = geminiErr.slice(0, 280)
@@ -165,7 +171,7 @@ export async function POST(req: Request) {
         response: content,
         actions,
         conversation_id,
-        metadata: { mode: "cpu", provider: "gemini", fallback: "local_rule_based", gemini_error: geminiErr, duration_ms: Date.now() - started },
+        metadata: { mode: "cpu", provider: "gemini", access: userApiKey ? "user_key" : (passOk ? "pass" : "system_key"), fallback: "local_rule_based", gemini_error: geminiErr, duration_ms: Date.now() - started },
       })
       return NextResponse.json(out)
     }
@@ -203,7 +209,7 @@ export async function POST(req: Request) {
       response: content,
       actions,
       conversation_id,
-      metadata: { mode: "gpu", provider: "gemini", model: r.model, duration_ms: Date.now() - started },
+      metadata: { mode: "gpu", provider: "gemini", access: userApiKey ? "user_key" : (passOk ? "pass" : "system_key"), model: r.model, duration_ms: Date.now() - started },
     })
     return NextResponse.json(out)
   } catch (e: any) {

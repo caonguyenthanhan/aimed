@@ -1,7 +1,7 @@
 "use client"
 
 import { RefObject } from "react"
-import { Send, X, Mic } from "lucide-react"
+import { Send, X, Mic, AudioLines } from "lucide-react"
 
 export type UnifiedComposerModel = "flash" | "pro"
 
@@ -40,6 +40,9 @@ export type UnifiedComposerProps = {
   isRecording: boolean
   onToggleRecording: () => void | Promise<void>
   onGotoSpeechChat: () => void | Promise<void>
+
+  isLiveMode?: boolean
+  onToggleLiveMode?: () => void | Promise<void>
 
   onDragOver: (e: React.DragEvent<HTMLDivElement>) => void
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void
@@ -225,6 +228,20 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
             >
               <img src="/icon-speech-to-speech.png" alt="Speech-to-Speech" className="h-5 w-5" />
             </button>
+            {typeof props.onToggleLiveMode === "function" ? (
+              <button
+                onClick={props.onToggleLiveMode}
+                disabled={props.isLoading}
+                className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
+                  props.isLiveMode
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                }`}
+                title={props.isLiveMode ? "Tắt Live mode" : "Bật Live mode"}
+              >
+                <AudioLines className={`h-5 w-5 ${props.isLiveMode ? "animate-pulse" : ""}`} />
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

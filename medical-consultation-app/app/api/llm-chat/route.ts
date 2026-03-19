@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
-import { geminiService } from '@/lib/gemini-service'
+import { GeminiService, geminiService } from '@/lib/gemini-service'
 import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 import { persistChatTurn } from '@/lib/chat-persistence'
 import crypto from 'crypto'
@@ -28,7 +28,7 @@ function determineContext(userMessage: string, conversationHistory?: any[]): str
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider } = await request.json()
+    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider, user_api_key, access_pass } = await request.json()
     const auth = request.headers.get('authorization') || ''
     const referer = request.headers.get('referer') || ''
     
@@ -159,14 +159,19 @@ NGUYÊN TẮC QUAN TRỌNG:
     const configuredProvider = (typeof provider === 'string' ? provider.trim().toLowerCase() : '') || (process.env.LLM_PROVIDER || '').trim().toLowerCase()
     const useGemini = configuredProvider === 'gemini' || selectedModel === 'gemini'
     if (useGemini) {
-      if (!process.env.GEMINI_API_KEY) {
+      const expectedPass = String(process.env.AGENT_KEY_PASS || '').trim()
+      const passOk = expectedPass && String(access_pass || '').trim() === expectedPass
+      const keyOverride = typeof user_api_key === 'string' && user_api_key.trim() ? user_api_key.trim() : ''
+      const keyToUse = keyOverride || String(process.env.GEMINI_API_KEY || '').trim()
+      if (!keyToUse) {
         return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 })
       }
 
       const startGemini = Date.now()
       const personaForGemini = (typeof persona === 'string' && persona.trim()) ? persona.trim() : (typeof role === 'string' && role.trim() ? role.trim() : '')
       const category = String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation'
-      const out = await geminiService.generateFromConfig({
+      const svc = keyToUse === String(process.env.GEMINI_API_KEY || '').trim() ? geminiService : new GeminiService(keyToUse)
+      const out = await svc.generateFromConfig({
         category: category as any,
         tier: modeHeader,
         question: String(userMessage),
@@ -204,6 +209,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           tier: modeHeader,
           fallback: false,
           provider: 'gemini',
+          access: keyOverride ? 'user_key' : (passOk ? 'pass' : 'system_key'),
           duration_ms: durationGemini
         },
         conversation_id: sid

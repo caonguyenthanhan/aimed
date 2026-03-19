@@ -20,6 +20,7 @@ import type { LlmMessage } from "@/types/llm"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { AgentResponseSchema, isAllowedPath, normalizeActions, type AgentAction } from "@/lib/agent-actions"
+import { GoogleGenAI, Modality } from "@google/genai"
 
 interface Message {
   id: string
@@ -34,6 +35,15 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
   const [headerPad, setHeaderPad] = useState<string>('6rem')
   const [agentMode, setAgentMode] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [authApiKey, setAuthApiKey] = useState("")
+  const [authPass, setAuthPass] = useState("")
+  const [liveMode, setLiveMode] = useState(false)
+  const liveSessionRef = useRef<any>(null)
+  const liveAudioContextRef = useRef<AudioContext | null>(null)
+  const liveStreamRef = useRef<MediaStream | null>(null)
+  const liveProcessorRef = useRef<ScriptProcessorNode | null>(null)
+  const liveSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
   useEffect(() => {
     const updatePad = () => {
       try {
@@ -63,6 +73,15 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } catch {}
   }, [])
 
+  useEffect(() => {
+    try {
+      const k = localStorage.getItem("mcs_user_gemini_key_v1") || ""
+      const p = localStorage.getItem("mcs_agent_access_pass_v1") || ""
+      setAuthApiKey(k)
+      setAuthPass(p)
+    } catch {}
+  }, [])
+
   const toggleAgentMode = () => {
     setAgentMode((prev) => {
       const next = !prev
@@ -72,6 +91,199 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       toast({ title: "Agent mode", description: next ? "Đã bật" : "Đã tắt" })
       return next
     })
+  }
+
+  const requireAuthIfNeeded = (meta?: any) => {
+    try {
+      if (!meta || meta.provider !== "gemini") return
+      const access = String(meta.access || "").trim()
+      if (access === "system_key") {
+        const used = Number(localStorage.getItem("mcs_system_gemini_used_v1") || "0")
+        localStorage.setItem("mcs_system_gemini_used_v1", String(Number.isFinite(used) ? used + 1 : 1))
+      }
+    } catch {}
+  }
+
+  const hasUserGeminiKey = () => {
+    try {
+      const k = localStorage.getItem("mcs_user_gemini_key_v1") || ""
+      return !!String(k).trim()
+    } catch {
+      return false
+    }
+  }
+
+  const hasAccessPass = () => {
+    try {
+      const p = localStorage.getItem("mcs_agent_access_pass_v1") || ""
+      return !!String(p).trim()
+    } catch {
+      return false
+    }
+  }
+
+  const canUseSystemGemini = () => {
+    try {
+      const used = Number(localStorage.getItem("mcs_system_gemini_used_v1") || "0")
+      return Number.isFinite(used) ? used < 5 : true
+    } catch {
+      return true
+    }
+  }
+
+  const ensureGeminiQuota = () => {
+    if (hasUserGeminiKey() || hasAccessPass()) return true
+    if (canUseSystemGemini()) return true
+    setAuthOpen(true)
+    toast({ title: "Cần API Key", description: "Bạn đã dùng hết 5 lượt miễn phí. Hãy nhập API key hoặc pass." })
+    return false
+  }
+
+  const saveAuth = () => {
+    try {
+      localStorage.setItem("mcs_user_gemini_key_v1", String(authApiKey || "").trim())
+      localStorage.setItem("mcs_agent_access_pass_v1", String(authPass || "").trim())
+    } catch {}
+    setAuthOpen(false)
+  }
+
+  const stopLiveMode = async () => {
+    try {
+      if (liveSessionRef.current) {
+        try { liveSessionRef.current.close() } catch {}
+        liveSessionRef.current = null
+      }
+      if (liveProcessorRef.current) {
+        try { liveProcessorRef.current.disconnect() } catch {}
+        liveProcessorRef.current = null
+      }
+      if (liveSourceRef.current) {
+        try { liveSourceRef.current.disconnect() } catch {}
+        liveSourceRef.current = null
+      }
+      if (liveAudioContextRef.current) {
+        try { await liveAudioContextRef.current.close() } catch {}
+        liveAudioContextRef.current = null
+      }
+      if (liveStreamRef.current) {
+        try { liveStreamRef.current.getTracks().forEach((t) => t.stop()) } catch {}
+        liveStreamRef.current = null
+      }
+    } catch {}
+  }
+
+  const startLiveMode = async () => {
+    if (!hasUserGeminiKey() && !hasAccessPass()) {
+      setAuthOpen(true)
+      return
+    }
+    let apiKey = ""
+    try {
+      apiKey = String(localStorage.getItem("mcs_user_gemini_key_v1") || "").trim()
+    } catch {}
+    if (!apiKey) {
+      const pass = (() => {
+        try { return String(localStorage.getItem("mcs_agent_access_pass_v1") || "").trim() } catch { return "" }
+      })()
+      if (!pass) {
+        setAuthOpen(true)
+        return
+      }
+      const r = await fetch("/api/live/access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_pass: pass }),
+      }).then((x) => x.json()).catch(() => null)
+      apiKey = String(r?.api_key || "").trim()
+    }
+    if (!apiKey) {
+      toast({ title: "Live mode", description: "Không lấy được API key để bật Live mode." })
+      return
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } })
+    liveStreamRef.current = stream
+
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 })
+    liveAudioContextRef.current = ctx
+    const source = ctx.createMediaStreamSource(stream)
+    liveSourceRef.current = source
+    const processor = ctx.createScriptProcessor(4096, 1, 1)
+    liveProcessorRef.current = processor
+    source.connect(processor)
+    processor.connect(ctx.destination)
+
+    const ai = new GoogleGenAI({ apiKey })
+    const session = await ai.live.connect({
+      model: "gemini-2.5-flash-native-audio-preview-12-2025",
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } } },
+        systemInstruction: "Bạn là trợ lý y tế AI. Trả lời ngắn gọn, an toàn và thân thiện.",
+      },
+      callbacks: {
+        onopen: () => {
+          const aiMessage: Message = { id: (Date.now() + 1).toString(), content: "Đã kết nối Live mode. Bạn có thể nói ngay bây giờ.", isUser: false, timestamp: new Date() }
+          setMessages((prev) => [...prev, aiMessage])
+          processor.onaudioprocess = (e) => {
+            const inputData = e.inputBuffer.getChannelData(0)
+            const pcm16 = new Int16Array(inputData.length)
+            for (let i = 0; i < inputData.length; i++) {
+              const s = Math.max(-1, Math.min(1, inputData[i]))
+              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7fff
+            }
+            const buffer = new ArrayBuffer(pcm16.length * 2)
+            const view = new DataView(buffer)
+            for (let i = 0; i < pcm16.length; i++) {
+              view.setInt16(i * 2, pcm16[i], true)
+            }
+            let binary = ""
+            const bytes = new Uint8Array(buffer)
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+            const base64Data = btoa(binary)
+            try {
+              session.sendRealtimeInput({ audio: { data: base64Data, mimeType: "audio/pcm;rate=16000" } } as any)
+            } catch {}
+          }
+        },
+        onmessage: async (m: any) => {
+          const base64Audio = m?.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data
+          if (base64Audio && liveAudioContextRef.current) {
+            try {
+              const binaryString = atob(String(base64Audio))
+              const len = binaryString.length
+              const bytes = new Uint8Array(len)
+              for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i)
+              const pcm16 = new Int16Array(bytes.buffer)
+              const audioBuffer = liveAudioContextRef.current.createBuffer(1, pcm16.length, 24000)
+              const channelData = audioBuffer.getChannelData(0)
+              for (let i = 0; i < pcm16.length; i++) channelData[i] = pcm16[i] / 32768.0
+              const src = liveAudioContextRef.current.createBufferSource()
+              src.buffer = audioBuffer
+              src.connect(liveAudioContextRef.current.destination)
+              src.start()
+            } catch {}
+          }
+        },
+        onclose: () => {
+          setLiveMode(false)
+          stopLiveMode()
+        },
+      },
+    } as any)
+    liveSessionRef.current = session
+    setLiveMode(true)
+  }
+
+  const toggleLiveMode = async () => {
+    if (liveMode) {
+      await stopLiveMode()
+      setLiveMode(false)
+      const aiMessage: Message = { id: (Date.now() + 1).toString(), content: "Đã tắt Live mode.", isUser: false, timestamp: new Date() }
+      setMessages((prev) => [...prev, aiMessage])
+      return
+    }
+    await startLiveMode()
   }
 
   const executeAgentActions = async (actions: AgentAction[], opts?: { speakMessageId?: string; fallbackSpeakText?: string }) => {
@@ -256,6 +468,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const sendMessageToAI = async (messageText: string) => {
     if (!messageText.trim() || sendingRef.current) return
+    if (liveMode) {
+      toast({ title: "Live mode", description: "Hãy tắt Live mode để gửi tin nhắn văn bản." })
+      return
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -286,6 +502,20 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
         if (p === 'gemini' || p === 'server') provider = p
       } catch {}
+      const needsGeminiGate = agentMode || provider === "gemini"
+      if (needsGeminiGate && !ensureGeminiQuota()) {
+        sendingRef.current = false
+        setIsLoading(false)
+        return
+      }
+      let user_api_key: string | undefined
+      let access_pass: string | undefined
+      try {
+        const k = localStorage.getItem("mcs_user_gemini_key_v1") || ""
+        const p = localStorage.getItem("mcs_agent_access_pass_v1") || ""
+        user_api_key = String(k || "").trim() || undefined
+        access_pass = String(p || "").trim() || undefined
+      } catch {}
       const payload = {
         model: selectedModel,
         message: messageText,
@@ -294,6 +524,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         conversationHistory,
         messages: conversationHistory,
         provider,
+        user_api_key,
+        access_pass,
         systemPrompt: (() => {
           try {
             const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null
@@ -310,7 +542,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const response = await fetch(agentMode ? '/api/agent-chat' : '/api/llm-chat', {
         method: 'POST',
         headers: authToken ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type': 'application/json' },
-        body: JSON.stringify(agentMode ? { message: messageText, messages: conversationHistory, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation" } : payload),
+        body: JSON.stringify(agentMode ? { message: messageText, messages: conversationHistory, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", user_api_key, access_pass } : payload),
       })
 
       if (!response.ok) {
@@ -342,6 +574,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const snapshot = [...messages, userMessage, aiMessage]
       setMessages((prev) => [...prev, aiMessage])
       const md = (data as any)?.metadata
+      requireAuthIfNeeded(md)
       if (md && (md as any)?.sos) {
         try {
           const hs = Array.isArray((md as any)?.hotlines) ? (md as any).hotlines : []
@@ -1299,6 +1532,24 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={authOpen} onOpenChange={setAuthOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>API Key / Pass</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-slate-700 dark:text-slate-300">
+              Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
+            </div>
+            <Input value={authApiKey} onChange={(e) => setAuthApiKey(e.target.value)} placeholder="Gemini API key (tuỳ chọn)" />
+            <Input value={authPass} onChange={(e) => setAuthPass(e.target.value)} placeholder="Pass (tuỳ chọn)" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAuthOpen(false)}>Đóng</Button>
+            <Button onClick={saveAuth}>Lưu</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {!isMobile && showSidebar && (
         <div className="w-64 glass-panel dark:glass-panel-dark bg-white dark:bg-slate-900 p-0 flex-shrink-0 h-full flex flex-col rounded-r-2xl border-r border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
@@ -1627,6 +1878,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onDrop={handleDrop}
         agentMode={agentMode}
         onToggleAgentMode={toggleAgentMode}
+        isLiveMode={liveMode}
+        onToggleLiveMode={toggleLiveMode}
       />
       </div>
     </div>

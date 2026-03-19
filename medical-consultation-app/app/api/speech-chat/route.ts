@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server"
+import { geminiTranscribe } from "@/lib/gemini-audio"
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,26 +17,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const backendUrl = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || 'http://127.0.0.1:8000').trim().replace(/\/$/, '')
-    const sttForm = new FormData()
-    sttForm.append('file', audioFile)
-    const sttResp = await fetch(`${backendUrl}/v1/stt/stream`, { method: 'POST', body: sttForm })
-    if (!sttResp.ok || !sttResp.body) return NextResponse.json({ success: false, error: 'stt_stream_failed' }, { status: 502 })
-    const reader = sttResp.body.getReader()
-    const decoder = new TextDecoder()
-    let userText = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      const chunk = decoder.decode(value)
-      const lines = chunk.split(/\n+/).filter(Boolean)
-      for (const line of lines) {
-        try {
-          const obj = JSON.parse(line)
-          if (obj?.text) userText += obj.text
-          if (obj?.partial) userText += ''
-        } catch {}
+    let userText = ""
+    const geminiKey = String(process.env.GEMINI_API_KEY || "").trim()
+    if (geminiKey) {
+      const ab = await audioFile.arrayBuffer()
+      const base64 = Buffer.from(ab).toString("base64")
+      const mimeType = String((audioFile as any)?.type || "audio/webm")
+      const model = (process.env.GEMINI_STT_MODEL && String(process.env.GEMINI_STT_MODEL).trim()) ? String(process.env.GEMINI_STT_MODEL).trim() : undefined
+      const out = await geminiTranscribe({ apiKey: geminiKey, audioBase64: base64, mimeType, model })
+      userText = String(out?.text || "").trim()
+    } else {
+      const backendUrl = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || 'http://127.0.0.1:8000').trim().replace(/\/$/, '')
+      const sttForm = new FormData()
+      sttForm.append('file', audioFile)
+      const sttResp = await fetch(`${backendUrl}/v1/stt/stream`, { method: 'POST', body: sttForm })
+      if (!sttResp.ok || !sttResp.body) return NextResponse.json({ success: false, error: 'stt_stream_failed' }, { status: 502 })
+      const reader = sttResp.body.getReader()
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value)
+        const lines = chunk.split(/\n+/).filter(Boolean)
+        for (const line of lines) {
+          try {
+            const obj = JSON.parse(line)
+            if (obj?.text) userText += obj.text
+            if (obj?.partial) userText += ''
+          } catch {}
+        }
       }
+      userText = String(userText || '').trim()
     }
     userText = String(userText || '').replace(/[\*\_`#]+/g, '').replace(/\s+/g, ' ').trim()
     if (!userText) return NextResponse.json({ success: false, error: 'empty_transcript' }, { status: 400 })
@@ -89,20 +101,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const qs = new URLSearchParams({ text: aiResponse, lang: 'vi' })
-    const ttsResponse = await fetch(`${request.nextUrl.origin}/api/text-to-speech-stream?${qs.toString()}`)
-
-    if (!ttsResponse.ok) {
-      throw new Error('Text-to-speech failed')
-    }
-
-    const headers = new Headers(ttsResponse.headers)
-    const contentType = headers.get('Content-Type') || ''
-    let audioUrl: string | null = null
-    if (contentType.includes('audio/mpeg') && ttsResponse.body) {
-      const blob = await ttsResponse.blob()
-      audioUrl = URL.createObjectURL(blob)
-    }
+    const audioUrl = `/api/text-to-speech-stream?text=${encodeURIComponent(aiResponse)}&lang=vi`
 
     return NextResponse.json({
       success: true,
@@ -113,7 +112,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         speech_to_text_success: true,
         ai_chat_success: true,
-        text_to_speech_success: !!audioUrl,
+        text_to_speech_success: true,
         timestamp: new Date().toISOString()
       }
     })

@@ -43,6 +43,9 @@ next-env.d.ts
 /plan/
 /todo/
 
+# external cloned repos (không push)
+/external/
+
 # tài liệu & model
 /doc/
 /models/

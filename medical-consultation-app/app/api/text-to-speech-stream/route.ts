@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { sanitizeTtsText } from '@/lib/tts-text'
+import { NextRequest, NextResponse } from "next/server"
+import { sanitizeTtsText } from "@/lib/tts-text"
+import { geminiTextToSpeech } from "@/lib/gemini-audio"
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +13,20 @@ export async function GET(request: NextRequest) {
     }
 
     const sanitized = sanitizeTtsText(String(text))
+    const key = String(process.env.GEMINI_API_KEY || "").trim()
+    if (key && sanitized.trim()) {
+      const model = (process.env.GEMINI_TTS_MODEL && String(process.env.GEMINI_TTS_MODEL).trim()) ? String(process.env.GEMINI_TTS_MODEL).trim() : undefined
+      const voiceName = (process.env.GEMINI_TTS_VOICE && String(process.env.GEMINI_TTS_VOICE).trim()) ? String(process.env.GEMINI_TTS_VOICE).trim() : undefined
+      const out = await geminiTextToSpeech({ apiKey: key, text: sanitized, model, voiceName }).catch(() => null)
+      if (out?.audioBase64) {
+        const bytes = Buffer.from(String(out.audioBase64), "base64")
+        const headers = new Headers()
+        headers.set("Content-Type", "audio/mpeg")
+        headers.set("Cache-Control", "no-store")
+        return new Response(bytes, { status: 200, headers })
+      }
+    }
+
     const backendUrl = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || 'http://127.0.0.1:8000').trim().replace(/\/$/, '')
     const target = `${backendUrl}/v1/text-to-speech-stream?text=${encodeURIComponent(sanitized)}&lang=${encodeURIComponent(lang)}`
 
