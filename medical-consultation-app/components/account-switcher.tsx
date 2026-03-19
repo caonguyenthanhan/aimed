@@ -57,6 +57,7 @@ export default function AccountSwitcher() {
     if (!selectedAccount) return
 
     setIsSwitching(true)
+    setShowConfirm(false)
     try {
       // Save current session before switching
       saveCurrentSession()
@@ -64,9 +65,8 @@ export default function AccountSwitcher() {
       // Switch to the selected account
       switchAccount(selectedAccount)
 
-      // Redirect to home/dashboard
-      setShowConfirm(false)
-      router.push('/') // Will redirect to appropriate dashboard based on role
+      // Redirect to home/dashboard using window.location
+      window.location.href = '/'
     } catch (error) {
       console.error('[v0] Error switching account:', error)
       setIsSwitching(false)
@@ -91,7 +91,7 @@ export default function AccountSwitcher() {
       localStorage.removeItem('username')
     }
 
-    router.push('/login?mode=add-account')
+    window.location.href = '/login?mode=add-account'
   }
 
   if (!mounted) return null

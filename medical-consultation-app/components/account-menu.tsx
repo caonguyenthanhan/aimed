@@ -58,6 +58,7 @@ export default function AccountMenu({
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
+    setShowLogoutConfirm(false)
     try {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authToken')
@@ -66,12 +67,11 @@ export default function AccountMenu({
         localStorage.removeItem('userFullName')
         localStorage.removeItem('username')
       }
+      // Navigate using window.location for safety
+      window.location.href = '/login'
     } catch (error) {
       console.error('[v0] Logout error:', error)
-    } finally {
-      setShowLogoutConfirm(false)
       setIsLoggingOut(false)
-      router.push('/login')
     }
   }
 
@@ -86,7 +86,7 @@ export default function AccountMenu({
             headers: { Authorization: `Bearer ${token}` },
           })
         } catch (error) {
-          console.error('[v0] Logout all error:', error)
+          console.error('[v0] Logout all API error:', error)
         }
       }
 
@@ -110,12 +110,13 @@ export default function AccountMenu({
           }
         }
       }
+      setShowLogoutAllConfirm(false)
+      // Navigate using window.location for safety
+      window.location.href = '/login'
     } catch (error) {
       console.error('[v0] Logout all error:', error)
-    } finally {
       setShowLogoutAllConfirm(false)
       setIsLoggingOut(false)
-      router.push('/login')
     }
   }
 
