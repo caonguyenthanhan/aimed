@@ -19,6 +19,7 @@ import { LlmChatResponseSchema } from "@/lib/llm-schema"
 import type { LlmMessage } from "@/types/llm"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
+import { AgentResponseSchema, isAllowedPath, normalizeActions, type AgentAction } from "@/lib/agent-actions"
 
 interface Message {
   id: string
@@ -32,6 +33,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const { toast } = useToast()
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
   const [headerPad, setHeaderPad] = useState<string>('6rem')
+  const [agentMode, setAgentMode] = useState(false)
   useEffect(() => {
     const updatePad = () => {
       try {
@@ -53,6 +55,51 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       }
     }
   }, [])
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("mcs_agent_mode_v1")
+      setAgentMode(v === "1")
+    } catch {}
+  }, [])
+
+  const toggleAgentMode = () => {
+    setAgentMode((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem("mcs_agent_mode_v1", next ? "1" : "0")
+      } catch {}
+      toast({ title: "Agent mode", description: next ? "Đã bật" : "Đã tắt" })
+      return next
+    })
+  }
+
+  const executeAgentActions = async (actions: AgentAction[]) => {
+    for (const a of actions) {
+      if (a.type === "open_screening") {
+        toast({ title: "Đang mở", description: "/sang-loc" })
+        router.push("/sang-loc")
+        return
+      }
+      if (a.type === "open_therapy") {
+        toast({ title: "Đang mở", description: "/tri-lieu" })
+        router.push("/tri-lieu")
+        return
+      }
+      if (a.type === "open_reminders") {
+        toast({ title: "Đang mở", description: "/nhac-nho" })
+        router.push("/nhac-nho")
+        return
+      }
+      if (a.type === "navigate") {
+        const p = String(a.args?.path || "").trim()
+        if (!isAllowedPath(p)) continue
+        toast({ title: "Đang mở", description: p })
+        router.push(p)
+        return
+      }
+    }
+  }
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -251,10 +298,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         })(),
       }
 
-      const response = await fetch('/api/llm-chat', {
+      const response = await fetch(agentMode ? '/api/agent-chat' : '/api/llm-chat', {
         method: 'POST',
         headers: authToken ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(agentMode ? { message: messageText, messages: conversationHistory, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation" } : payload),
       })
 
       if (!response.ok) {
@@ -264,9 +311,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       }
 
       const raw = await response.json()
-      const parsed = LlmChatResponseSchema.safeParse(raw)
-      const data = parsed.success ? parsed.data : raw
+      const data = agentMode
+        ? (AgentResponseSchema.safeParse(raw).success ? AgentResponseSchema.parse(raw) : raw)
+        : (LlmChatResponseSchema.safeParse(raw).success ? LlmChatResponseSchema.parse(raw) : raw)
       const aiResponse = (data as any)?.response || (data as any)?.choices?.[0]?.message?.content || "Không nhận được phản hồi từ máy trả lời"
+      const agentActions = agentMode ? normalizeActions((data as any)?.actions) : []
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -340,6 +389,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
       }
       await fetchConversations()
+      if (agentActions.length) {
+        await executeAgentActions(agentActions)
+      }
     } catch (error) {
       console.error("Error getting AI response:", error)
 
@@ -1564,6 +1616,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onGotoSpeechChat={() => router.push("/speech-chat")}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
+        agentMode={agentMode}
+        onToggleAgentMode={toggleAgentMode}
       />
       </div>
     </div>

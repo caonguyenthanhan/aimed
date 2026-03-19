@@ -10,6 +10,13 @@ interface GeminiRequest {
       text: string
     }>
   }>
+  tools?: Array<{
+    functionDeclarations: Array<{
+      name: string
+      description?: string
+      parameters?: any
+    }>
+  }>
   generationConfig?: {
     temperature?: number
     topK?: number
@@ -27,7 +34,8 @@ interface GeminiResponse {
   candidates: Array<{
     content: {
       parts: Array<{
-        text: string
+        text?: string
+        functionCall?: { name?: string; args?: any }
       }>
     }
     finishReason: string
@@ -163,6 +171,65 @@ export class GeminiService {
     const data = (await response.json()) as GeminiResponse
     const text = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || ''
     return { text: String(text || '').trim(), model: modelToUse }
+  }
+
+  async generateAgent(opts: {
+    category: 'consultation' | 'friend'
+    tier?: 'flash' | 'pro'
+    question: string
+    persona?: string
+    messages?: Array<{ role?: string; content?: string }>
+    tools: Array<{ name: string; description?: string; parameters?: any }>
+  }): Promise<{ text: string; model: string; toolCalls: Array<{ name: string; args: any }> }> {
+    const cfg = this.loadPromptConfig()
+    const tier = opts?.tier === 'pro' ? 'pro' : 'flash'
+    const providerCfg = cfg?.providers?.gemini
+    const modelFromCfg = providerCfg?.models?.[tier]
+    const modelToUse = (process.env.GEMINI_MODEL && String(process.env.GEMINI_MODEL).trim())
+      ? String(process.env.GEMINI_MODEL).trim()
+      : (modelFromCfg && String(modelFromCfg).trim()) ? String(modelFromCfg).trim() : this.model
+
+    const system = [
+      'Bạn là AI agent cho ứng dụng tư vấn y tế & tâm lý.',
+      'Bạn có thể gọi các tool để thực thi hành động trên UI.',
+      'Chỉ gọi tool khi cần thao tác cụ thể (mở trang, điều hướng).',
+      'Nếu gọi tool, vẫn trả lời ngắn gọn để người dùng hiểu bạn đang làm gì.',
+    ].join('\n')
+
+    const historyBlock = this.buildHistoryBlock(opts.messages)
+    const personaText = String(opts.persona || '').trim()
+    const personaBlock = personaText ? `VAI TRÒ: ${personaText}` : ''
+    const prompt = `${system}\n${personaBlock}\n${historyBlock}\nYêu cầu: ${String(opts.question || '').trim()}`.trim()
+
+    const requestBody: GeminiRequest = {
+      contents: [{ parts: [{ text: prompt }] }],
+      tools: [{ functionDeclarations: (Array.isArray(opts.tools) ? opts.tools : []).map((t) => ({ name: t.name, description: t.description, parameters: t.parameters })) }],
+      generationConfig: this.getGenerationConfigForCategory(opts.category),
+      safetySettings: this.getSafetySettings(),
+    }
+
+    const url = `${this.baseUrl}/${modelToUse}:generateContent`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': this.apiKey
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '')
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText} ${errorText}`)
+    }
+
+    const data = (await response.json()) as GeminiResponse
+    const parts = data?.candidates?.[0]?.content?.parts || []
+    const text = parts.map((p: any) => p?.text || '').join('').trim()
+    const toolCalls = parts
+      .map((p: any) => p?.functionCall ? { name: String(p.functionCall?.name || '').trim(), args: p.functionCall?.args ?? {} } : null)
+      .filter((x: any) => x && x.name)
+    return { text, model: modelToUse, toolCalls }
   }
 
   // Prompt templates cho từng context

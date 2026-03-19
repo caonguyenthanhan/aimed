@@ -43,6 +43,9 @@ export type UnifiedComposerProps = {
 
   onDragOver: (e: React.DragEvent<HTMLDivElement>) => void
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void
+
+  agentMode?: boolean
+  onToggleAgentMode?: () => void
 }
 
 export function UnifiedComposer(props: UnifiedComposerProps) {
@@ -175,6 +178,19 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {typeof props.onToggleAgentMode === "function" ? (
+              <button
+                onClick={props.onToggleAgentMode}
+                className={`px-3 py-2 rounded-lg border transition-all duration-200 text-sm font-semibold ${
+                  props.agentMode
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                }`}
+                title="Bật/tắt agent mode"
+              >
+                agent
+              </button>
+            ) : null}
             <select
               value={props.selectedModel}
               onChange={(e) => props.onSelectedModelChange(e.target.value as UnifiedComposerModel)}
