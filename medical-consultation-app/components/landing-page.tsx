@@ -1,350 +1,298 @@
 "use client"
 
-import { useState } from "react"
+import Link from "next/link"
+import { 
+  Stethoscope, 
+  MessageSquare, 
+  Search, 
+  Activity, 
+  Newspaper, 
+  Smile, 
+  Bell, 
+  BookOpenText,
+  Heart,
+  Brain,
+  Zap,
+  ShieldCheck
+} from "lucide-react"
 
-const Icon = ({ size = 24, className = "", children }: { size?: number; className?: string; children: React.ReactNode }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    {children}
-  </svg>
-)
-
-const BrainCircuit = (props: any) => (
-  <Icon {...props}>
-    <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
-    <path d="M9 13a4.5 4.5 0 0 0 3-4" />
-    <path d="M6.003 5.125A3 3 0 0 1 19.528 16.32" />
-    <path d="M12 18a4 4 0 0 0 4-3.464 6.5 6.5 0 0 0 2.993-8.03" />
-    <path d="M16 5h.01" />
-    <path d="M12 18h.01" />
-    <path d="M2.5 10a4.5 4.5 0 0 1 7-3" />
-    <path d="M14.5 10a4.5 4.5 0 0 1 7-3" />
-  </Icon>
-)
-
-const Stethoscope = (props: any) => (
-  <Icon {...props}>
-    <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
-    <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" />
-    <circle cx="20" cy="10" r="2" />
-  </Icon>
-)
-
-const MessageSquare = (props: any) => (
-  <Icon {...props}>
-    <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z" />
-  </Icon>
-)
-
-const Mic = (props: any) => (
-  <Icon {...props}>
-    <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z" />
-    <path d="M19 11a7 7 0 0 1-14 0" />
-    <path d="M12 19v3" />
-    <path d="M8 22h8" />
-  </Icon>
-)
-
-const Newspaper = (props: any) => (
-  <Icon {...props}>
-    <path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-    <path d="M8 7h8" />
-    <path d="M8 11h8" />
-    <path d="M8 15h5" />
-  </Icon>
-)
-
-const BookOpen = (props: any) => (
-  <Icon {...props}>
-    <path d="M2 4h7a3 3 0 0 1 3 3v14a3 3 0 0 0-3-3H2z" />
-    <path d="M22 4h-7a3 3 0 0 0-3 3v14a3 3 0 0 1 3-3h7z" />
-  </Icon>
-)
-
-const Bell = (props: any) => (
-  <Icon {...props}>
-    <path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </Icon>
-)
-
-const User = (props: any) => (
-  <Icon {...props}>
-    <path d="M20 21a8 8 0 1 0-16 0" />
-    <circle cx="12" cy="7" r="4" />
-  </Icon>
-)
-
-const Terminal = (props: any) => (
-  <Icon {...props}>
-    <polyline points="4 17 10 11 4 5" />
-    <line x1="12" y1="19" x2="20" y2="19" />
-  </Icon>
-)
-
-const SearchIcon = (props: any) => (
-  <Icon {...props}>
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </Icon>
-)
-
-const Activity = (props: any) => (
-  <Icon {...props}>
-    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-  </Icon>
-)
-
-const Monitor = (props: any) => (
-  <Icon {...props}>
-    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-    <line x1="8" y1="21" x2="16" y2="21" />
-    <line x1="12" y1="17" x2="12" y2="21" />
-  </Icon>
-)
-
-const ChevronRight = (props: any) => (
-  <Icon {...props}>
-    <polyline points="9 18 15 12 9 6" />
-  </Icon>
-)
-
-const Copy = (props: any) => (
-  <Icon {...props}>
-    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-  </Icon>
-)
-
-const Check = (props: any) => (
-  <Icon {...props}>
-    <polyline points="20 6 9 17 4 12" />
-  </Icon>
-)
-
-const Database = (props: any) => (
-  <Icon {...props}>
-    <ellipse cx="12" cy="5" rx="9" ry="3" />
-    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-  </Icon>
-)
-
-const Server = (props: any) => (
-  <Icon {...props}>
-    <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
-    <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
-    <line x1="6" y1="6" x2="6.01" y2="6" />
-    <line x1="6" y1="18" x2="6.01" y2="18" />
-  </Icon>
-)
-
-const GraduationCap = (props: any) => (
-  <Icon {...props}>
-    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
-    <path d="M6 12v5c3 3 9 3 12 0v-5" />
-  </Icon>
-)
-
-function CopyBlock({ title, code }: { title: string; code: string }) {
-  const [copied, setCopied] = useState(false)
-  const handleCopy = () => {
-    navigator.clipboard.writeText(code)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+function FeatureCard({ 
+  title, 
+  description, 
+  icon: IconComp, 
+  link 
+}: { 
+  title: string
+  description: string
+  icon: any
+  link: string
+}) {
   return (
-    <div className="mb-4 rounded-lg overflow-hidden border border-slate-700 bg-slate-950/50">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-800/50 border-b border-slate-700">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{title}</span>
-        <button onClick={handleCopy} className="text-slate-400 hover:text-white transition-colors">
-          {copied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
-        </button>
+    <Link 
+      href={link} 
+      className="group relative flex flex-col p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 hover:shadow-blue-100 dark:hover:shadow-blue-950/50 hover:-translate-y-1"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-800/50 transition-colors">
+          <IconComp size={24} className="text-blue-600 dark:text-blue-400" />
+        </div>
       </div>
-      <div className="p-4 overflow-x-auto">
-        <pre className="font-mono text-sm text-green-400 leading-relaxed whitespace-pre-wrap">{code}</pre>
+      <h3 className="text-lg font-bold mb-2 text-slate-900 dark:text-slate-50 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{title}</h3>
+      <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed flex-grow mb-4">{description}</p>
+      <div className="flex items-center text-sm font-semibold text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform">
+        Khám phá →
       </div>
-    </div>
+    </Link>
   )
 }
 
-function FeatureCard({ title, description, icon: IconComp, link, colorClass }: { title: string; description: string; icon: any; link: string; colorClass: string }) {
+function QuickAccessCard({
+  title,
+  subtitle,
+  icon: IconComp,
+  link
+}: {
+  title: string
+  subtitle: string
+  icon: any
+  link: string
+}) {
   return (
-    <a href={link} className="group relative block p-6 h-full rounded-2xl backdrop-blur-md bg-white/92 border border-white/20 hover:shadow-[0_0_24px_rgba(255,255,255,0.18)] transition-all duration-300 hover:-translate-y-1 overflow-hidden">
-      <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity ${colorClass}`}>
-        <IconComp size={100} />
+    <Link
+      href={link}
+      className="flex items-center gap-3 p-4 rounded-lg bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700/50 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200"
+    >
+      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+        <IconComp size={20} className="text-blue-600 dark:text-blue-400" />
       </div>
-      <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${colorClass} bg-opacity-20`}>
-        <IconComp size={24} className={colorClass.replace('bg-', 'text-')} />
+      <div className="flex-grow">
+        <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">{title}</div>
+        <div className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</div>
       </div>
-      <h3 className="text-xl font-bold mb-2 group-hover:text-blue-400 transition-colors">{title}</h3>
-      <p className="text-slate-400 text-sm leading-relaxed mb-4">{description}</p>
-      <div className="flex items-center text-sm font-semibold text-blue-400 group-hover:translate-x-2 transition-transform">
-        Truy cập ngay <ChevronRight size={16} className="ml-1" />
-      </div>
-    </a>
+    </Link>
   )
 }
 
 export default function LandingPage() {
-  const [activeTab, setActiveTab] = useState<'server' | 'client'>('server')
   return (
-    <div className="min-h-screen hero-gradient flex flex-col text-slate-800" suppressHydrationWarning>
-      <header className="fixed top-0 w-full z-50 glass-panel border-b border-b-slate-200" suppressHydrationWarning>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between" suppressHydrationWarning>
-          <div className="flex items-center space-x-2">
-            <BrainCircuit className="text-blue-500" size={32} />
-            <div>
-              <h1 className="text-lg font-bold tracking-tight"><span className="text-blue-500">AI</span>Med</h1>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest">KLTN 2026</p>
-            </div>
-          </div>
-          <nav className="hidden md:flex items-center space-x-8">
-            <a href="#features" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">Tính năng</a>
-          </nav>
-        </div>
-      </header>
-      <main className="flex-grow pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="inline-flex items-center px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-semibold uppercase tracking-wide">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse mr-2"></span>
-                Powered by Llama 3.1 & FastAPI
-              </div>
-              <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight leading-tight">
-                Trợ lý Y tế <br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-400 text-glow">Thông minh</span>
-              </h1>
-              <p className="text-lg text-slate-300 max-w-xl leading-relaxed">Hệ thống tư vấn sức khỏe ứng dụng mô hình ngôn ngữ lớn (LLM), hỗ trợ sàng lọc tâm lý và tra cứu thông tin y dược chính xác, tin cậy.</p>
-              <div className="flex flex-wrap gap-4">
-                <a href="/tu-van" className="px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold shadow-lg shadow-blue-500/25 transition-all hover:scale-105 flex items-center">
-                  <Stethoscope className="mr-2" size={20} />
-                  Bắt đầu Tư vấn
-                </a>
-                <a href="/tam-su" className="px-6 py-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold border border-white/10 transition-all hover:scale-105 flex items-center">
-                  <MessageSquare className="mr-2" size={20} />
-                  Tâm sự
-                </a>
-                <a href="/speech-chat" className="px-6 py-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold border border-white/10 transition-all hover:scale-105 flex items-center">
-                  <Mic className="mr-2" size={20} />
-                  Stream
-                </a>
-              </div>
-            </div>
-            <div className="relative hidden lg:block">
-              <div className="absolute inset-0 bg-blue-500 blur-[100px] opacity-20 rounded-full"></div>
-            <div className="relative glass-panel rounded-2xl p-6 border border-slate-200 shadow-2xl rotate-1">
-                <div className="flex items-center space-x-2 mb-4 border-b border-white/10 pb-4">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <div className="ml-4 px-3 py-1 bg-slate-100 rounded text-xs text-slate-500 font-mono w-full text-center">Llama-3.1-Medical-Assistant</div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-50" suppressHydrationWarning>
+      <main className="flex-grow">
+        {/* Hero Section */}
+        <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Hero Content */}
+              <div className="space-y-8">
+                {/* Badge */}
+                <div className="inline-flex items-center px-4 py-2 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-xs font-semibold uppercase tracking-wide">
+                  <span className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400 mr-2"></span>
+                  Công nghệ AI tiên tiến
                 </div>
-                <div className="space-y-4 font-mono text-sm">
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center">You</div>
-                    <div className="bg-slate-100 p-3 rounded-r-lg rounded-bl-lg text-slate-700">Tôi cảm thấy mệt mỏi và mất ngủ kéo dài 2 tuần nay...</div>
-                  </div>
-                  <div className="flex gap-3 flex-row-reverse">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center">AI</div>
-                    <div className="bg-blue-50 border border-blue-200 p-3 rounded-l-lg rounded-br-lg text-blue-700">Dựa trên triệu chứng bạn mô tả, đây có thể là dấu hiệu của căng thẳng hoặc rối loạn lo âu.\n\nTôi khuyên bạn nên làm bài Sàng lọc tâm lý (PHQ-9) để đánh giá chi tiết hơn.</div>
-                  </div>
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center text-green-600"><Activity size={16} className="mr-2" /><span>Đề xuất: Bài test PHQ-9</span></div>
-                    <button className="text-xs bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded">Thực hiện ngay</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div id="features" className="mt-24 grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <FeatureCard title="Trang chủ" description="Tổng quan hệ thống, bảng điều khiển và lối tắt truy cập nhanh." icon={Monitor} link="/" colorClass="text-slate-400" />
-            <FeatureCard title="Tư vấn AI" description="Trò chuyện trực tiếp với trợ lý ảo để nhận lời khuyên sức khỏe." icon={Stethoscope} link="/tu-van" colorClass="text-blue-500" />
-            <FeatureCard title="Tra cứu Y dược" description="Tìm kiếm thông tin thuốc, bệnh lý từ cơ sở dữ liệu chuẩn hóa." icon={SearchIcon} link="/tra-cuu" colorClass="text-teal-400" />
-            <FeatureCard title="Sàng lọc Tâm lý" description="Thực hiện các bài test (PHQ-9, GAD-7) để đánh giá tinh thần." icon={Activity} link="/sang-loc" colorClass="text-purple-400" />
-          </div>
 
-          <div className="mt-10">
-            <div className="text-sm font-semibold text-slate-200 uppercase tracking-widest mb-3">Chức năng</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              <a href="/tu-van" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-blue-600/20 flex items-center justify-center"><Stethoscope size={20} className="text-blue-300" /></div>
+                {/* Heading */}
+                <div>
+                  <h1 className="text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-balance mb-6">
+                    Trợ lý Y tế <span className="text-blue-600 dark:text-blue-400">Cá nhân hóa</span>
+                  </h1>
+                  <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                    Hệ thống tư vấn sức khỏe thông minh với AI, hỗ trợ sàng lọc tâm lý, tra cứu thông tin y dược và theo dõi sức khỏe toàn diện.
+                  </p>
+                </div>
+
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <Link
+                    href="/tu-van"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5"
+                  >
+                    <Stethoscope size={20} />
+                    <span>Bắt đầu Tư vấn</span>
+                  </Link>
+                  <Link
+                    href="/tam-su"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-semibold border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                  >
+                    <Heart size={20} />
+                    <span>Tâm sự</span>
+                  </Link>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 pt-8 border-t border-slate-200 dark:border-slate-800">
                   <div>
-                    <div className="text-sm font-semibold">Tư vấn</div>
-                    <div className="text-[11px] text-white/70">Chat y tế</div>
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">24/7</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">Hỗ trợ liên tục</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-teal-500 dark:text-teal-400">100%</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">Bảo mật dữ liệu</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">10k+</div>
+                    <div className="text-xs text-slate-600 dark:text-slate-400">Người dùng</div>
                   </div>
                 </div>
-              </a>
-              <a href="/tam-su" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-teal-600/20 flex items-center justify-center"><MessageSquare size={20} className="text-teal-200" /></div>
-                  <div>
-                    <div className="text-sm font-semibold">Tâm sự</div>
-                    <div className="text-[11px] text-white/70">Companion</div>
+              </div>
+
+              {/* Hero Illustration */}
+              <div className="relative hidden lg:flex items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-200/30 to-teal-200/30 dark:from-blue-500/10 dark:to-teal-500/10 rounded-3xl blur-3xl"></div>
+                <div className="relative bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-700 shadow-xl dark:shadow-2xl">
+                  <div className="space-y-6">
+                    <div className="flex gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">👤</div>
+                      <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-lg text-sm text-slate-700 dark:text-slate-300 flex-grow">
+                        Tôi cảm thấy căng thẳng suốt ngày
+                      </div>
+                    </div>
+                    <div className="flex gap-3 flex-row-reverse">
+                      <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0 text-white font-bold text-sm">AI</div>
+                      <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg text-sm text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex-grow">
+                        Có thể bạn nên thử bài đánh giá GAD-7
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">👤</div>
+                      <div className="bg-slate-100 dark:bg-slate-800 p-3 rounded-lg text-sm text-slate-700 dark:text-slate-300 flex-grow">
+                        Tôi muốn làm bài test
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </a>
-              <a href="/speech-chat" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-indigo-600/20 flex items-center justify-center"><Mic size={20} className="text-indigo-200" /></div>
-                  <div>
-                    <div className="text-sm font-semibold">Stream</div>
-                    <div className="text-[11px] text-white/70">Voice</div>
-                  </div>
-                </div>
-              </a>
-              <a href="/tin-tuc-y-khoa" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-amber-600/20 flex items-center justify-center"><Newspaper size={20} className="text-amber-200" /></div>
-                  <div>
-                    <div className="text-sm font-semibold">Tin tức</div>
-                    <div className="text-[11px] text-white/70">Web search</div>
-                  </div>
-                </div>
-              </a>
-              <a href="/tri-lieu" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-purple-600/20 flex items-center justify-center"><BookOpen size={20} className="text-purple-200" /></div>
-                  <div>
-                    <div className="text-sm font-semibold">Trị liệu</div>
-                    <div className="text-[11px] text-white/70">Mood/Journal</div>
-                  </div>
-                </div>
-              </a>
-              <a href="/nhac-nho" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-emerald-600/20 flex items-center justify-center"><Bell size={20} className="text-emerald-200" /></div>
-                  <div>
-                    <div className="text-sm font-semibold">Nhắc nhở</div>
-                    <div className="text-[11px] text-white/70">Behavior</div>
-                  </div>
-                </div>
-              </a>
-              <a href="/account" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-slate-600/20 flex items-center justify-center"><User size={20} className="text-slate-200" /></div>
-                  <div>
-                    <div className="text-sm font-semibold">Tài khoản</div>
-                    <div className="text-[11px] text-white/70">Profile</div>
-                  </div>
-                </div>
-              </a>
-              <a href="/quan-ly" className="rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 backdrop-blur-md px-4 py-4 text-white transition-all hover:-translate-y-0.5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-slate-600/20 flex items-center justify-center"><Monitor size={20} className="text-slate-200" /></div>
-                  <div>
-                    <div className="text-sm font-semibold">Quản lý</div>
-                    <div className="text-[11px] text-white/70">Dashboard</div>
-                  </div>
-                </div>
-              </a>
+              </div>
             </div>
           </div>
-          
-        </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-900">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">
+                Tính năng chính
+              </h2>
+              <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                Tất cả những gì bạn cần để chăm sóc sức khỏe toàn diện
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <FeatureCard 
+                title="Tư vấn AI"
+                description="Chat trực tiếp với trợ lý thông minh để nhận lời khuyên sức khỏe"
+                icon={Stethoscope}
+                link="/tu-van"
+              />
+              <FeatureCard 
+                title="Tâm sự"
+                description="Đối thoại thân thiết với AI companion để nói chuyện và thả lỏng"
+                icon={MessageSquare}
+                link="/tam-su"
+              />
+              <FeatureCard 
+                title="Tra cứu Y dược"
+                description="Tìm kiếm thông tin chi tiết về thuốc, bệnh lý từ cơ sở dữ liệu tin cậy"
+                icon={Search}
+                link="/tra-cuu"
+              />
+              <FeatureCard 
+                title="Sàng lọc Tâm lý"
+                description="Thực hiện các bài test (PHQ-9, GAD-7) để đánh giá sức khỏe tinh thần"
+                icon={Brain}
+                link="/sang-loc"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Quick Access Section */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold tracking-tight">Truy cập nhanh</h2>
+              <p className="text-slate-600 dark:text-slate-400 mt-2">Khám phá tất cả các tính năng có sẵn</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <QuickAccessCard
+                title="Tư vấn"
+                subtitle="Chat y tế"
+                icon={Stethoscope}
+                link="/tu-van"
+              />
+              <QuickAccessCard
+                title="Tâm sự"
+                subtitle="Companion"
+                icon={Smile}
+                link="/tam-su"
+              />
+              <QuickAccessCard
+                title="Tra cứu"
+                subtitle="Thuốc & Bệnh"
+                icon={Search}
+                link="/tra-cuu"
+              />
+              <QuickAccessCard
+                title="Sàng lọc"
+                subtitle="Sức khỏe tâm lý"
+                icon={Activity}
+                link="/sang-loc"
+              />
+              <QuickAccessCard
+                title="Trị liệu"
+                subtitle="Mood tracking"
+                icon={BookOpenText}
+                link="/tri-lieu"
+              />
+              <QuickAccessCard
+                title="Nhắc nhở"
+                subtitle="Quản lý thói quen"
+                icon={Bell}
+                link="/nhac-nho"
+              />
+              <QuickAccessCard
+                title="Tin tức"
+                subtitle="Y khoa"
+                icon={Newspaper}
+                link="/tin-tuc-y-khoa"
+              />
+              <QuickAccessCard
+                title="Tài khoản"
+                subtitle="Profile"
+                icon={ShieldCheck}
+                link="/account"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-50 to-teal-50 dark:from-blue-950/20 dark:to-teal-950/20">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight mb-6">
+              Bắt đầu chăm sóc sức khỏe ngay hôm nay
+            </h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-2xl mx-auto">
+              Tham gia hàng ngàn người dùng đang sử dụng AI Med để quản lý sức khỏe của họ
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                href="/tu-van"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+              >
+                <Zap size={20} />
+                Khám phá ngay
+              </Link>
+              <Link
+                href="/account"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 font-semibold border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+              >
+                Tài khoản của tôi
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
-      
     </div>
   )
 }
