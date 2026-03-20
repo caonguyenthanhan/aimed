@@ -5,7 +5,7 @@ import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Heart } from "lucide-react"
+import { Heart, Menu, X } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { PageAiInsight } from "@/components/page-ai-insight"
@@ -35,9 +35,10 @@ const toStored = (msgs: Message[]): StoredMessage[] =>
     timestamp: new Date(m.ts || nowTs()).toISOString()
   }))
 
-const fromStored = (arr: any[]): Message[] =>
-  (Array.isArray(arr) ? arr : [])
-    .map((m: any) => {
+const fromStored = (arr: any[]): Message[] => {
+  const used = new Set<string>()
+  return (Array.isArray(arr) ? arr : [])
+    .map((m: any, idx: number) => {
       const ts = (() => {
         try {
           const t = new Date(m?.timestamp)
@@ -47,14 +48,23 @@ const fromStored = (arr: any[]): Message[] =>
           return nowTs()
         }
       })()
+      const base = String(m?.id || `m-${ts}-${idx}`)
+      let id = base
+      if (used.has(id)) {
+        let n = 2
+        while (used.has(`${base}-${n}`)) n++
+        id = `${base}-${n}`
+      }
+      used.add(id)
       return {
-        id: String(m?.id || `m-${ts}`),
+        id,
         role: m?.isUser ? "user" : "assistant",
         content: String(m?.content || ""),
         ts
       } as Message
     })
     .filter(m => m.content.trim().length > 0)
+}
 
 const loadLocalMessages = (id: string): Message[] => {
   try {
@@ -390,7 +400,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
     const text = (textInput || "").trim()
     if (!text || isLoading) return
 
-    const userMsg: Message = { id: `u-${nowTs()}`, role: "user", content: text, ts: nowTs() }
+    const userMsg: Message = { id: `u-${nowTs()}-${Math.random().toString(16).slice(2)}`, role: "user", content: text, ts: nowTs() }
     const ensuredId = conversationId || newConvId()
     if (!conversationId) {
       setConversationId(ensuredId)
@@ -453,7 +463,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         (data as any)?.choices?.[0]?.message?.content ||
         (data as any)?.response ||
         "Mình đang gặp sự cố, bạn thử lại sau nhé."
-      const aiMsg: Message = { id: `a-${nowTs()}`, role: "assistant", content: String(content), ts: nowTs() }
+      const aiMsg: Message = { id: `a-${nowTs()}-${Math.random().toString(16).slice(2)}`, role: "assistant", content: String(content), ts: nowTs() }
       const finalSnap = [...snapshot, aiMsg]
       setMessages(finalSnap)
 
@@ -483,7 +493,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
       if (speakAssistant) await speak(String(content))
     } catch (e: any) {
       const msg = String(e?.message || "Mình đang gặp chút trục trặc, bạn thử lại sau nhé.")
-      const errMsg: Message = { id: `e-${nowTs()}`, role: "assistant", content: msg, ts: nowTs() }
+      const errMsg: Message = { id: `e-${nowTs()}-${Math.random().toString(16).slice(2)}`, role: "assistant", content: msg, ts: nowTs() }
       const finalSnap = [...snapshot, errMsg]
       setMessages(finalSnap)
       saveLocalMessages(ensuredId, finalSnap)
