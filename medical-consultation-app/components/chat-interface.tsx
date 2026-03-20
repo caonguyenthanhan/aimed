@@ -432,6 +432,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [sidebarSearchOpen, setSidebarSearchOpen] = useState<boolean>(false)
   const [sidebarSearch, setSidebarSearch] = useState<string>('')
  
+
   const startConversationIfNeeded = async (): Promise<string | null> => {
     if (conversationId) return conversationId
     if (!authToken) {

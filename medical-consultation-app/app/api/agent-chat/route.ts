@@ -172,7 +172,10 @@ export async function POST(req: Request) {
         return null
       }
       const retryAfter = parseRetryAfterSec(geminiErr || "")
-      const is429 = String(geminiErr || "").includes(" 429 ") || String(geminiErr || "").includes("RESOURCE_EXHAUSTED") || String(geminiErr || "").includes("\"code\": 429")
+      const is429 =
+        String(geminiErr || "").includes(" 429 ") ||
+        String(geminiErr || "").includes("RESOURCE_EXHAUSTED") ||
+        String(geminiErr || "").includes("\"code\": 429")
       if (is429) {
         const content = retryAfter
           ? `Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau khoảng ${retryAfter}s, hoặc nhập API key/pass để tiếp tục.`
