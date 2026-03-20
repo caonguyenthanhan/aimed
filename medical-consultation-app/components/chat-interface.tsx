@@ -114,7 +114,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } catch {
       setAuthSecret("")
     }
-  }, [userId])
+  }, [])
 
   const hasSecret = () => !!String(authSecret || "").trim()
 
