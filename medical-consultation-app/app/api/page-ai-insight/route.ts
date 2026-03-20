@@ -105,43 +105,24 @@ export async function POST(request: NextRequest) {
 
     // Build system prompt for insight generation
     const pageName = PAGE_NAMES[pageContext] || pageContext
-    const pageDescription = PAGE_DESCRIPTIONS[pageContext] || pageContext
 
-    const systemPrompt = `Bạn là Trợ lý Y tế AI thông minh, hỗ trợ người dùng trên ứng dụng tư vấn y tế.
+    const systemPrompt = `RESPONSE FORMAT - ONLY RETURN VALID JSON, NO TEXT BEFORE OR AFTER!
 
-NGỮ CẢNH HIỆN TẠI: 
-- Trang: ${pageName} 
-- Mô tả: ${pageDescription}
-
-HƯỚNG DẪN:
-1. Nếu người dùng đặt một câu hỏi, hãy trả lời ngắn gọn (2-3 câu) một cách thân thiện và hữu ích.
-2. Sau câu trả lời, hãy nhận xét xem câu hỏi/nhu cầu của họ có liên quan đến các trang chức năng khác không.
-3. Nếu có, hãy khéo léo gợi ý họ chuyển sang trang phù hợp với lý do tại sao nó sẽ giúp ích.
-4. Nếu không cần thiết, hãy set "show_insight" = false.
-
-LƯU Ý QUAN TRỌNG:
-- Chỉ gợi ý chuyển trang nếu nó thực sự phù hợp và sẽ giúp họ tốt hơn.
-- Không bắt buộc gợi ý mỗi lần - LLM quyết định nếu cần thiết.
-- Giọng điệu ấm áp, hỗ trợ, chuyên nghiệp.
-- Trả về JSON hợp lệ theo định dạng được yêu cầu.
-
-TRẢ VỀ JSON CÓ CẤU TRÚC:
-\`\`\`json
+Return ONLY this JSON structure, nothing else:
 {
   "show_insight": boolean,
-  "main_response": "string (câu trả lời chính)",
-  "suggested_page": "string | null (/tam-su, /tra-cuu, /sang-loc, /tri-lieu, or null)",
-  "suggestion_reason": "string | null (tại sao nên chuyển sang trang đó)",
+  "main_response": "text response here",
+  "suggested_page": "/tam-su" | "/tra-cuu" | "/sang-loc" | "/tri-lieu" | null,
+  "suggestion_reason": "reason text" | null,
   "insight_type": "advice" | "clarification" | "guidance"
 }
-\`\`\`
 
-Ví dụ nếu người dùng đang ở trang Tâm sự và hỏi về triệu chứng của bệnh:
-- show_insight: true
-- main_response: "Những triệu chứng đó có thể liên quan đến ... Bạn nên tìm hiểu kỹ hơn."
-- suggested_page: "/tra-cuu"
-- suggestion_reason: "Trang Tra cứu sẽ giúp bạn tìm thêm thông tin chi tiết về bệnh và triệu chứng."
-- insight_type: "guidance"`
+CONTEXT: User is on ${pageName} page.
+
+LOGIC:
+- If user asks a health question: answer briefly (2-3 sentences) and suggest a relevant page if helpful
+- If no question yet: show_insight=false
+- Always return JSON, never any text`
 
     const userMessage = userQuestion
       ? userQuestion
@@ -160,9 +141,9 @@ Ví dụ nếu người dùng đang ở trang Tâm sự và hỏi về triệu c
         category: 'consultation',
         tier: 'flash',
         question: userMessage,
-        persona: '',
+        persona: systemPrompt,
         messages: conversationHistory,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 512 },
+        generationConfig: { temperature: 0.1, maxOutputTokens: 512 },
       })
 
       const responseText = String(out?.text || '').trim()
@@ -176,15 +157,28 @@ Ví dụ nếu người dùng đang ở trang Tâm sự và hỏi về triệu c
       // Parse JSON response from LLM
       let parsedResponse: Partial<PageInsight> = {}
       try {
-        // Extract JSON from markdown code blocks if present
-        const jsonMatch = responseText.match(
-          /```(?:json)?\s*(\{[\s\S]*?\})\s*```/
-        )
-        const jsonStr = jsonMatch ? jsonMatch[1] : responseText
+        // Try multiple parsing strategies
+        let jsonStr = responseText.trim()
+        
+        // Strategy 1: Extract from markdown code blocks
+        const jsonMatch = jsonStr.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1]
+        }
+        
+        // Strategy 2: Find first { and last } if not already extracted
+        if (!jsonMatch) {
+          const startIdx = jsonStr.indexOf('{')
+          const endIdx = jsonStr.lastIndexOf('}')
+          if (startIdx !== -1 && endIdx !== -1 && startIdx < endIdx) {
+            jsonStr = jsonStr.substring(startIdx, endIdx + 1)
+          }
+        }
+        
         parsedResponse = JSON.parse(jsonStr)
       } catch (parseErr) {
-        console.error('[v0] Failed to parse LLM JSON response:', responseText)
-        // Fallback: create a safe default insight
+        console.error('[v0] Failed to parse LLM JSON response:', responseText.substring(0, 200))
+        // Fallback: create a safe default insight (don't show)
         parsedResponse = {
           show_insight: false,
           main_response: '',

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Heart } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
@@ -582,6 +582,9 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
             <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
+            <DialogDescription className="text-slate-700">
+              Liên hệ hỗ trợ khẩn cấp nếu bạn cần giúp đỡ ngay lập tức
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-slate-800">
             <div>Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>

@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { } from "@/lib/llm-config"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { sanitizeTtsText } from "@/lib/tts-text"
@@ -87,21 +87,23 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }, [textLiveMode])
 
   const toggleAgentMode = () => {
-    setAgentMode((prev) => {
-      const next = !prev
-      try {
-        localStorage.setItem("mcs_agent_mode_v1", next ? "1" : "0")
-      } catch {}
-      toast({ title: "Agent mode", description: next ? "Đã bật" : "Đã tắt" })
-      return next
+    const newValue = !agentMode
+    setAgentMode(newValue)
+    try {
+      localStorage.setItem("mcs_agent_mode_v1", newValue ? "1" : "0")
+    } catch {}
+    // Defer toast to next microtask queue to avoid React render warnings
+    queueMicrotask(() => {
+      toast({ title: "Agent mode", description: newValue ? "Đã bật" : "Đã tắt" })
     })
   }
 
   const toggleTextLiveMode = () => {
-    setTextLiveMode((prev) => {
-      const next = !prev
-      toast({ title: "Live text", description: next ? "Đã bật" : "Đã tắt" })
-      return next
+    const newValue = !textLiveMode
+    setTextLiveMode(newValue)
+    // Defer toast to next microtask queue to avoid React render warnings
+    queueMicrotask(() => {
+      toast({ title: "Live text", description: newValue ? "Đã bật" : "Đã tắt" })
     })
   }
 
@@ -1539,6 +1541,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
             <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
+            <DialogDescription className="text-slate-700">
+              Liên hệ hỗ trợ khẩn cấp nếu bạn cần giúp đỡ ngay lập tức
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-slate-800">
             <div>Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>
@@ -1558,6 +1563,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Đổi tên hội thoại</DialogTitle>
+            <DialogDescription>
+              Nhập tên mới cho hội thoại của bạn
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input value={renameInput} onChange={(e) => setRenameInput(e.target.value)} placeholder="Nhập tiêu đề" />
@@ -1572,6 +1580,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent>
           <DialogHeader>
             <DialogTitle>API Key / Pass</DialogTitle>
+            <DialogDescription>
+              Cung cấp API key của bạn để tiếp tục sử dụng
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="text-sm text-slate-700 dark:text-slate-300">
