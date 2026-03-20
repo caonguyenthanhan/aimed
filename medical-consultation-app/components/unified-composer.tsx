@@ -1,7 +1,7 @@
 "use client"
 
 import { RefObject } from "react"
-import { Send, X, Mic, AudioLines, KeyRound } from "lucide-react"
+import { Send, X, Mic, AudioLines, KeyRound, Sparkles } from "lucide-react"
 
 export type UnifiedComposerModel = "flash" | "pro"
 
@@ -43,6 +43,9 @@ export type UnifiedComposerProps = {
 
   isLiveMode?: boolean
   onToggleLiveMode?: () => void | Promise<void>
+
+  isTextLiveMode?: boolean
+  onToggleTextLiveMode?: () => void | Promise<void>
 
   onManageKey?: () => void | Promise<void>
 
@@ -242,6 +245,20 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                 title={props.isLiveMode ? "Tắt Live mode" : "Bật Live mode"}
               >
                 <AudioLines className={`h-5 w-5 ${props.isLiveMode ? "animate-pulse" : ""}`} />
+              </button>
+            ) : null}
+            {typeof props.onToggleTextLiveMode === "function" ? (
+              <button
+                onClick={props.onToggleTextLiveMode}
+                disabled={props.isLoading}
+                className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
+                  props.isTextLiveMode
+                    ? "bg-fuchsia-600 text-white hover:bg-fuchsia-700 shadow-md"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                }`}
+                title={props.isTextLiveMode ? "Tắt Live text" : "Bật Live text"}
+              >
+                <Sparkles className={`h-5 w-5 ${props.isTextLiveMode ? "animate-pulse" : ""}`} />
               </button>
             ) : null}
             {typeof props.onManageKey === "function" ? (

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { ChatDeliveryMessageSchema, ChatDeliverySchema } from "@/lib/chat-delivery-schema"
 
 export const LlmRoleSchema = z.union([z.literal("system"), z.literal("user"), z.literal("assistant")])
 
@@ -28,6 +29,8 @@ export const LlmChatMetadataSchema = z
 export const LlmChatResponseSchema = z
   .object({
     response: z.string(),
+    messages: z.array(ChatDeliveryMessageSchema).optional(),
+    delivery: ChatDeliverySchema.optional(),
     context: z.string().optional(),
     metadata: LlmChatMetadataSchema.optional(),
     conversation_id: z.union([z.string(), z.null()]).optional(),

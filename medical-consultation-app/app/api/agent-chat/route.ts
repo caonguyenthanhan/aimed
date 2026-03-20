@@ -7,6 +7,7 @@ import { geminiToolDeclarations, toolCallsToActions } from "@/lib/agent-tools"
 import { AgentResponseSchema, isAllowedPath, normalizeActions } from "@/lib/agent-actions"
 import { persistChatTurn } from "@/lib/chat-persistence"
 import { runLocalAgent } from "@/lib/agent-local-provider"
+import { buildNavLinkMessage, planChunkedMessages } from "@/lib/chat-delivery"
 
 export async function POST(req: Request) {
   const started = Date.now()
@@ -18,8 +19,22 @@ export async function POST(req: Request) {
     const tier = body?.tier === "pro" ? "pro" : "flash"
     const category = body?.category === "friend" ? "friend" : "consultation"
     const accessPass = String(body?.access_pass || "").trim()
+    const deliveryMode = body?.delivery_mode === "live" ? "live" : "chunked"
 
     if (!message) return NextResponse.json({ error: "Message is required" }, { status: 400 })
+
+    const planResponseMessages = (content: string, actions: any[]) => {
+      const nav = Array.isArray(actions) ? actions.find((a) => a?.type === "navigate" && isAllowedPath(String(a?.args?.path || ""))) : null
+      if (nav) {
+        const p = String(nav?.args?.path || "").trim()
+        return [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }, buildNavLinkMessage(p)]
+      }
+      if (deliveryMode === "chunked") {
+        const planned = planChunkedMessages(content)
+        return planned.length ? planned : [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }]
+      }
+      return [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }]
+    }
 
     const ruleBasedActionsGuess = () => {
       const lower = message.toLowerCase()
@@ -37,6 +52,8 @@ export async function POST(req: Request) {
       } catch {}
       return NextResponse.json({
         response: content,
+        messages: planResponseMessages(content, []),
+        delivery: { mode: deliveryMode },
         actions: [],
         conversation_id,
         metadata: { mode: "cpu", sos: true, hotlines: sos.hotlines, reasons: sos.reasons, situation: "sos", duration_ms: Date.now() - started },
@@ -51,6 +68,8 @@ export async function POST(req: Request) {
       } catch {}
       return NextResponse.json({
         response: content,
+        messages: planResponseMessages(content, []),
+        delivery: { mode: deliveryMode },
         actions: [],
         conversation_id,
         metadata: { mode: "cpu", blocked: true, hits: safetyHits, situation: "safety", duration_ms: Date.now() - started },
@@ -83,6 +102,8 @@ export async function POST(req: Request) {
         return NextResponse.json(
           AgentResponseSchema.parse({
             response: content,
+            messages: planResponseMessages(content, actions),
+            delivery: { mode: deliveryMode },
             actions,
             conversation_id,
             metadata: { mode: "cpu", provider: "local", fallback: "rule_based", duration_ms: Date.now() - started },
@@ -116,6 +137,8 @@ export async function POST(req: Request) {
       return NextResponse.json(
         AgentResponseSchema.parse({
           response: content,
+          messages: planResponseMessages(content, actions),
+          delivery: { mode: deliveryMode },
           actions,
           conversation_id,
           metadata: { mode: "cpu", provider: "local", model: local.model, parsed_json: !!json, duration_ms: Date.now() - started },
@@ -128,7 +151,17 @@ export async function POST(req: Request) {
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
-      return NextResponse.json({ response: content, actions, conversation_id, metadata: { mode: "cpu", provider, duration_ms: Date.now() - started } }, { status: 200 })
+      return NextResponse.json(
+        AgentResponseSchema.parse({
+          response: content,
+          messages: planResponseMessages(content, actions),
+          delivery: { mode: deliveryMode },
+          actions,
+          conversation_id,
+          metadata: { mode: "cpu", provider, duration_ms: Date.now() - started },
+        }),
+        { status: 200 }
+      )
     }
 
     const expectedPass = String(process.env.AGENT_KEY_PASS || "").trim()
@@ -144,6 +177,8 @@ export async function POST(req: Request) {
       } catch {}
       const out = AgentResponseSchema.parse({
         response: content,
+        messages: planResponseMessages(content, actions),
+        delivery: { mode: deliveryMode },
         actions,
         conversation_id,
         metadata: { mode: "cpu", provider: "local", fallback: "missing_gemini_key", duration_ms: Date.now() - started },
@@ -185,6 +220,8 @@ export async function POST(req: Request) {
         } catch {}
         const out = AgentResponseSchema.parse({
           response: content,
+          messages: planResponseMessages(content, []),
+          delivery: { mode: deliveryMode },
           actions: [],
           conversation_id,
           metadata: { mode: "gpu", provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, duration_ms: Date.now() - started },
@@ -199,6 +236,8 @@ export async function POST(req: Request) {
       } catch {}
       const out = AgentResponseSchema.parse({
         response: content,
+        messages: planResponseMessages(content, actions),
+        delivery: { mode: deliveryMode },
         actions,
         conversation_id,
         metadata: { mode: "cpu", provider: "gemini", access, fallback: "local_rule_based", gemini_error: geminiErr, duration_ms: Date.now() - started },
@@ -237,6 +276,8 @@ export async function POST(req: Request) {
 
     const out = AgentResponseSchema.parse({
       response: content,
+      messages: planResponseMessages(content, actions),
+      delivery: { mode: deliveryMode },
       actions,
       conversation_id,
       metadata: { mode: "gpu", provider: "gemini", access, model: r.model, duration_ms: Date.now() - started },
@@ -246,6 +287,8 @@ export async function POST(req: Request) {
     return NextResponse.json(
       AgentResponseSchema.parse({
         response: "Xin lỗi, agent đang gặp sự cố kỹ thuật. Bạn thử lại giúp mình.",
+        messages: [{ content: "Xin lỗi, agent đang gặp sự cố kỹ thuật. Bạn thử lại giúp mình.", kind: "text", delay_ms: 0 }],
+        delivery: { mode: "chunked" },
         actions: [],
         metadata: { mode: "cpu", provider: "agent", error: "internal_error", duration_ms: Date.now() - started },
       }),

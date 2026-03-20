@@ -38,13 +38,12 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [authOpen, setAuthOpen] = useState(false)
   const [authSecret, setAuthSecret] = useState("")
   const [liveMode, setLiveMode] = useState(false)
+  const [textLiveMode, setTextLiveMode] = useState(false)
   const liveSessionRef = useRef<any>(null)
   const liveAudioContextRef = useRef<AudioContext | null>(null)
   const liveStreamRef = useRef<MediaStream | null>(null)
   const liveProcessorRef = useRef<ScriptProcessorNode | null>(null)
   const liveSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
-  const [navigationConfirm, setNavigationConfirm] = useState<{ open: boolean; destination: string; title: string }>({ open: false, destination: "", title: "" })
-  const pendingNavigationRef = useRef<(() => void) | null>(null)
   useEffect(() => {
     const updatePad = () => {
       try {
@@ -74,6 +73,19 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } catch {}
   }, [])
 
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("mcs_text_live_mode_v1")
+      setTextLiveMode(v === "1")
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mcs_text_live_mode_v1", textLiveMode ? "1" : "0")
+    } catch {}
+  }, [textLiveMode])
+
   const toggleAgentMode = () => {
     setAgentMode((prev) => {
       const next = !prev
@@ -81,6 +93,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         localStorage.setItem("mcs_agent_mode_v1", next ? "1" : "0")
       } catch {}
       toast({ title: "Agent mode", description: next ? "Đã bật" : "Đã tắt" })
+      return next
+    })
+  }
+
+  const toggleTextLiveMode = () => {
+    setTextLiveMode((prev) => {
+      const next = !prev
+      toast({ title: "Live text", description: next ? "Đã bật" : "Đã tắt" })
       return next
     })
   }
@@ -300,28 +320,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
         continue
       }
-      if (a.type === "open_screening") {
-        setNavigationConfirm({ open: true, destination: "/sang-loc", title: "Bạn có muốn mở chương trình sàng lọc không?" })
-        pendingNavigationRef.current = () => router.push("/sang-loc")
-        return
-      }
-      if (a.type === "open_therapy") {
-        setNavigationConfirm({ open: true, destination: "/tri-lieu", title: "Bạn có muốn mở chương trình trị liệu không?" })
-        pendingNavigationRef.current = () => router.push("/tri-lieu")
-        return
-      }
-      if (a.type === "open_reminders") {
-        setNavigationConfirm({ open: true, destination: "/nhac-nho", title: "Bạn có muốn mở nhắc nhở không?" })
-        pendingNavigationRef.current = () => router.push("/nhac-nho")
-        return
-      }
-      if (a.type === "navigate") {
-        const p = String(a.args?.path || "").trim()
-        if (!isAllowedPath(p)) continue
-        setNavigationConfirm({ open: true, destination: p, title: `Bạn có muốn mở ${p}?` })
-        pendingNavigationRef.current = () => router.push(p)
-        return
-      }
     }
   }
   const [messages, setMessages] = useState<Message[]>([
@@ -345,6 +343,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const sendingRef = useRef<boolean>(false)
+  const messagesRef = useRef<Message[]>([])
+  const userBufferRef = useRef<string[]>([])
+  const userBufferTimerRef = useRef<any>(null)
+  const inFlightRef = useRef<boolean>(false)
+  const pendingFlushRef = useRef<boolean>(false)
+  const assistantQueueRef = useRef<Array<{ id: string; content: string; delay_ms?: number }>>([])
+  const assistantWorkerRef = useRef<boolean>(false)
+  const liveTextRunRef = useRef<number>(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const docInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -420,6 +426,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   useEffect(() => {
     scrollToBottom()
+    messagesRef.current = messages
   }, [messages])
 
   const [selectedModel, setSelectedModel] = useState<'flash' | 'pro'>('flash')
@@ -469,58 +476,102 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     return conversationId
   }
 
-  const sendMessageToAI = async (messageText: string) => {
-    if (!messageText.trim() || sendingRef.current) return
-    if (liveMode) {
-      toast({ title: "Live mode", description: "Hãy tắt Live mode để gửi tin nhắn văn bản." })
+  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+  const enqueueAssistantDelivery = (items: Array<{ content: string; delay_ms?: number }>) => {
+    const safeItems = items
+      .map((m) => ({ id: (Date.now() + Math.random()).toString(), content: String(m?.content || "").trim(), delay_ms: typeof m?.delay_ms === "number" ? m.delay_ms : undefined }))
+      .filter((m) => m.content)
+    if (!safeItems.length) return
+    assistantQueueRef.current.push(...safeItems)
+    if (!assistantWorkerRef.current) {
+      assistantWorkerRef.current = true
+      void (async () => {
+        try {
+          while (assistantQueueRef.current.length) {
+            const next = assistantQueueRef.current.shift()
+            if (!next) continue
+            const delay = Math.max(0, Math.min(30000, Number(next.delay_ms ?? 0)))
+            if (delay) await sleep(delay)
+            const aiMsg: Message = { id: next.id, content: next.content, isUser: false, timestamp: new Date() }
+            setMessages((prev) => {
+              const updated = [...prev, aiMsg]
+              try {
+                const idToUse = conversationId
+                if (idToUse && typeof window !== "undefined") {
+                  const serial = updated.map((m) => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: m.timestamp.toISOString() }))
+                  sessionStorage.setItem(`pending_conv_messages_${idToUse}`, JSON.stringify(serial))
+                  if (!authToken) localStorage.setItem(`conv_messages_${idToUse}`, JSON.stringify(serial))
+                }
+              } catch {}
+              return updated
+            })
+          }
+        } finally {
+          assistantWorkerRef.current = false
+        }
+      })()
+    }
+    return safeItems.map((x) => x.id)
+  }
+
+  const waitAssistantIdle = async () => {
+    while (assistantWorkerRef.current || assistantQueueRef.current.length) {
+      await sleep(40)
+    }
+  }
+
+  const deliverLiveText = async (text: string) => {
+    const full = String(text || "")
+    if (!full.trim()) return null
+    await waitAssistantIdle()
+    const runId = ++liveTextRunRef.current
+    const id = (Date.now() + Math.random()).toString()
+    setMessages((prev) => [...prev, { id, content: "", isUser: false, timestamp: new Date() }])
+    const step = 14
+    for (let i = step; i < full.length + step; i += step) {
+      if (liveTextRunRef.current !== runId) return null
+      const partial = full.slice(0, Math.min(i, full.length))
+      setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, content: partial } : m)))
+      await sleep(35)
+    }
+    return id
+  }
+
+  const flushUserBuffer = async () => {
+    if (inFlightRef.current) {
+      pendingFlushRef.current = true
       return
     }
+    const text = userBufferRef.current.map((s) => String(s || "").trim()).filter(Boolean).join("\n").trim()
+    if (!text) return
+    userBufferRef.current = []
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: messageText,
-      isUser: true,
-      timestamp: new Date(),
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    sendingRef.current = true
+    inFlightRef.current = true
     setIsLoading(true)
-
     try {
       const ensuredId = await startConversationIfNeeded()
-      const conversationHistory = [...messages, userMessage].map(m => ({
-        role: m.isUser ? 'user' : 'assistant',
-        content: m.content
-      })) as LlmMessage[]
+      const historySnapshot = (messagesRef.current || []).map((m) => ({ role: m.isUser ? "user" : "assistant", content: m.content })) as LlmMessage[]
+      let provider: string = "server"
       try {
-        const idToUse = ensuredId || conversationId
-        if (idToUse && typeof window !== 'undefined') {
-          const toStore = [...messages, userMessage].map(m => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: m.timestamp.toISOString() }))
-          sessionStorage.setItem(`pending_conv_messages_${idToUse}`, JSON.stringify(toStore))
-        }
-      } catch {}
-      let provider: string = 'server'
-      try {
-        const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
-        if (p === 'gemini' || p === 'server') provider = p
+        const p = typeof window !== "undefined" ? localStorage.getItem("llm_provider") : null
+        if (p === "gemini" || p === "server") provider = p
       } catch {}
       const needsGeminiGate = agentMode || provider === "gemini"
-      if (needsGeminiGate && !ensureGeminiQuota()) {
-        sendingRef.current = false
-        setIsLoading(false)
-        return
-      }
+      if (needsGeminiGate && !ensureGeminiQuota()) return
+
       const access_pass = String(authSecret || "").trim() || undefined
+      const delivery_mode = textLiveMode ? "live" : "chunked"
       const payload = {
         model: selectedModel,
-        message: messageText,
+        message: text,
         conversation_id: ensuredId || conversationId,
         user_id: userId,
-        conversationHistory,
-        messages: conversationHistory,
+        conversationHistory: historySnapshot,
+        messages: historySnapshot,
         provider,
         access_pass,
+        delivery_mode,
         systemPrompt: (() => {
           try {
             const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null
@@ -534,40 +585,21 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         })(),
       }
 
-      const response = await fetch(agentMode ? '/api/agent-chat' : '/api/llm-chat', {
-        method: 'POST',
-        headers: authToken ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` } : { 'Content-Type': 'application/json' },
-        body: JSON.stringify(agentMode ? { message: messageText, messages: conversationHistory, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", access_pass } : payload),
+      const response = await fetch(agentMode ? "/api/agent-chat" : "/api/llm-chat", {
+        method: "POST",
+        headers: authToken ? { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` } : { "Content-Type": "application/json" },
+        body: JSON.stringify(agentMode ? { message: text, messages: historySnapshot, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", access_pass, delivery_mode } : payload),
       })
-
       if (!response.ok) {
         const errorText = await response.text()
-        console.error("API Error:", errorText)
-        throw new Error(`Failed to get AI response: ${response.status} ${response.statusText}`)
+        throw new Error(`Failed to get AI response: ${response.status} ${response.statusText} ${errorText}`)
       }
 
       const raw = await response.json()
       const data = agentMode
         ? (AgentResponseSchema.safeParse(raw).success ? AgentResponseSchema.parse(raw) : raw)
         : (LlmChatResponseSchema.safeParse(raw).success ? LlmChatResponseSchema.parse(raw) : raw)
-      const aiResponse = (data as any)?.response || (data as any)?.choices?.[0]?.message?.content || "Không nhận được phản hồi từ máy trả lời"
-      const agentActions = agentMode ? normalizeActions((data as any)?.actions) : []
 
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: aiResponse,
-        isUser: false,
-        timestamp: new Date(),
-      }
-      if (authToken && typeof window !== 'undefined') {
-        try {
-          const mu = (data as any)?.mode_used
-          const target = mu === 'gpu' ? 'gpu' : 'cpu'
-          window.dispatchEvent(new CustomEvent('runtime_mode_changed', { detail: { target } }))
-        } catch {}
-      }
-      const snapshot = [...messages, userMessage, aiMessage]
-      setMessages((prev) => [...prev, aiMessage])
       const md = (data as any)?.metadata
       requireAuthIfNeeded(md)
       if (md && (md as any)?.sos) {
@@ -579,80 +611,88 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
         setSosOpen(true)
       }
-      if (md && typeof window !== 'undefined') {
-        try {
-          const detail: any = { target: md.mode === 'gpu' ? 'gpu' : 'cpu' }
-          if (md.provider) detail.provider = md.provider
-          window.dispatchEvent(new CustomEvent('runtime_mode_changed', { detail }))
-          if (md.model_init) {
-            toast({
-              title: "Khởi động mô hình CPU",
-              description: "Đang tải mô hình GGUF để tiếp tục trên CPU.",
-            })
-          }
-        } catch {}
-      }
-      let newId = typeof (data as any).conversation_id === 'string' && (data as any).conversation_id ? (data as any).conversation_id : (ensuredId || conversationId)
-      if (newId && typeof window !== 'undefined') {
-        try {
-          const toStore = snapshot.map(m => ({ id: m.id, content: m.content, isUser: m.isUser, timestamp: m.timestamp.toISOString() }))
-          sessionStorage.setItem(`pending_conv_messages_${newId}`, JSON.stringify(toStore))
-        } catch {}
-        if (!authToken) {
-          const toStore = snapshot.map(m => ({ id: m.id, content: m.content, isUser: m.isUser, timestamp: m.timestamp.toISOString() }))
-          localStorage.setItem(`conv_messages_${newId}`, JSON.stringify(toStore))
-        }
-        setConversationId(newId)
-        if (typeof window !== 'undefined') {
-          try {
-            const url = new URL(window.location.href)
-            url.pathname = '/tu-van'
-            url.searchParams.set('id', newId)
-            window.history.replaceState(null, '', url.toString())
-          } catch {
-            router.replace(`/tu-van?id=${newId}`)
-          }
-        }
-        if (!authToken) {
-          try {
-            const baseText = messageText.trim() || aiResponse.trim()
-            const words = baseText.split(/\s+/).slice(0, 6).join(' ')
-            const title = words || 'Hội thoại'
-            localStorage.setItem(`conv_title_${newId}`, title)
-          } catch {}
-        }
-        if (authToken) {
-          try { await fetchConversations() } catch {}
-        }
-      }
-      await fetchConversations()
-      if (agentActions.length) {
-        await executeAgentActions(agentActions, { speakMessageId: aiMessage.id, fallbackSpeakText: aiResponse })
-      }
-    } catch (error) {
-      console.error("Error getting AI response:", error)
 
+      const aiResponse = String((data as any)?.response || (data as any)?.choices?.[0]?.message?.content || "").trim()
+      const planned = Array.isArray((data as any)?.messages) ? (data as any).messages : null
+      const deliverList = (planned && planned.length)
+        ? planned.map((m: any) => ({ content: String(m?.content || ""), delay_ms: typeof m?.delay_ms === "number" ? m.delay_ms : undefined }))
+        : [{ content: aiResponse || "Không nhận được phản hồi từ máy trả lời", delay_ms: 0 }]
+      let deliveredIds: string[] = []
+      if (delivery_mode === "live") {
+        const lastId = await deliverLiveText(aiResponse || deliverList.map((x) => x.content).join("\n\n"))
+        if (lastId) deliveredIds = [lastId]
+      } else {
+        deliveredIds = enqueueAssistantDelivery(deliverList) || []
+      }
+
+      let newId = typeof (data as any).conversation_id === "string" && (data as any).conversation_id ? (data as any).conversation_id : (ensuredId || conversationId)
+      if (newId && typeof window !== "undefined") {
+        setConversationId(newId)
+        try {
+          const url = new URL(window.location.href)
+          url.pathname = "/tu-van"
+          url.searchParams.set("id", newId)
+          window.history.replaceState(null, "", url.toString())
+        } catch {
+          router.replace(`/tu-van?id=${newId}`)
+        }
+      }
+
+      await fetchConversations()
+
+      const agentActions = agentMode ? normalizeActions((data as any)?.actions) : []
+      if (agentActions.length) {
+        const lastId = deliveredIds[deliveredIds.length - 1] || (Date.now() + 1).toString()
+        await executeAgentActions(agentActions, { speakMessageId: lastId, fallbackSpeakText: aiResponse })
+      }
+    } catch {
       const fallbackMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content:
-          "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau hoặc tham khảo ý kiến bác sĩ chuyên khoa để có lời khuyên chính xác nhất.",
+        content: "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau.",
         isUser: false,
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, fallbackMessage])
     } finally {
-      sendingRef.current = false
+      inFlightRef.current = false
       setIsLoading(false)
-      // Clear image preview after sending
-      setSelectedImageBase64(null)
-      setSelectedImageName(null)
-      setSelectedImageMime(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (pendingFlushRef.current) {
+        pendingFlushRef.current = false
+        void flushUserBuffer()
+      }
     }
   }
 
+  const bufferUserMessage = (messageText: string) => {
+    const text = String(messageText || "").trim()
+    if (!text) return
+    if (liveMode) {
+      toast({ title: "Live mode", description: "Hãy tắt Live mode để gửi tin nhắn văn bản." })
+      return
+    }
+    void startConversationIfNeeded()
+    const userMessage: Message = { id: Date.now().toString(), content: text, isUser: true, timestamp: new Date() }
+    setMessages((prev) => {
+      const updated = [...prev, userMessage]
+      try {
+        const idToUse = conversationId
+        if (idToUse && typeof window !== "undefined") {
+          const serial = updated.map((m) => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: m.timestamp.toISOString() }))
+          sessionStorage.setItem(`pending_conv_messages_${idToUse}`, JSON.stringify(serial))
+          if (!authToken) localStorage.setItem(`conv_messages_${idToUse}`, JSON.stringify(serial))
+        }
+      } catch {}
+      return updated
+    })
+    userBufferRef.current.push(text)
+    if (userBufferTimerRef.current) clearTimeout(userBufferTimerRef.current)
+    userBufferTimerRef.current = setTimeout(() => {
+      void flushUserBuffer()
+    }, 5000)
+  }
+
   const handleSubmit = async () => {
-    if (((!input.trim()) && !selectedImageBase64 && !selectedDocContent) || sendingRef.current) return
+    if ((!input.trim()) && !selectedImageBase64 && !selectedDocContent) return
 
     const currentInput = input
     setInput("")
@@ -727,7 +767,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         setSelectedDocName(null)
         if (docInputRef.current) docInputRef.current.value = ''
       } else {
-        await sendMessageToAI(currentInput)
+        bufferUserMessage(currentInput)
       }
     } catch (error) {
       console.error("Error getting AI response:", error)
@@ -960,7 +1000,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       
       if (data.success && data.text) {
         setInput(data.text);
-        await sendMessageToAI(data.text);
+        bufferUserMessage(data.text);
+        setInput("");
       } else {
         console.error('Speech-to-text error:', data.error);
         alert('Không thể chuyển đổi giọng nói thành văn bản. Vui lòng thử lại.');
@@ -1875,49 +1916,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onToggleAgentMode={toggleAgentMode}
         isLiveMode={liveMode}
         onToggleLiveMode={toggleLiveMode}
+        isTextLiveMode={textLiveMode}
+        onToggleTextLiveMode={toggleTextLiveMode}
         onManageKey={() => setAuthOpen(true)}
       />
       </div>
-      
-      {/* Navigation Confirmation Dialog */}
-      <Dialog open={navigationConfirm.open} onOpenChange={(open) => {
-        if (!open) {
-          setNavigationConfirm({ ...navigationConfirm, open: false })
-          pendingNavigationRef.current = null
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Xác nhận chuyển hướng</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-gray-600 mb-4">{navigationConfirm.title}</p>
-            <p className="text-xs text-gray-500">Địa chỉ: <code className="bg-gray-100 px-2 py-1 rounded">{navigationConfirm.destination}</code></p>
-          </div>
-          <DialogFooter className="gap-2 flex justify-end">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setNavigationConfirm({ ...navigationConfirm, open: false })
-                pendingNavigationRef.current = null
-              }}
-            >
-              Hủy
-            </Button>
-            <Button 
-              onClick={() => {
-                setNavigationConfirm({ ...navigationConfirm, open: false })
-                if (pendingNavigationRef.current) {
-                  pendingNavigationRef.current()
-                  pendingNavigationRef.current = null
-                }
-              }}
-            >
-              Đồng ý
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

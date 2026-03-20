@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { ChatDeliveryMessageSchema, ChatDeliverySchema } from "@/lib/chat-delivery-schema"
 
 export const AgentActionSchema = z.discriminatedUnion("type", [
   z.object({
@@ -32,6 +33,8 @@ export type AgentAction = z.infer<typeof AgentActionSchema>
 export const AgentResponseSchema = z
   .object({
     response: z.string(),
+    messages: z.array(ChatDeliveryMessageSchema).optional(),
+    delivery: ChatDeliverySchema.optional(),
     actions: z.array(AgentActionSchema).optional(),
     metadata: z.record(z.any()).optional(),
     conversation_id: z.string().optional(),

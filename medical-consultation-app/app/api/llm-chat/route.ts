@@ -6,6 +6,7 @@ import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 import { persistChatTurn } from '@/lib/chat-persistence'
 import crypto from 'crypto'
 import { assessSos, buildSosResponse } from '@/lib/sos-mode'
+import { planChunkedMessages } from '@/lib/chat-delivery'
 
 // Determine context based on the conversation or user input
 function determineContext(userMessage: string, conversationHistory?: any[]): string {
@@ -28,9 +29,17 @@ function determineContext(userMessage: string, conversationHistory?: any[]): str
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider, access_pass } = await request.json()
+    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider, access_pass, delivery_mode } = await request.json()
     const auth = request.headers.get('authorization') || ''
     const referer = request.headers.get('referer') || ''
+    const deliveryMode = delivery_mode === 'live' ? 'live' : 'chunked'
+    const planResponseMessages = (content: string) => {
+      if (deliveryMode === 'chunked') {
+        const planned = planChunkedMessages(content)
+        return planned.length ? planned : [{ content: String(content || '').trim() || ' ', kind: 'text', delay_ms: 0 }]
+      }
+      return [{ content: String(content || '').trim() || ' ', kind: 'text', delay_ms: 0 }]
+    }
     
     const userMessage = message || question || prompt
     if (!userMessage) {
@@ -54,6 +63,8 @@ export async function POST(request: NextRequest) {
       } catch {}
       return NextResponse.json({
         response: content,
+        messages: planResponseMessages(content),
+        delivery: { mode: deliveryMode },
         metadata: {
           timestamp: new Date().toISOString(),
           mode: 'sos',
@@ -78,6 +89,8 @@ export async function POST(request: NextRequest) {
       } catch {}
       return NextResponse.json({
         response: buildBlockResponse(safetyHits),
+        messages: planResponseMessages(buildBlockResponse(safetyHits)),
+        delivery: { mode: deliveryMode },
         metadata: {
           timestamp: new Date().toISOString(),
           mode: 'safety',
@@ -200,6 +213,8 @@ NGUYÊN TẮC QUAN TRỌNG:
             : 'Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau, hoặc nhập API key/pass để tiếp tục.'
           return NextResponse.json({
             response: msg,
+            messages: planResponseMessages(msg),
+            delivery: { mode: deliveryMode },
             context: determinedContext,
             model_info: { model_name: process.env.GEMINI_MODEL || 'gemini', provider: 'Gemini' },
             metadata: {
@@ -235,6 +250,8 @@ NGUYÊN TẮC QUAN TRỌNG:
 
       return NextResponse.json({
         response: content,
+        messages: planResponseMessages(content),
+        delivery: { mode: deliveryMode },
         context: determinedContext,
         model_info: {
           model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
@@ -300,6 +317,8 @@ NGUYÊN TẮC QUAN TRỌNG:
               if (content) {
                 return NextResponse.json({
                   response: content,
+                  messages: planResponseMessages(content),
+                  delivery: { mode: deliveryMode },
                   context: determinedContext,
                   model_info: {
                     model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
@@ -388,6 +407,8 @@ NGUYÊN TẮC QUAN TRỌNG:
             } catch {}
             return NextResponse.json({
               response: content,
+              messages: planResponseMessages(content),
+              delivery: { mode: deliveryMode },
               context: determinedContext,
               model_info: {
                 model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
@@ -457,6 +478,8 @@ NGUYÊN TẮC QUAN TRỌNG:
 
     return NextResponse.json({
       response: content,
+      messages: planResponseMessages(content),
+      delivery: { mode: deliveryMode },
       context: determinedContext,
       model_info: {
         model_name: 'local-llama-compatible',
