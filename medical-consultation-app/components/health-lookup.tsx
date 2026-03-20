@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { PageAiInsight } from "@/components/page-ai-insight"
 
 type KnowledgeEntity = {
   id: string
@@ -328,6 +329,12 @@ export function HealthLookup() {
             Tìm kiếm thông tin chi tiết về bệnh lý, thuốc men và các vấn đề sức khỏe
           </p>
         </div>
+
+        {/* AI Insight */}
+        <PageAiInsight
+          pageContext="health_knowledge"
+          userQuestion={searchQuery}
+        />
 
       {/* Enhanced Search */}
       <div className="space-y-4">

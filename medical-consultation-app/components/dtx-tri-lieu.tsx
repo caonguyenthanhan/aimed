@@ -12,6 +12,7 @@ import { upsertReminder } from "@/lib/reminders-store"
 import { appendTherapyEvent, createPlanFromCarePlan, getTherapyPlan, isTaskDone, listTherapyEvents, saveTherapyPlan, setTaskDone, type TherapyPlan } from "@/lib/therapy-store"
 import { getDeviceId } from "@/lib/device-id"
 import { getDailyCard, redrawToday, type TherapeuticCard } from "@/lib/therapeutic-cards"
+import { PageAiInsight } from "@/components/page-ai-insight"
 
 type MoodEntry = {
   id: string
@@ -282,6 +283,12 @@ export function DtxTriLieu() {
           Theo dõi tâm trạng và ghi chép để tăng nhận thức và tuân thủ thói quen.
         </div>
       </div>
+
+      {/* AI Insight */}
+      <PageAiInsight
+        pageContext="therapy_planning"
+        pageData={{ moodItems, therapyPlan }}
+      />
 
       {carePlan || lastScreening ? (
         <Card className="border-0 shadow-sm">

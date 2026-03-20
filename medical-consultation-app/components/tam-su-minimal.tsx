@@ -5,9 +5,10 @@ import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
+import { Menu, X, Heart } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
+import { PageAiInsight } from "@/components/page-ai-insight"
 
 type Message = {
   id: string
@@ -762,6 +763,11 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
             </div>
 
             <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto bg-white dark:bg-slate-950">
+              <PageAiInsight
+                pageContext="emotional_support"
+                userQuestion={messages.length > 0 ? messages[messages.length - 1]?.role === "user" ? messages[messages.length - 1]?.content : undefined : undefined}
+                conversationHistory={messages.map(m => ({ role: m.role, content: m.content }))}
+              />
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
                   <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center">

@@ -14,6 +14,7 @@ import dynamic from "next/dynamic"
 import { getScreeningHistory, saveScreeningResult, setPendingScreeningContext } from "@/lib/screening-store"
 import { upsertUserState } from "@/lib/user-state-client"
 import { appendTherapyEvent } from "@/lib/therapy-store"
+import { PageAiInsight } from "@/components/page-ai-insight"
 
 const PDFReportGenerator = dynamic(() => import("./pdf-report-generator").then(mod => ({ default: mod.PDFReportGenerator })), {
   ssr: false,
@@ -1127,6 +1128,11 @@ export function PsychologicalScreening() {
         <h2 className="text-xl font-bold mb-2">Sàng lọc Tâm lý</h2>
         <p className="text-muted-foreground text-sm">Đánh giá sức khỏe tâm thần với các bài test chuẩn quốc tế</p>
       </div>
+
+      {/* AI Insight */}
+      <PageAiInsight
+        pageContext="mental_health_screening"
+      />
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
