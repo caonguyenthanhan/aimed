@@ -43,6 +43,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const liveStreamRef = useRef<MediaStream | null>(null)
   const liveProcessorRef = useRef<ScriptProcessorNode | null>(null)
   const liveSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
+  const [navigationConfirm, setNavigationConfirm] = useState<{ open: boolean; destination: string; title: string }>({ open: false, destination: "", title: "" })
+  const pendingNavigationRef = useRef<(() => void) | null>(null)
   useEffect(() => {
     const updatePad = () => {
       try {
@@ -299,25 +301,25 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         continue
       }
       if (a.type === "open_screening") {
-        toast({ title: "Đang mở", description: "/sang-loc" })
-        router.push("/sang-loc")
+        setNavigationConfirm({ open: true, destination: "/sang-loc", title: "Bạn có muốn mở chương trình sàng lọc không?" })
+        pendingNavigationRef.current = () => router.push("/sang-loc")
         return
       }
       if (a.type === "open_therapy") {
-        toast({ title: "Đang mở", description: "/tri-lieu" })
-        router.push("/tri-lieu")
+        setNavigationConfirm({ open: true, destination: "/tri-lieu", title: "Bạn có muốn mở chương trình trị liệu không?" })
+        pendingNavigationRef.current = () => router.push("/tri-lieu")
         return
       }
       if (a.type === "open_reminders") {
-        toast({ title: "Đang mở", description: "/nhac-nho" })
-        router.push("/nhac-nho")
+        setNavigationConfirm({ open: true, destination: "/nhac-nho", title: "Bạn có muốn mở nhắc nhở không?" })
+        pendingNavigationRef.current = () => router.push("/nhac-nho")
         return
       }
       if (a.type === "navigate") {
         const p = String(a.args?.path || "").trim()
         if (!isAllowedPath(p)) continue
-        toast({ title: "Đang mở", description: p })
-        router.push(p)
+        setNavigationConfirm({ open: true, destination: p, title: `Bạn có muốn mở ${p}?` })
+        pendingNavigationRef.current = () => router.push(p)
         return
       }
     }
@@ -1876,6 +1878,46 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onManageKey={() => setAuthOpen(true)}
       />
       </div>
+      
+      {/* Navigation Confirmation Dialog */}
+      <Dialog open={navigationConfirm.open} onOpenChange={(open) => {
+        if (!open) {
+          setNavigationConfirm({ ...navigationConfirm, open: false })
+          pendingNavigationRef.current = null
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác nhận chuyển hướng</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-4">{navigationConfirm.title}</p>
+            <p className="text-xs text-gray-500">Địa chỉ: <code className="bg-gray-100 px-2 py-1 rounded">{navigationConfirm.destination}</code></p>
+          </div>
+          <DialogFooter className="gap-2 flex justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setNavigationConfirm({ ...navigationConfirm, open: false })
+                pendingNavigationRef.current = null
+              }}
+            >
+              Hủy
+            </Button>
+            <Button 
+              onClick={() => {
+                setNavigationConfirm({ ...navigationConfirm, open: false })
+                if (pendingNavigationRef.current) {
+                  pendingNavigationRef.current()
+                  pendingNavigationRef.current = null
+                }
+              }}
+            >
+              Đồng ý
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
