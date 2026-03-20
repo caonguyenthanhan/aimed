@@ -159,6 +159,14 @@ NGUYÊN TẮC QUAN TRỌNG:
     const configuredProvider = (typeof provider === 'string' ? provider.trim().toLowerCase() : '') || (process.env.LLM_PROVIDER || '').trim().toLowerCase()
     const useGemini = configuredProvider === 'gemini' || selectedModel === 'gemini'
     if (useGemini) {
+      const parseRetryAfterSec = (s: string) => {
+        const raw = String(s || '')
+        const m1 = raw.match(/"retryDelay"\s*:\s*"(\d+)s"/)
+        if (m1?.[1]) return Number(m1[1])
+        const m2 = raw.match(/Please retry in\s+([0-9.]+)s/i)
+        if (m2?.[1]) return Math.ceil(Number(m2[1]))
+        return null
+      }
       const expectedPass = String(process.env.AGENT_KEY_PASS || '').trim()
       const passOk = expectedPass && String(access_pass || '').trim() === expectedPass
       const accessSecret = String(access_pass || '').trim()
@@ -172,13 +180,44 @@ NGUYÊN TẮC QUAN TRỌNG:
       const personaForGemini = (typeof persona === 'string' && persona.trim()) ? persona.trim() : (typeof role === 'string' && role.trim() ? role.trim() : '')
       const category = String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation'
       const svc = keyToUse === String(process.env.GEMINI_API_KEY || '').trim() ? geminiService : new GeminiService(keyToUse)
-      const out = await svc.generateFromConfig({
-        category: category as any,
-        tier: modeHeader,
-        question: String(userMessage),
-        persona: personaForGemini,
-        messages: Array.isArray(conversationHistory) ? conversationHistory : []
-      })
+      let out: any = null
+      try {
+        out = await svc.generateFromConfig({
+          category: category as any,
+          tier: modeHeader,
+          question: String(userMessage),
+          persona: personaForGemini,
+          messages: Array.isArray(conversationHistory) ? conversationHistory : []
+        })
+      } catch (e: any) {
+        const em = String(e?.message || e || '')
+        const retryAfter = parseRetryAfterSec(em)
+        const is429 = em.includes(' 429 ') || em.includes('RESOURCE_EXHAUSTED') || em.includes('"code": 429')
+        if (is429) {
+          const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+          const msg = retryAfter
+            ? `Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau khoảng ${retryAfter}s, hoặc nhập API key/pass để tiếp tục.`
+            : 'Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau, hoặc nhập API key/pass để tiếp tục.'
+          return NextResponse.json({
+            response: msg,
+            context: determinedContext,
+            model_info: { model_name: process.env.GEMINI_MODEL || 'gemini', provider: 'Gemini' },
+            metadata: {
+              context: determinedContext,
+              timestamp: new Date().toISOString(),
+              mode: 'gpu',
+              tier: modeHeader,
+              provider: 'gemini',
+              access: passOk ? 'pass' : (accessSecret ? 'user_key' : 'system_key'),
+              rate_limited: true,
+              retry_after_sec: retryAfter ?? undefined,
+              duration_ms: Date.now() - startGemini
+            },
+            conversation_id: sid
+          })
+        }
+        throw e
+      }
       const durationGemini = Date.now() - startGemini
       const content = String(out?.text || '').trim()
       if (!content) {

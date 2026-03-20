@@ -163,6 +163,32 @@ export async function POST(req: Request) {
       r = null
     }
     if (!r) {
+      const parseRetryAfterSec = (s: string) => {
+        const raw = String(s || "")
+        const m1 = raw.match(/"retryDelay"\s*:\s*"(\d+)s"/)
+        if (m1?.[1]) return Number(m1[1])
+        const m2 = raw.match(/Please retry in\s+([0-9.]+)s/i)
+        if (m2?.[1]) return Math.ceil(Number(m2[1]))
+        return null
+      }
+      const retryAfter = parseRetryAfterSec(geminiErr || "")
+      const is429 = String(geminiErr || "").includes(" 429 ") || String(geminiErr || "").includes("RESOURCE_EXHAUSTED") || String(geminiErr || "").includes("\"code\": 429")
+      if (is429) {
+        const content = retryAfter
+          ? `Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau khoảng ${retryAfter}s, hoặc nhập API key/pass để tiếp tục.`
+          : "Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau, hoặc nhập API key/pass để tiếp tục."
+        try {
+          await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
+        } catch {}
+        const out = AgentResponseSchema.parse({
+          response: content,
+          actions: [],
+          conversation_id,
+          metadata: { mode: "gpu", provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, duration_ms: Date.now() - started },
+        })
+        return NextResponse.json(out)
+      }
+
       const actions = normalizeActions(ruleBasedActionsGuess())
       const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent (Gemini). Bạn thử lại giúp mình."
       try {
