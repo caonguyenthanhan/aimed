@@ -2,7 +2,6 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { GeistMono } from "geist/font/mono"
-import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import Script from "next/script"
 import SiteHeader from "@/components/site-header"
@@ -63,7 +62,6 @@ export default function RootLayout({
         <MobileBottomNav />
         <FloatingQuickMenu />
         <div suppressHydrationWarning><Toaster /></div>
-        <Analytics />
       </body>
     </html>
   )
