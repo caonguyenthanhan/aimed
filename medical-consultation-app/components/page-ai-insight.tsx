@@ -102,7 +102,9 @@ export function PageAiInsight({
       })
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`)
+        // Silently handle API errors - don't show insight if API fails
+        console.debug('[v0] Page insight API error:', response.status, response.statusText)
+        return
       }
 
       const data: InsightResponse = await response.json()
@@ -114,8 +116,8 @@ export function PageAiInsight({
         }
       }
     } catch (err) {
-      console.error('[v0] Failed to fetch page insight:', err)
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      // Silently handle network/parse errors - don't show insight if fetch fails
+      console.debug('[v0] Failed to fetch page insight:', err instanceof Error ? err.message : String(err))
     } finally {
       setIsLoading(false)
     }
