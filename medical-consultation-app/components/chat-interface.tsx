@@ -92,18 +92,24 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       try {
         localStorage.setItem("mcs_agent_mode_v1", next ? "1" : "0")
       } catch {}
-      toast({ title: "Agent mode", description: next ? "Đã bật" : "Đã tắt" })
       return next
     })
   }
 
+  useEffect(() => {
+    toast({ title: "Agent mode", description: agentMode ? "Đã bật" : "Đã tắt" })
+  }, [agentMode, toast])
+
   const toggleTextLiveMode = () => {
     setTextLiveMode((prev) => {
       const next = !prev
-      toast({ title: "Live text", description: next ? "Đã bật" : "Đã tắt" })
       return next
     })
   }
+
+  useEffect(() => {
+    toast({ title: "Live text", description: textLiveMode ? "Đã bật" : "Đã tắt" })
+  }, [textLiveMode, toast])
 
   const requireAuthIfNeeded = (meta?: any) => {
     try {
@@ -1351,7 +1357,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setMessages([
         {
           id: 'error-1',
-          content: 'Không thể kết nối đến server để tải lịch sử hội thoại. Vui lòng kiểm tra kết nối và thử lại.',
+          content: 'Không thể kết n���i đến server để tải lịch sử hội thoại. Vui lòng kiểm tra kết nối và thử lại.',
           isUser: false,
           timestamp: new Date(),
         },
