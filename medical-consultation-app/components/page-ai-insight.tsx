@@ -122,9 +122,10 @@ export function PageAiInsight({
           setIsDismissed(true)
         }
       }
-    } catch (err) {
+    } catch {
       // Silently handle errors - page insight is optional feature
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      // Don't log to console as this is a non-critical feature
+      setError('fetch_failed')
     } finally {
       setIsLoading(false)
     }
