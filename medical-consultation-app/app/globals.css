@@ -4,89 +4,89 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Refined Healthcare Palette - Warm & Trustworthy */
-  --background: #faf9f7;
+  /* Blue Color Palette - Primary */
+  --background: #f8fafb;
   --foreground: #1a1a1a;
   --card: #ffffff;
   --card-foreground: #1a1a1a;
   --popover: #ffffff;
   --popover-foreground: #1a1a1a;
-  --primary: #1d4e5f;
+  --primary: #1447E6;
   --primary-foreground: #ffffff;
-  --secondary: #f5f3f0;
+  --secondary: #f0f4fb;
   --secondary-foreground: #1a1a1a;
-  --muted: #f0eeeb;
-  --muted-foreground: #6b6b6b;
-  --accent: #2a9d8f;
+  --muted: #e8f0ff;
+  --muted-foreground: #5a6b7d;
+  --accent: #0088FF;
   --accent-foreground: #ffffff;
   --destructive: #e63946;
   --destructive-foreground: #ffffff;
-  --border: #e5e2de;
+  --border: #d4e3ff;
   --input: #ffffff;
-  --ring: #1d4e5f;
-  --chart-1: #1d4e5f;
-  --chart-2: #2a9d8f;
-  --chart-3: #e9c46a;
-  --chart-4: #f4a261;
-  --chart-5: #e76f51;
+  --ring: #1447E6;
+  --chart-1: #1447E6;
+  --chart-2: #006FFF;
+  --chart-3: #0088FF;
+  --chart-4: #009AE2;
+  --chart-5: #00A8B3;
   --radius: 0.75rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #1a1a1a;
-  --sidebar-primary: #f5f3f0;
+  --sidebar-primary: #f0f4fb;
   --sidebar-primary-foreground: #1a1a1a;
-  --sidebar-accent: #1d4e5f;
+  --sidebar-accent: #1447E6;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #e5e2de;
-  --sidebar-ring: #1d4e5f;
+  --sidebar-border: #d4e3ff;
+  --sidebar-ring: #1447E6;
   
   /* Chat specific colors */
-  --chat-user-bg: #1d4e5f;
+  --chat-user-bg: #1447E6;
   --chat-user-text: #ffffff;
-  --chat-bot-bg: #f5f3f0;
+  --chat-bot-bg: #f0f4fb;
   --chat-bot-text: #1a1a1a;
-  --chat-accent: #2a9d8f;
+  --chat-accent: #0088FF;
 }
 
 .dark {
-  --background: #121212;
+  --background: #0f1419;
   --foreground: #f5f5f5;
-  --card: #1e1e1e;
+  --card: #1a1f2e;
   --card-foreground: #f5f5f5;
-  --popover: #1e1e1e;
+  --popover: #1a1f2e;
   --popover-foreground: #f5f5f5;
-  --primary: #5fb3a1;
-  --primary-foreground: #121212;
-  --secondary: #2a2a2a;
+  --primary: #3d7ee6;
+  --primary-foreground: #0f1419;
+  --secondary: #1f2937;
   --secondary-foreground: #f5f5f5;
-  --muted: #2a2a2a;
-  --muted-foreground: #a0a0a0;
-  --accent: #4ecdc4;
-  --accent-foreground: #121212;
+  --muted: #2d3748;
+  --muted-foreground: #a0aec0;
+  --accent: #0088FF;
+  --accent-foreground: #0f1419;
   --destructive: #ff6b6b;
   --destructive-foreground: #f5f5f5;
-  --border: #333333;
-  --input: #2a2a2a;
-  --ring: #5fb3a1;
-  --chart-1: #5fb3a1;
-  --chart-2: #4ecdc4;
-  --chart-3: #f7dc6f;
-  --chart-4: #f0b27a;
-  --chart-5: #e74c3c;
-  --sidebar: #1e1e1e;
+  --border: #2d3f5f;
+  --input: #1f2937;
+  --ring: #3d7ee6;
+  --chart-1: #3d7ee6;
+  --chart-2: #0088FF;
+  --chart-3: #00c2ff;
+  --chart-4: #009AE2;
+  --chart-5: #00A8B3;
+  --sidebar: #1a1f2e;
   --sidebar-foreground: #f5f5f5;
-  --sidebar-primary: #2a2a2a;
+  --sidebar-primary: #1f2937;
   --sidebar-primary-foreground: #f5f5f5;
-  --sidebar-accent: #5fb3a1;
-  --sidebar-accent-foreground: #121212;
-  --sidebar-border: #333333;
-  --sidebar-ring: #5fb3a1;
+  --sidebar-accent: #3d7ee6;
+  --sidebar-accent-foreground: #0f1419;
+  --sidebar-border: #2d3f5f;
+  --sidebar-ring: #3d7ee6;
   
   /* Chat specific colors */
-  --chat-user-bg: #2a9d8f;
-  --chat-user-text: #ffffff;
-  --chat-bot-bg: #2a2a2a;
+  --chat-user-bg: #0088FF;
+  --chat-user-text: #f5f5f5;
+  --chat-bot-bg: #1f2937;
   --chat-bot-text: #f5f5f5;
-  --chat-accent: #4ecdc4;
+  --chat-accent: #0088FF;
 }
 
 @theme inline {
@@ -163,15 +163,15 @@ body {
 }
 
 .hero-gradient {
-  background: radial-gradient(circle at top right, rgba(29, 78, 95, 0.06) 0%, transparent 50%), 
-              radial-gradient(circle at bottom left, rgba(42, 157, 143, 0.04) 0%, transparent 50%), 
-              #faf9f7;
+  background: radial-gradient(circle at top right, rgba(20, 71, 230, 0.08) 0%, transparent 50%), 
+              radial-gradient(circle at bottom left, rgba(0, 136, 255, 0.06) 0%, transparent 50%), 
+              #f8fafb;
 }
 
 .hero-gradient-dark {
-  background: radial-gradient(circle at top right, rgba(95, 179, 161, 0.08) 0%, transparent 50%), 
-              radial-gradient(circle at bottom left, rgba(78, 205, 196, 0.06) 0%, transparent 50%), 
-              #121212;
+  background: radial-gradient(circle at top right, rgba(61, 126, 230, 0.12) 0%, transparent 50%), 
+              radial-gradient(circle at bottom left, rgba(0, 136, 255, 0.1) 0%, transparent 50%), 
+              #0f1419;
 }
 
 /* Chat bubble styles */

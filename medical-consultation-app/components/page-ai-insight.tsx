@@ -110,6 +110,7 @@ export function PageAiInsight({
           return
         }
         // For other errors, set error state but don't throw
+        console.debug('[v0] PageAiInsight API error:', status)
         setError(`API error: ${status}`)
         return
       }
