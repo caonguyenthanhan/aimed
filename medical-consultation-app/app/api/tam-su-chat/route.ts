@@ -7,13 +7,68 @@ import { persistChatTurn } from '@/lib/chat-persistence'
 import crypto from 'crypto'
 import { assessSos, buildSosResponse } from '@/lib/sos-mode'
 
+// Healing music recommendations based on mood
+const HEALING_MUSIC: Record<string, Array<{ videoId: string; title: string; artist: string; mood: string }>> = {
+  sad: [
+    { videoId: "4N3N1MlvVc4", title: "Weightless", artist: "Marconi Union", mood: "calm" },
+    { videoId: "lFcSrYw-ARY", title: "Gymnopédie No.1", artist: "Erik Satie", mood: "calm" },
+    { videoId: "UfcAVejslrU", title: "River Flows In You", artist: "Yiruma", mood: "calm" },
+  ],
+  anxious: [
+    { videoId: "77ZozI0rw7w", title: "Meditation Music - Relax Mind Body", artist: "Relaxing Music", mood: "meditation" },
+    { videoId: "1ZYbU82GVz4", title: "Deep Sleep Music", artist: "Soothing Relaxation", mood: "sleep" },
+    { videoId: "lTRiuFIWV54", title: "528Hz Healing Frequency", artist: "Meditative Mind", mood: "meditation" },
+  ],
+  stressed: [
+    { videoId: "hlWiI4xVXKY", title: "Relaxing Piano Music", artist: "Relaxdaily", mood: "calm" },
+    { videoId: "DWcJFNfaw9c", title: "Beautiful Relaxing Music", artist: "Soothing Relaxation", mood: "calm" },
+    { videoId: "aXItOY0sLRY", title: "Peaceful Piano & Soft Rain", artist: "Peder B. Helland", mood: "calm" },
+  ],
+  lonely: [
+    { videoId: "Bo9G3E1qLrw", title: "Comfort Music", artist: "Acoustic Covers", mood: "uplifting" },
+    { videoId: "CvFH_6DNRCY", title: "A Thousand Years", artist: "Piano Cover", mood: "calm" },
+    { videoId: "RgKAFK5djSk", title: "See You Again", artist: "Piano Cover", mood: "uplifting" },
+  ],
+  default: [
+    { videoId: "4N3N1MlvVc4", title: "Weightless", artist: "Marconi Union", mood: "calm" },
+    { videoId: "hlWiI4xVXKY", title: "Relaxing Piano Music", artist: "Relaxdaily", mood: "calm" },
+    { videoId: "77ZozI0rw7w", title: "Meditation Music", artist: "Relaxing Music", mood: "meditation" },
+  ]
+}
+
+// Detect mood from message and conversation
+function detectMood(message: string, history: any[]): string {
+  const text = message.toLowerCase()
+  const allText = [...history.map(h => h.content?.toLowerCase() || ''), text].join(' ')
+  
+  if (/buồn|khóc|mất mát|chia tay|cô đơn|đau|thất vọng|tuyệt vọng/.test(allText)) return 'sad'
+  if (/lo lắng|lo âu|sợ|hoang mang|bất an|căng thẳng|áp lực/.test(allText)) return 'anxious'
+  if (/stress|mệt|kiệt sức|quá tải|không ngủ được/.test(allText)) return 'stressed'
+  if (/cô đơn|một mình|không ai|thiếu vắng|nhớ/.test(allText)) return 'lonely'
+  
+  return 'default'
+}
+
+// Check if should recommend music
+function shouldRecommendMusic(message: string, history: any[]): boolean {
+  const text = message.toLowerCase()
+  // Direct requests
+  if (/nhạc|music|nghe|bài hát|thư giãn|relax|thiền|meditation/.test(text)) return true
+  // After emotional sharing (every 3-5 messages)
+  if (history.length >= 4 && history.length % 3 === 0) {
+    const mood = detectMood(message, history)
+    if (mood !== 'default') return true
+  }
+  return false
+}
+
 export async function POST(request: NextRequest) {
   try {
     const bodyIn = await request.json()
     const auth = request.headers.get('authorization') || ''
 
     const userMessage: string = String(bodyIn?.message || bodyIn?.prompt || bodyIn?.question || '').trim()
-    const conversationHistory: any[] = Array.isArray(bodyIn?.conversationHistory) ? bodyIn.conversationHistory : (Array.isArray(bodyIn?.messages) ? bodyIn.messages : [])
+    const conversationHistory: any[] = Array.isArray(bodyIn?.conversationHistory) ? bodyIn.conversationHistory : (Array.isArray(bodyIn?.messages) ? bodyIn.messages.filter(m => m?.role === 'assistant').slice(-10) : [])
     const conversation_id: string | null = typeof bodyIn?.conversation_id === 'string' ? bodyIn.conversation_id : null
     const user_id: string | null = typeof bodyIn?.user_id === 'string' ? bodyIn.user_id : null
     const selectedModel = (typeof bodyIn?.model === 'string' ? String(bodyIn.model).toLowerCase() : 'flash')
@@ -323,6 +378,11 @@ export async function POST(request: NextRequest) {
       })
     } catch {}
 
+    // Check if should recommend music
+    const includeMusic = shouldRecommendMusic(userMessage, conversationHistory)
+    const mood = detectMood(userMessage, conversationHistory)
+    const musicRecommendations = includeMusic ? (HEALING_MUSIC[mood] || HEALING_MUSIC.default) : undefined
+
     return NextResponse.json({
       response: content,
       metadata: {
@@ -331,7 +391,15 @@ export async function POST(request: NextRequest) {
         fallback: originalTarget === 'gpu' && modeUsed === 'cpu',
         provider: 'server'
       },
-      conversation_id: newConversationId
+      conversation_id: newConversationId,
+      // Music recommendations for Tam Su
+      music: musicRecommendations ? {
+        mood,
+        recommendations: musicRecommendations,
+        message: mood !== 'default' 
+          ? `Mình gợi ý một vài bản nhạc để giúp bạn cảm thấy tốt hơn nhé:`
+          : `Đây là một số nhạc thư giãn cho bạn:`
+      } : undefined
     })
   } catch (error: any) {
     return NextResponse.json({ error: 'Internal server error', details: error?.message || 'unknown' }, { status: 500 })

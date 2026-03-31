@@ -61,18 +61,19 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
 
   return (
     <div
-      className="flex-shrink-0 p-4 glass-panel dark:glass-panel-dark border-t border-slate-200 dark:border-slate-700 relative z-10"
+      className="flex-shrink-0 p-3 sm:p-4 bg-card/80 backdrop-blur-sm border-t border-border relative z-10"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       onDragOver={props.onDragOver}
       onDrop={props.onDrop}
     >
-      <div className="max-w-3xl mx-auto px-2">
-        <div className="mb-3 -mx-2 px-2 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="max-w-2xl mx-auto">
+        {/* Suggested Questions - Grid on desktop, horizontal scroll on mobile */}
+        <div className="mb-3 grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
           {props.suggestedQuestions.slice(0, 4).map((q, i) => (
             <button
               key={i}
               onClick={() => props.onSuggestedQuestion(q)}
-              className="shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-all duration-200 font-medium"
+              className="px-3 py-2 rounded-xl bg-secondary hover:bg-accent hover:text-accent-foreground text-foreground text-xs font-medium border border-border hover:border-accent transition-all duration-200 text-left truncate"
             >
               {q}
             </button>
@@ -120,7 +121,7 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
           </div>
         )}
 
-        <div className="rounded-xl bg-white dark:bg-slate-900 shadow-md border border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-2 transition-all">
+        <div className="rounded-2xl bg-card shadow-lg border border-border px-3 sm:px-4 py-2 flex items-center gap-2 transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50">
           <textarea
             value={props.value}
             onChange={(e) => props.onValueChange(e.target.value)}
@@ -130,44 +131,45 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                 props.onSubmit()
               }
             }}
-            placeholder="Nhập câu hỏi của bạn..."
-            className="flex-1 border-0 focus:ring-0 focus:outline-none text-sm bg-transparent dark:text-slate-50 resize-none py-3 max-h-32 overflow-y-auto placeholder-slate-400 dark:placeholder-slate-500"
-            style={{ WebkitTapHighlightColor: "transparent", minHeight: "44px" }}
+            placeholder="Nhap cau hoi cua ban..."
+            className="flex-1 border-0 focus:ring-0 focus:outline-none text-sm bg-transparent text-foreground resize-none py-2.5 max-h-28 overflow-y-auto placeholder-muted-foreground"
+            style={{ WebkitTapHighlightColor: "transparent", minHeight: "40px" }}
             disabled={props.isLoading}
             rows={1}
           />
           <button
             onClick={props.onSubmit}
             disabled={!canSend}
-            className={`flex-shrink-0 p-2.5 rounded-lg transition-all duration-200 ${
+            className={`flex-shrink-0 p-2 rounded-xl transition-all duration-200 ${
               canSend
-                ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-95"
-                : "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed"
+                ? "bg-primary hover:opacity-90 text-primary-foreground shadow-md active:scale-95"
+                : "bg-secondary text-muted-foreground cursor-not-allowed"
             }`}
             style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
-            aria-label="Gửi tin nhắn"
+            aria-label="Gui tin nhan"
           >
-            <Send className="h-5 w-5" />
+            <Send className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+        {/* Compact Toolbar */}
+        <div className="mt-2 flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1">
             <button
               onClick={props.onToggleTools}
-              className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 font-semibold text-sm"
-              aria-label="Bật/Tắt công cụ"
+              className="h-8 w-8 rounded-lg bg-secondary hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-all text-muted-foreground"
+              aria-label="Toggle tools"
             >
-              +
+              <span className="text-lg font-medium">+</span>
             </button>
             {props.showTools && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <input ref={props.fileInputRef} type="file" accept="image/*" className="hidden" onChange={props.onImageChange} />
                 <button
                   onClick={() => props.fileInputRef.current?.click()}
-                  className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 text-sm"
+                  className="px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-accent hover:text-accent-foreground text-muted-foreground text-xs font-medium transition-all"
                 >
-                  Ảnh
+                  Anh
                 </button>
                 <input
                   ref={props.docInputRef}
@@ -178,23 +180,23 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                 />
                 <button
                   onClick={() => props.docInputRef.current?.click()}
-                  className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 text-sm"
+                  className="px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-accent hover:text-accent-foreground text-muted-foreground text-xs font-medium transition-all"
                 >
-                  PDF/Doc
+                  PDF
                 </button>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {typeof props.onToggleAgentMode === "function" ? (
               <button
                 onClick={props.onToggleAgentMode}
-                className={`px-3 py-2 rounded-lg border transition-all duration-200 text-sm font-semibold ${
+                className={`px-2.5 py-1.5 rounded-lg transition-all text-xs font-semibold ${
                   props.agentMode
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 }`}
-                title="Bật/tắt agent mode"
+                title="Agent mode"
               >
                 agent
               </button>
@@ -202,73 +204,73 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
             <select
               value={props.selectedModel}
               onChange={(e) => props.onSelectedModelChange(e.target.value as UnifiedComposerModel)}
-              className="px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50"
+              className="px-2 py-1.5 border border-border rounded-lg text-xs bg-card text-foreground cursor-pointer"
             >
               <option value="flash">flash</option>
               <option value="pro">pro</option>
             </select>
             <button
               onClick={props.onStartNewConversation}
-              className="px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 text-sm"
-              title="Bắt đầu hội thoại mới"
+              className="px-2.5 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-medium"
+              title="New conversation"
             >
               new
             </button>
             <button
               onClick={props.onToggleRecording}
               disabled={props.isLoading}
-              className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
+              className={`h-8 w-8 rounded-lg transition-all active:scale-95 flex items-center justify-center ${
                 props.isRecording 
-                  ? "bg-red-600 text-white hover:bg-red-700 shadow-md" 
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  ? "bg-destructive text-destructive-foreground shadow-md" 
+                  : "bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               }`}
-              title={props.isRecording ? "Dừng ghi âm" : "Bắt đầu ghi âm"}
+              title={props.isRecording ? "Stop recording" : "Start recording"}
             >
-              <Mic className={`h-5 w-5 ${props.isRecording ? "animate-pulse" : ""}`} />
+              <Mic className={`h-4 w-4 ${props.isRecording ? "animate-pulse" : ""}`} />
             </button>
             <button
               onClick={props.onGotoSpeechChat}
-              className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200"
-              title="Chuyển sang Voice Chat"
+              className="h-8 w-8 rounded-lg bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all flex items-center justify-center"
+              title="Voice Chat"
             >
-              <img src="/icon-speech-to-speech.png" alt="Speech-to-Speech" className="h-5 w-5" />
+              <img src="/icon-speech-to-speech.png" alt="Voice" className="h-4 w-4" />
             </button>
             {typeof props.onToggleLiveMode === "function" ? (
               <button
                 onClick={props.onToggleLiveMode}
                 disabled={props.isLoading}
-                className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
+                className={`h-8 w-8 rounded-lg transition-all active:scale-95 flex items-center justify-center ${
                   props.isLiveMode
-                    ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-md"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    ? "bg-accent text-accent-foreground shadow-md"
+                    : "bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 }`}
-                title={props.isLiveMode ? "Tắt Live mode" : "Bật Live mode"}
+                title={props.isLiveMode ? "Live OFF" : "Live ON"}
               >
-                <AudioLines className={`h-5 w-5 ${props.isLiveMode ? "animate-pulse" : ""}`} />
+                <AudioLines className={`h-4 w-4 ${props.isLiveMode ? "animate-pulse" : ""}`} />
               </button>
             ) : null}
             {typeof props.onToggleTextLiveMode === "function" ? (
               <button
                 onClick={props.onToggleTextLiveMode}
                 disabled={props.isLoading}
-                className={`p-2 rounded-lg transition-all duration-200 active:scale-95 ${
+                className={`h-8 w-8 rounded-lg transition-all active:scale-95 flex items-center justify-center ${
                   props.isTextLiveMode
-                    ? "bg-fuchsia-600 text-white hover:bg-fuchsia-700 shadow-md"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                    ? "bg-accent text-accent-foreground shadow-md"
+                    : "bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 }`}
-                title={props.isTextLiveMode ? "Tắt Live text" : "Bật Live text"}
+                title={props.isTextLiveMode ? "Live text OFF" : "Live text ON"}
               >
-                <Sparkles className={`h-5 w-5 ${props.isTextLiveMode ? "animate-pulse" : ""}`} />
+                <Sparkles className={`h-4 w-4 ${props.isTextLiveMode ? "animate-pulse" : ""}`} />
               </button>
             ) : null}
             {typeof props.onManageKey === "function" ? (
               <button
                 onClick={props.onManageKey}
                 disabled={props.isLoading}
-                className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 active:scale-95"
-                title="Thiết lập API key/pass"
+                className="h-8 w-8 rounded-lg bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all active:scale-95 flex items-center justify-center"
+                title="API key"
               >
-                <KeyRound className="h-5 w-5" />
+                <KeyRound className="h-4 w-4" />
               </button>
             ) : null}
           </div>

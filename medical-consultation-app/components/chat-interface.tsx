@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, Search } from "lucide-react"
+import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, ChevronRight, Search, MessageSquare } from "lucide-react"
+// Force refresh - clear cache - v3
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { } from "@/lib/llm-config"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { sanitizeTtsText } from "@/lib/tts-text"
@@ -21,6 +22,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { AgentResponseSchema, isAllowedPath, normalizeActions, type AgentAction } from "@/lib/agent-actions"
 import { GoogleGenAI, Modality } from "@google/genai"
+import { ChatSpecialMessage, parseSpecialMessages, type SpecialMessageData } from "@/components/chat-special-message"
 
 interface Message {
   id: string
@@ -35,6 +37,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
   const [headerPad, setHeaderPad] = useState<string>('6rem')
   const [agentMode, setAgentMode] = useState(false)
+  const [specialMessages, setSpecialMessages] = useState<SpecialMessageData[]>([])
+  const handleCloseSpecialMessage = (id: string) => {
+    setSpecialMessages((prev) => prev.filter((m) => m.id !== id))
+  }
   const [authOpen, setAuthOpen] = useState(false)
   const [authSecret, setAuthSecret] = useState("")
   const [liveMode, setLiveMode] = useState(false)
@@ -331,8 +337,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content:
-        "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+      content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -346,6 +351,19 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [sosHotlines, setSosHotlines] = useState<Array<{ label: string; number: string }>>([])
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
+  const [selectedModel, setSelectedModel] = useState<'flash' | 'pro'>('flash')
+  const [showTools, setShowTools] = useState(false)
+  const [selectedDocName, setSelectedDocName] = useState<string | null>(null)
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [isDisclaimerCollapsed, setIsDisclaimerCollapsed] = useState<boolean>(false)
+  const [disclaimerDismissed, setDisclaimerDismissed] = useState<boolean>(false)
+  const [sidebarSearchOpen, setSidebarSearchOpen] = useState<boolean>(false)
+  const [sidebarSearch, setSidebarSearch] = useState<string>('')
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+
+  // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const sendingRef = useRef<boolean>(false)
@@ -359,6 +377,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const liveTextRunRef = useRef<number>(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const docInputRef = useRef<HTMLInputElement | null>(null)
+  const suggestionsTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Smart suggestion system based on context and conversation history
   const getSmartSuggestions = () => {
@@ -407,7 +426,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       if (conversationText.includes('đau') || conversationText.includes('nhức')) {
         return contextualSuggestions.pain
       }
-      if (conversationText.includes('lo âu') || conversationText.includes('stress') || 
+      if (conversationText.includes('lo ����u') || conversationText.includes('stress') || 
           conversationText.includes('trầm cảm') || conversationText.includes('tâm lý')) {
         return contextualSuggestions.mental
       }
@@ -425,6 +444,51 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   const suggestedQuestions = getSmartSuggestions()
+  
+  // Fetch AI-powered suggestions
+  const fetchAiSuggestions = async () => {
+    if (isLoadingSuggestions) return
+    
+    setIsLoadingSuggestions(true)
+    try {
+      const response = await fetch('/api/suggest-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: messages.slice(-5) })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.suggestions && data.suggestions.length > 0) {
+          setAiSuggestions(data.suggestions)
+        }
+      }
+    } catch {
+      // Silently fail - will use fallback suggestions
+    } finally {
+      setIsLoadingSuggestions(false)
+    }
+  }
+  
+  // Fetch suggestions when messages change (with debounce)
+  useEffect(() => {
+    if (suggestionsTimerRef.current) {
+      clearTimeout(suggestionsTimerRef.current)
+    }
+    
+    // Only fetch if we have messages and last message is from AI
+    if (messages.length > 0 && !messages[messages.length - 1]?.isUser) {
+      suggestionsTimerRef.current = setTimeout(() => {
+        fetchAiSuggestions()
+      }, 1000) // Debounce 1 second after AI response
+    }
+    
+    return () => {
+      if (suggestionsTimerRef.current) {
+        clearTimeout(suggestionsTimerRef.current)
+      }
+    }
+  }, [messages])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -434,17 +498,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     scrollToBottom()
     messagesRef.current = messages
   }, [messages])
-
-  const [selectedModel, setSelectedModel] = useState<'flash' | 'pro'>('flash')
-  const [showTools, setShowTools] = useState(false)
-  const [selectedDocName, setSelectedDocName] = useState<string | null>(null)
-  const [conversationId, setConversationId] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [isDisclaimerCollapsed, setIsDisclaimerCollapsed] = useState<boolean>(false)
-  const [disclaimerDismissed, setDisclaimerDismissed] = useState<boolean>(false)
-  const [sidebarSearchOpen, setSidebarSearchOpen] = useState<boolean>(false)
-  const [sidebarSearch, setSidebarSearch] = useState<string>('')
- 
 
   const startConversationIfNeeded = async (): Promise<string | null> => {
     if (conversationId) return conversationId
@@ -486,8 +539,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const enqueueAssistantDelivery = (items: Array<{ content: string; delay_ms?: number }>) => {
     const safeItems = items
-      .map((m) => ({ id: (Date.now() + Math.random()).toString(), content: String(m?.content || "").trim(), delay_ms: typeof m?.delay_ms === "number" ? m.delay_ms : undefined }))
-      .filter((m) => m.content)
+      .map((m, idx) => {
+        const content = String(m?.content || "").trim()
+        const id = (Date.now() + Math.random()).toString()
+        if (!content) {
+          console.warn(`[v0] Item ${idx} has empty content after trim, preserving with placeholder to prevent loss`)
+        }
+        return { id, content: content || " ", delay_ms: typeof m?.delay_ms === "number" ? m.delay_ms : undefined }
+      })
     if (!safeItems.length) return
     assistantQueueRef.current.push(...safeItems)
     if (!assistantWorkerRef.current) {
@@ -620,9 +679,21 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
       const aiResponse = String((data as any)?.response || (data as any)?.choices?.[0]?.message?.content || "").trim()
       const planned = Array.isArray((data as any)?.messages) ? (data as any).messages : null
-      const deliverList = (planned && planned.length)
-        ? planned.map((m: any) => ({ content: String(m?.content || ""), delay_ms: typeof m?.delay_ms === "number" ? m.delay_ms : undefined }))
+      
+      // Parse special messages (embeds, music, navigation prompts)
+      const { textMessages: parsedTexts, specialMessages: parsedSpecials } = planned 
+        ? parseSpecialMessages(planned)
+        : { textMessages: [aiResponse || "Không nhận được phản hồi từ máy trả lời"], specialMessages: [] }
+      
+      // Add special messages to state (for embeds, music players, etc.)
+      if (parsedSpecials.length > 0) {
+        setSpecialMessages((prev) => [...prev, ...parsedSpecials])
+      }
+      
+      const deliverList = parsedTexts.length > 0
+        ? parsedTexts.map((content, i) => ({ content, delay_ms: i === 0 ? 0 : 450 }))
         : [{ content: aiResponse || "Không nhận được phản hồi từ máy trả lời", delay_ms: 0 }]
+      
       let deliveredIds: string[] = []
       if (delivery_mode === "live") {
         const lastId = await deliverLiveText(aiResponse || deliverList.map((x) => x.content).join("\n\n"))
@@ -649,7 +720,15 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const agentActions = agentMode ? normalizeActions((data as any)?.actions) : []
       if (agentActions.length) {
         const lastId = deliveredIds[deliveredIds.length - 1] || (Date.now() + 1).toString()
-        await executeAgentActions(agentActions, { speakMessageId: lastId, fallbackSpeakText: aiResponse })
+        let executionDelay = 1000
+        if (delivery_mode !== "live") {
+          const allDelays = deliverList.map((m: any) => (m?.delay_ms || 0))
+          const totalDelay = allDelays.reduce((a, b) => a + b, 0)
+          executionDelay = Math.max(totalDelay + 500, 1500)
+        }
+        setTimeout(async () => {
+          await executeAgentActions(agentActions, { speakMessageId: lastId, fallbackSpeakText: aiResponse })
+        }, executionDelay)
       }
     } catch {
       const fallbackMessage: Message = {
@@ -704,7 +783,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     setInput("")
 
     try {
-      // Nếu có ảnh đã chọn, gửi tới VLM cùng với văn bản
+      // Nếu có ảnh đã chọn, gửi t���i VLM cùng với văn bản
       if (selectedImageBase64) {
         const parts: string[] = []
         if (currentInput.trim()) parts.push(`Nội dung: ${currentInput}`)
@@ -905,8 +984,28 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             timestamp: new Date(),
           }
           setMessages([defaultMsg])
+          setAiSuggestions([]) // Reset AI suggestions for new conversation
           
-          await fetchConversations()
+      await fetchConversations()
+
+      // Auto-name conversation if it's the first message
+      if (messages.length === 1 && newId) {
+        try {
+          const nameResponse = await fetch('/api/auto-name-conversation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: [{ isUser: true, content: text }], conversationId: newId })
+          })
+          
+          if (nameResponse.ok) {
+            const { name } = await nameResponse.json()
+            // Optionally update conversation title in UI/backend
+            console.log('[v0] Auto-named conversation:', name)
+          }
+        } catch (err) {
+          console.debug('[v0] Auto-naming failed:', err)
+        }
+      }
           if (typeof window !== 'undefined') {
             try {
               const url = new URL(window.location.href)
@@ -924,6 +1023,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
       setConversationId(newId)
       setMessages([])
+      setSpecialMessages([])
+      setAiSuggestions([]) // Reset AI suggestions
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(`conv_messages_${newId}`, JSON.stringify([]))
@@ -1417,7 +1518,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               {
                 id: '1',
                 content:
-                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. B��n có câu hỏi gì không?',
+                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuy��n biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. B��n có câu hỏi gì không?',
                 isUser: false,
                 timestamp: new Date(),
               },
@@ -1545,16 +1646,18 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
             <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
+            <DialogDescription className="text-red-600">
+              Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-slate-800">
-            <div>Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>
             <div className="space-y-1">
               {(sosHotlines.length ? sosHotlines : [{ label: "Cấp cứu", number: "115" }, { label: "Bảo vệ trẻ em", number: "111" }]).map((h) => (
                 <div key={`${h.label}-${h.number}`} className="font-medium">{h.label}: {h.number}</div>
               ))}
             </div>
-            <div>Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</div>
           </div>
+          <p className="text-sm text-slate-800">Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSosOpen(false)}>Đã hiểu</Button>
           </DialogFooter>
@@ -1564,6 +1667,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Đổi tên hội thoại</DialogTitle>
+            <DialogDescription>
+              Nhập tiêu đề mới cho hội thoại này
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input value={renameInput} onChange={(e) => setRenameInput(e.target.value)} placeholder="Nhập tiêu đề" />
@@ -1578,11 +1684,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent>
           <DialogHeader>
             <DialogTitle>API Key / Pass</DialogTitle>
+            <DialogDescription>
+              Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="text-sm text-slate-700 dark:text-slate-300">
-              Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
-            </div>
             <Input type="password" value={authSecret} onChange={(e) => setAuthSecret(e.target.value)} placeholder="Nhập API key hoặc pass" />
           </div>
           <DialogFooter>
@@ -1593,66 +1699,66 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         </DialogContent>
       </Dialog>
       {!isMobile && showSidebar && (
-        <div className="w-64 glass-panel dark:glass-panel-dark bg-white dark:bg-slate-900 p-0 flex-shrink-0 h-full flex flex-col rounded-r-2xl border-r border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">Lịch sử hội thoại</span>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
-                <Search className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+        <div className="w-56 bg-card/95 backdrop-blur-sm p-0 flex-shrink-0 h-full flex flex-col border-r border-border">
+          {/* Compact Header */}
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
+            <span className="text-xs font-semibold text-foreground">Lich su</span>
+            <div className="flex items-center gap-0.5">
+              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Tim kiem">
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
-              <button onClick={beginNewConversation} className="h-8 w-8 rounded-lg bg-blue-600 dark:bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 dark:hover:bg-blue-700 transition shadow-sm">
-                <Plus className="h-4 w-4" />
+              <button onClick={beginNewConversation} className="h-7 w-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition" title="Moi">
+                <Plus className="h-3.5 w-3.5" />
               </button>
-              <button onClick={fetchConversations} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
-                <RefreshCcw className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              <button onClick={fetchConversations} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Lam moi">
+                <RefreshCcw className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
-              <button onClick={() => setShowSidebar(false)} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
-                <ChevronLeft className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              <button onClick={() => setShowSidebar(false)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Dong">
+                <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             </div>
           </div>
           {sidebarSearchOpen && (
-            <div className="px-3 pb-2">
+            <div className="px-2 pb-2">
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <input
                   value={sidebarSearch}
                   onChange={(e) => setSidebarSearch(e.target.value)}
-                  placeholder="Lọc hội thoại..."
-                  className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl border border-gray-200 focus:border-blue-400 outline-none bg-white/60"
+                  placeholder="Tim kiem..."
+                  className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-border focus:border-primary outline-none bg-secondary/50"
                 />
                 {sidebarSearch && (
-                  <button onClick={() => setSidebarSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                    x
+                  <button onClick={() => setSidebarSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="h-3 w-3" />
                   </button>
                 )}
               </div>
             </div>
           )}
-          <div className="flex-1 space-y-1 overflow-y-auto px-3 pb-3">
+          <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2 custom-scrollbar">
             {isLoadingConversations ? (
-              <div className="text-xs text-gray-500">Đang tải...</div>
+              <div className="text-xs text-muted-foreground px-2 py-4">Dang tai...</div>
             ) : (
               serverUnavailable ? (
-                <div className="text-xs text-red-600">Không kết nối được với server</div>
+                <div className="text-xs text-destructive px-2 py-4">Khong ket noi duoc</div>
               ) : (
                 (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).length
                   ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
-                    <div key={c.id} className={`group flex items-center justify-between p-2 rounded-xl ${conversationId === c.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-100'}`}>
-                      <button className="text-left text-sm flex-1 pr-2" onClick={() => openConversation(c.id)}>
-                        {c.title || 'Chưa có tiêu đề'}
-                      </button>
-                      <div className="hidden group-hover:flex items-center gap-2">
-                        <button className="h-7 w-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center" onClick={() => { setRenameTargetId(c.id); setRenameInput(c.title || ''); setIsRenameOpen(true) }}>
-                          <Sparkles className="h-3.5 w-3.5 text-gray-700" />
+                    <div key={c.id} className={`group flex items-center gap-1.5 px-2 py-2 rounded-lg cursor-pointer transition-colors ${conversationId === c.id ? 'bg-primary/10 text-primary' : 'hover:bg-secondary text-foreground'}`} onClick={() => openConversation(c.id)}>
+                      <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
+                      <span className="text-xs font-medium flex-1 truncate">{c.title || 'Chua co tieu de'}</span>
+                      <div className="hidden group-hover:flex items-center gap-0.5">
+                        <button className="h-5 w-5 rounded hover:bg-secondary flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setRenameTargetId(c.id); setRenameInput(c.title || ''); setIsRenameOpen(true) }}>
+                          <Sparkles className="h-3 w-3 text-muted-foreground" />
                         </button>
-                        <button className="h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center" onClick={() => deleteConversation(c.id)}>
-                          <X className="h-3.5 w-3.5" />
+                        <button className="h-5 w-5 rounded hover:bg-destructive/10 flex items-center justify-center" onClick={(e) => { e.stopPropagation(); deleteConversation(c.id) }}>
+                          <X className="h-3 w-3 text-destructive" />
                         </button>
                       </div>
                     </div>
                   ))
-                  : <div className="text-xs text-gray-500">Chưa có hội thoại</div>
+                  : <div className="text-xs text-muted-foreground px-2 py-4 text-center">Chua co hoi thoai</div>
               )
             )}
           </div>
@@ -1689,7 +1795,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                     <input
                       value={sidebarSearch}
                       onChange={(e) => setSidebarSearch(e.target.value)}
-                      placeholder="Lọc hội thoại..."
+                      placeholder="L���c hội thoại..."
                       className="w-full pl-9 pr-9 py-2 text-sm rounded-2xl border border-gray-200 focus:border-blue-400 outline-none bg-white"
                     />
                     {sidebarSearch && (
@@ -1712,7 +1818,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                       ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
                         <div key={c.id} className={`flex items-center justify-between p-3 rounded-2xl border ${conversationId === c.id ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'}`}>
                           <button className="text-left text-sm flex-1 pr-2" onClick={() => { openConversation(c.id); setShowSidebar(false) }} type="button">
-                            <div className="font-medium text-slate-800">{c.title || 'Chưa có tiêu đề'}</div>
+                            <div className="font-medium text-slate-800">{c.title || 'Chưa có tiêu ��ề'}</div>
                             <div className="text-[11px] text-slate-500 mt-0.5">{c.last_active ? new Date(c.last_active).toLocaleString('vi-VN') : ''}</div>
                           </button>
                           <div className="flex items-center gap-2">
@@ -1734,116 +1840,96 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         </Drawer>
       )}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {!showSidebar && (
-          <div className="p-2">
-            <button onClick={() => setShowSidebar(true)} className="text-xs px-3 py-1.5 bg-gray-100 rounded-full hover:bg-gray-200">Mở lịch sử</button>
+        {!showSidebar && !isMobile && (
+          <div className="absolute top-20 left-3 z-20">
+            <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mo lich su">
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
           </div>
         )}
       {/* Input and actions moved to bottom */}
-      {/* Medical Disclaimer */}
+      {/* Medical Disclaimer - Compact */}
       {!disclaimerDismissed && (
-        isDisclaimerCollapsed ? (
-          <div className="mx-4 mb-3">
-            <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-full px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-amber-500 dark:bg-amber-600 rounded-md flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="h-3 w-3 text-white" />
-                </div>
-                <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">Lưu ý quan trọng</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setIsDisclaimerCollapsed(false)} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Mở</button>
-                <button onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Ẩn</button>
-              </div>
+        <div className="mx-3 sm:mx-4 mb-2">
+          <div className="flex items-center justify-between bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/50 rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <span className="text-xs text-amber-800 dark:text-amber-200">Thong tin chi mang tinh tham khao. Hay tham khao y kien bac si.</span>
             </div>
+            <button 
+              onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} 
+              className="ml-2 p-1 rounded-lg hover:bg-amber-200/50 dark:hover:bg-amber-800/30 transition flex-shrink-0"
+            >
+              <X className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+            </button>
           </div>
-        ) : (
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 m-4 mb-3 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-amber-500 dark:bg-amber-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                <AlertTriangle className="h-4 w-4 text-white" />
-              </div>
-              <div className="text-sm flex-1">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <p className="text-amber-800 dark:text-amber-200 font-semibold">Lưu ý quan trọng</p>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => setIsDisclaimerCollapsed(true)} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Thu nhỏ</button>
-                    <button onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Ẩn</button>
-                  </div>
-                </div>
-                <p className="text-amber-700 dark:text-amber-300 text-xs leading-relaxed">
-                  Thông tin này chỉ mang tính chất tham khảo. Vui lòng tham khảo ý kiến bác sĩ chuyên khoa để được chẩn đoán và điều trị chính xác.
-                </p>
-              </div>
-            </div>
-          </div>
-        )
+        </div>
       )}
 
       {/* Messages Container */}
       <div 
-        className="flex-1 overflow-y-auto px-4 min-h-0"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 min-h-0 custom-scrollbar"
         style={{ 
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain'
         }}
       >
-        <div className="space-y-2">
+        <div className="space-y-4 py-4">
         {messages.map((message, index) => (
           <div
             key={index}
-            className={`flex items-start space-x-2 ${
+            className={`flex items-end gap-3 animate-message-in ${
               message.isUser ? 'justify-end' : 'justify-start'
             }`}
           >
             {!message.isUser && (
-              <div className="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                <Bot className="h-3 w-3 text-white" />
+              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                <Bot className="h-4 w-4 text-white" />
               </div>
             )}
             
             <div
-              className={`max-w-[80%] px-3 py-2 shadow-[0px_2px_6px_rgba(0,0,0,0.05)] ${
+              className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 ${
                 message.isUser
-                  ? 'bg-blue-500 text-white rounded-tl-[12px] rounded-tr-[12px] rounded-bl-[12px] rounded-br-[4px]'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-tl-[12px] rounded-tr-[12px] rounded-br-[12px] rounded-bl-[4px]'
+                  ? 'chat-bubble-user'
+                  : 'chat-bubble-bot border border-border/50'
               }`}
               style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
             >
               {message.isUser ? (
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed font-medium">{message.content}</p>
               ) : (
-                <div className="text-sm prose prose-sm dark:prose-invert leading-relaxed" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                <div className="text-sm prose prose-sm dark:prose-invert leading-relaxed prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                 </div>
               )}
               {!message.isUser && (
-                <div className="flex justify-end mt-2 space-x-1">
+                <div className="flex justify-end mt-3 pt-2 border-t border-border/30 gap-1.5">
                   {/* Nút Play/Pause */}
                   {isPlayingAudio === message.id ? (
                     <button
                       onClick={() => handlePauseAudio(message.id)}
-                      className="p-1 rounded-full bg-blue-500 text-white transition-colors duration-200 hover:bg-blue-600"
+                      className="p-1.5 rounded-full bg-primary text-primary-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
                       title="Tạm dừng"
                     >
-                      <Pause className="h-3 w-3" />
+                      <Pause className="h-3.5 w-3.5" />
                     </button>
                   ) : isPausedAudio === message.id ? (
                     <button
                       onClick={() => handleResumeAudio(message.id)}
-                      className="p-1 rounded-full bg-green-500 text-white transition-colors duration-200 hover:bg-green-600"
+                      className="p-1.5 rounded-full bg-accent text-accent-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
                       title="Tiếp tục"
                     >
-                      <Play className="h-3 w-3" />
+                      <Play className="h-3.5 w-3.5" />
                     </button>
                   ) : (
                     <button
                       onClick={() => handleTextToSpeech(message.id, message.content)}
-                      className="p-1 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors duration-200"
+                      className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200"
                       title="Nghe tin nhắn"
                     >
-                      <Volume2 className="h-3 w-3" />
+                      <Volume2 className="h-3.5 w-3.5" />
                     </button>
                   )}
                   
@@ -1851,10 +1937,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                   {(isPlayingAudio === message.id || isPausedAudio === message.id) && (
                     <button
                       onClick={handleStopAudio}
-                      className="p-1 rounded-full bg-red-500 text-white transition-colors duration-200 hover:bg-red-600"
+                      className="p-1.5 rounded-full bg-destructive text-destructive-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
                       title="Dừng"
                     >
-                      <Square className="h-3 w-3" />
+                      <Square className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
@@ -1862,24 +1948,37 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             </div>
 
             {message.isUser && (
-              <div className="flex-shrink-0 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <User className="h-3 w-3 text-white" />
+              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                <User className="h-4 w-4 text-white" />
               </div>
             )}
           </div>
         ))}
 
+        {/* Special Messages (Embeds, Music Players, Navigation Prompts) */}
+        {specialMessages.map((specialMsg) => (
+          <ChatSpecialMessage 
+            key={specialMsg.id} 
+            message={specialMsg} 
+            onClose={handleCloseSpecialMessage}
+          />
+        ))}
+
         {/* Loading Animation */}
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="flex items-start space-x-2">
-              <div className="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                <Bot className="h-3 w-3 text-white" />
+          <div className="flex justify-start animate-message-in">
+            <div className="flex items-end gap-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                <Bot className="h-4 w-4 text-white animate-pulse" />
               </div>
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-tl-[12px] rounded-tr-[12px] rounded-br-[12px] rounded-bl-[4px] px-3 py-2 shadow-[0px_2px_6px_rgba(0,0,0,0.05)]">
-                <div className="text-sm text-gray-700 dark:text-gray-200">
-                  <span>Đang trả lời</span>
-                  <span className="inline-block w-[8px] h-[16px] align-middle bg-gray-600 dark:bg-gray-300 ml-1 animate-pulse"></span>
+              <div className="chat-bubble-bot border border-border/50 px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                  <span className="text-sm text-muted-foreground font-medium">Dang suy nghi...</span>
                 </div>
               </div>
             </div>
@@ -1894,7 +1993,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onValueChange={setInput}
         onSubmit={handleSubmit}
         isLoading={isLoading}
-        suggestedQuestions={suggestedQuestions}
+        suggestedQuestions={aiSuggestions.length > 0 ? aiSuggestions : suggestedQuestions}
         onSuggestedQuestion={handleSuggestedQuestion}
         showTools={showTools}
         onToggleTools={() => setShowTools(!showTools)}

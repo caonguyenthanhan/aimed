@@ -4,75 +4,89 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Modern & Clean color palette for medical app - Blue/Teal healthcare aesthetic */
-  --background: #f8fafc;
-  --foreground: #1e293b;
+  /* Blue Color Palette - Primary */
+  --background: #f8fafb;
+  --foreground: #1a1a1a;
   --card: #ffffff;
-  --card-foreground: #1e293b;
+  --card-foreground: #1a1a1a;
   --popover: #ffffff;
-  --popover-foreground: #1e293b;
-  --primary: #2563eb;
+  --popover-foreground: #1a1a1a;
+  --primary: #1447E6;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #1e293b;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #14b8a6;
+  --secondary: #f0f4fb;
+  --secondary-foreground: #1a1a1a;
+  --muted: #e8f0ff;
+  --muted-foreground: #5a6b7d;
+  --accent: #0088FF;
   --accent-foreground: #ffffff;
-  --destructive: #dc2626;
+  --destructive: #e63946;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
+  --border: #d4e3ff;
   --input: #ffffff;
-  --ring: #2563eb;
-  --chart-1: #2563eb;
-  --chart-2: #14b8a6;
-  --chart-3: #10b981;
-  --chart-4: #f87171;
-  --chart-5: #8b5cf6;
-  --radius: 0.5rem;
+  --ring: #1447E6;
+  --chart-1: #1447E6;
+  --chart-2: #006FFF;
+  --chart-3: #0088FF;
+  --chart-4: #009AE2;
+  --chart-5: #00A8B3;
+  --radius: 0.75rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #1e293b;
-  --sidebar-primary: #f1f5f9;
-  --sidebar-primary-foreground: #1e293b;
-  --sidebar-accent: #2563eb;
+  --sidebar-foreground: #1a1a1a;
+  --sidebar-primary: #f0f4fb;
+  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar-accent: #1447E6;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #e2e8f0;
-  --sidebar-ring: #2563eb;
+  --sidebar-border: #d4e3ff;
+  --sidebar-ring: #1447E6;
+  
+  /* Chat specific colors */
+  --chat-user-bg: #1447E6;
+  --chat-user-text: #ffffff;
+  --chat-bot-bg: #f0f4fb;
+  --chat-bot-text: #1a1a1a;
+  --chat-accent: #0088FF;
 }
 
 .dark {
-  --background: #0f172a;
-  --foreground: #f1f5f9;
-  --card: #1e293b;
-  --card-foreground: #f1f5f9;
-  --popover: #1e293b;
-  --popover-foreground: #f1f5f9;
-  --primary: #3b82f6;
-  --primary-foreground: #0f172a;
-  --secondary: #334155;
-  --secondary-foreground: #f1f5f9;
-  --muted: #334155;
-  --muted-foreground: #94a3b8;
-  --accent: #06d6a0;
-  --accent-foreground: #0f172a;
-  --destructive: #ef4444;
-  --destructive-foreground: #f1f5f9;
-  --border: #334155;
-  --input: #334155;
-  --ring: #3b82f6;
-  --chart-1: #3b82f6;
-  --chart-2: #06d6a0;
-  --chart-3: #10b981;
-  --chart-4: #f87171;
-  --chart-5: #a78bfa;
-  --sidebar: #1e293b;
-  --sidebar-foreground: #f1f5f9;
-  --sidebar-primary: #334155;
-  --sidebar-primary-foreground: #f1f5f9;
-  --sidebar-accent: #3b82f6;
-  --sidebar-accent-foreground: #0f172a;
-  --sidebar-border: #334155;
-  --sidebar-ring: #3b82f6;
+  --background: #0f1419;
+  --foreground: #f5f5f5;
+  --card: #1a1f2e;
+  --card-foreground: #f5f5f5;
+  --popover: #1a1f2e;
+  --popover-foreground: #f5f5f5;
+  --primary: #3d7ee6;
+  --primary-foreground: #0f1419;
+  --secondary: #1f2937;
+  --secondary-foreground: #f5f5f5;
+  --muted: #2d3748;
+  --muted-foreground: #a0aec0;
+  --accent: #0088FF;
+  --accent-foreground: #0f1419;
+  --destructive: #ff6b6b;
+  --destructive-foreground: #f5f5f5;
+  --border: #2d3f5f;
+  --input: #1f2937;
+  --ring: #3d7ee6;
+  --chart-1: #3d7ee6;
+  --chart-2: #0088FF;
+  --chart-3: #00c2ff;
+  --chart-4: #009AE2;
+  --chart-5: #00A8B3;
+  --sidebar: #1a1f2e;
+  --sidebar-foreground: #f5f5f5;
+  --sidebar-primary: #1f2937;
+  --sidebar-primary-foreground: #f5f5f5;
+  --sidebar-accent: #3d7ee6;
+  --sidebar-accent-foreground: #0f1419;
+  --sidebar-border: #2d3f5f;
+  --sidebar-ring: #3d7ee6;
+  
+  /* Chat specific colors */
+  --chat-user-bg: #0088FF;
+  --chat-user-text: #f5f5f5;
+  --chat-bot-bg: #1f2937;
+  --chat-bot-text: #f5f5f5;
+  --chat-accent: #0088FF;
 }
 
 @theme inline {
@@ -149,11 +163,74 @@ body {
 }
 
 .hero-gradient {
-  background: radial-gradient(circle at top right, rgba(37, 99, 235, 0.08) 0%, transparent 40%), radial-gradient(circle at bottom left, rgba(20, 184, 166, 0.06) 0%, transparent 40%), #f8fafc;
+  background: radial-gradient(circle at top right, rgba(20, 71, 230, 0.08) 0%, transparent 50%), 
+              radial-gradient(circle at bottom left, rgba(0, 136, 255, 0.06) 0%, transparent 50%), 
+              #f8fafb;
 }
 
 .hero-gradient-dark {
-  background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1) 0%, transparent 40%), radial-gradient(circle at bottom left, rgba(6, 214, 160, 0.08) 0%, transparent 40%), #0f172a;
+  background: radial-gradient(circle at top right, rgba(61, 126, 230, 0.12) 0%, transparent 50%), 
+              radial-gradient(circle at bottom left, rgba(0, 136, 255, 0.1) 0%, transparent 50%), 
+              #0f1419;
+}
+
+/* Chat bubble styles */
+.chat-bubble-user {
+  background: var(--chat-user-bg);
+  color: var(--chat-user-text);
+  border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(29, 78, 95, 0.12);
+}
+
+.chat-bubble-bot {
+  background: var(--chat-bot-bg);
+  color: var(--chat-bot-text);
+  border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dark .chat-bubble-bot {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Smooth scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Message animation */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-message-in {
+  animation: message-in 0.3s ease-out forwards;
+}
+
+/* Subtle gradient card */
+.card-gradient {
+  background: linear-gradient(135deg, var(--card) 0%, var(--secondary) 100%);
+}
+
+/* Input focus glow */
+.input-glow:focus {
+  box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.15);
 }
 
 .text-glow {

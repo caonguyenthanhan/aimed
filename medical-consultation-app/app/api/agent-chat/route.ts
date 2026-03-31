@@ -24,16 +24,90 @@ export async function POST(req: Request) {
     if (!message) return NextResponse.json({ error: "Message is required" }, { status: 400 })
 
     const planResponseMessages = (content: string, actions: any[]) => {
-      const nav = Array.isArray(actions) ? actions.find((a) => a?.type === "navigate" && isAllowedPath(String(a?.args?.path || ""))) : null
-      if (nav) {
-        const p = String(nav?.args?.path || "").trim()
-        return [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }, buildNavLinkMessage(p)]
-      }
+      const msgs: any[] = []
+      
+      // Add text content first
       if (deliveryMode === "chunked") {
         const planned = planChunkedMessages(content)
-        return planned.length ? planned : [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }]
+        if (planned.length) {
+          msgs.push(...planned)
+        } else {
+          msgs.push({ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 })
+        }
+      } else {
+        msgs.push({ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 })
       }
-      return [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }]
+      
+      // Process actions and add special messages
+      if (Array.isArray(actions)) {
+        for (const action of actions) {
+          if (!action?.type) continue
+          
+          // Navigate action - add navigation link
+          if (action.type === "navigate" && isAllowedPath(String(action?.args?.path || ""))) {
+            const p = String(action.args.path).trim()
+            msgs.push(buildNavLinkMessage(p))
+          }
+          
+          // Ask navigation - add prompt message
+          if (action.type === "ask_navigation") {
+            msgs.push({
+              content: "",
+              kind: "ask_navigation",
+              delay_ms: 300,
+              data: {
+                feature: action.args?.feature,
+                reason: action.args?.reason || "Bạn muốn mở tính năng này không?",
+                context: action.args?.context || {},
+              },
+            })
+          }
+          
+          // Embed - add embed message
+          if (action.type === "embed") {
+            msgs.push({
+              content: "",
+              kind: "embed",
+              delay_ms: 300,
+              data: {
+                feature: action.args?.feature,
+                context: action.args?.context || {},
+              },
+            })
+          }
+          
+          // Play music - add music player
+          if (action.type === "play_music") {
+            msgs.push({
+              content: "",
+              kind: "play_music",
+              delay_ms: 200,
+              data: {
+                videoId: action.args?.videoId,
+                title: action.args?.title,
+                artist: action.args?.artist,
+                autoplay: action.args?.autoplay !== false,
+              },
+            })
+          }
+          
+          // Recommend music - add music list
+          if (action.type === "recommend_music") {
+            msgs.push({
+              content: "",
+              kind: "recommend_music",
+              delay_ms: 300,
+              data: {
+                recommendations: action.args?.recommendations || [],
+                mood: action.args?.mood,
+                message: action.args?.message,
+              },
+            })
+          }
+        }
+      }
+      
+      return msgs.length ? msgs : [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }]
     }
 
     const ruleBasedActionsGuess = () => {

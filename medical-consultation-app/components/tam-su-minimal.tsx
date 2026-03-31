@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Heart, Menu, X } from "lucide-react"
+import { Heart, Menu, X, Music, Play, ExternalLink, User } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { PageAiInsight } from "@/components/page-ai-insight"
@@ -178,6 +178,9 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   const [isRecording, setIsRecording] = useState(false)
   const [lastAudioUrl, setLastAudioUrl] = useState<string | null>(null)
   const [levels, setLevels] = useState<number[]>([6, 10, 16, 10, 6])
+  const [musicRecommendations, setMusicRecommendations] = useState<Array<{ videoId: string; title: string; artist: string; mood: string }> | null>(null)
+  const [musicMessage, setMusicMessage] = useState<string | null>(null)
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -459,6 +462,13 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         }
         setSosOpen(true)
       }
+      
+      // Handle music recommendations
+      const musicData = (data as any)?.music
+      if (musicData && Array.isArray(musicData.recommendations) && musicData.recommendations.length > 0) {
+        setMusicRecommendations(musicData.recommendations)
+        setMusicMessage(musicData.message || "Đây là một số nhạc thư giãn cho bạn:")
+      }
       const content =
         (data as any)?.choices?.[0]?.message?.content ||
         (data as any)?.response ||
@@ -592,16 +602,18 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
             <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
+            <DialogDescription className="text-red-600">
+              Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-slate-800">
-            <div>Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>
             <div className="space-y-1">
               {(sosHotlines.length ? sosHotlines : [{ label: "Cấp cứu", number: "115" }, { label: "Bảo vệ trẻ em", number: "111" }]).map((h) => (
                 <div key={`${h.label}-${h.number}`} className="font-medium">{h.label}: {h.number}</div>
               ))}
             </div>
-            <div>Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</div>
           </div>
+          <p className="text-sm text-slate-800">Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSosOpen(false)}>Đã hiểu</Button>
           </DialogFooter>
@@ -708,14 +720,14 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {isMobile ? (
-                  <button className="h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center hover:border-blue-300 dark:hover:border-blue-600 transition" type="button" onClick={() => setShowSidebar(true)} aria-label="Mở lịch sử">
-                    <Menu className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+                  <button className="h-9 w-9 rounded-xl border border-border bg-card flex items-center justify-center hover:bg-secondary transition-colors" type="button" onClick={() => setShowSidebar(true)} aria-label="Mo lich su">
+                    <Menu className="h-4 w-4 text-foreground" />
                   </button>
                 ) : null}
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as any)}
-                  className="text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium"
+                  className="text-xs px-3 py-2 border border-border rounded-xl bg-card text-foreground font-medium hover:bg-secondary transition-colors cursor-pointer"
                 >
                   <option value="flash">flash</option>
                   <option value="pro">pro</option>
@@ -723,25 +735,25 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 <select
                   value={friendStyle}
                   onChange={(e) => setFriendStyle(e.target.value as any)}
-                  className="text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium"
+                  className="text-xs px-3 py-2 border border-border rounded-xl bg-card text-foreground font-medium hover:bg-secondary transition-colors cursor-pointer"
                 >
-                  <option value="standard">gọn</option>
-                  <option value="deep">sâu</option>
+                  <option value="standard">gon</option>
+                  <option value="deep">sau</option>
                 </select>
                 <button 
-                  className="text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium hover:border-blue-300 dark:hover:border-blue-600 transition" 
+                  className="text-xs px-3 py-2 border border-border rounded-xl bg-card text-foreground font-medium hover:bg-secondary transition-colors" 
                   type="button" 
                   onClick={() => setVoiceMode(v => !v)}
                 >
-                  {voiceMode ? "💬 Chat" : "🎤 Voice"}
+                  {voiceMode ? "Chat" : "Voice"}
                 </button>
                 {voiceMode ? (
                   <button
-                    className={`text-xs px-3 py-2 rounded-lg font-medium transition-all ${isRecording ? "bg-red-600 dark:bg-red-600 text-white shadow-md active:scale-95" : "bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700"}`}
+                    className={`text-xs px-3 py-2 rounded-xl font-medium transition-all ${isRecording ? "bg-destructive text-destructive-foreground shadow-md active:scale-95" : "bg-primary text-primary-foreground hover:opacity-90"}`}
                     type="button"
                     onClick={() => { if (isRecording) void stopRecording(); else void startRecording() }}
                   >
-                    {isRecording ? "⏹ Dừng" : "🎙 Ghi âm"}
+                    {isRecording ? "Dung" : "Ghi am"}
                   </button>
                 ) : null}
                 {voiceMode && lastAudioUrl ? (
@@ -750,66 +762,171 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               </div>
             </div>
 
-            <div className="px-4 py-3 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b border-slate-200 dark:border-slate-700">
+            <div className="px-4 py-3 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b border-border bg-secondary/30">
               {suggestedQuestions.slice(0, 4).map((q) => (
                 <button 
                   key={q} 
                   type="button" 
-                  className="shrink-0 text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all font-medium" 
+                  className="shrink-0 text-xs px-4 py-2 rounded-full border border-border bg-card text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all font-medium shadow-sm" 
                   onClick={() => setInput(q)}
                 >
                   {q}
                 </button>
               ))}
               {voiceMode && isRecording ? (
-                <div className="flex items-end gap-1 h-6 ml-2">
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[0] || 6))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[1] || 10))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[2] || 16))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[3] || 10))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
-                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[4] || 6))) }px` }} className="w-1 bg-teal-500 rounded-sm transition-all duration-50"></div>
+                <div className="flex items-end gap-1 h-6 ml-2 px-3 py-1 bg-accent/10 rounded-full">
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[0] || 6))) }px` }} className="w-1 bg-accent rounded-full transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[1] || 10))) }px` }} className="w-1 bg-accent rounded-full transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[2] || 16))) }px` }} className="w-1 bg-accent rounded-full transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[3] || 10))) }px` }} className="w-1 bg-accent rounded-full transition-all duration-50"></div>
+                  <div style={{ height: `${Math.max(4, Math.min(24, (levels?.[4] || 6))) }px` }} className="w-1 bg-accent rounded-full transition-all duration-50"></div>
                 </div>
               ) : null}
             </div>
 
-            <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto bg-white dark:bg-slate-950">
+            <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto bg-background custom-scrollbar">
               <PageAiInsight
                 pageContext="emotional_support"
                 userQuestion={messages.length > 0 ? messages[messages.length - 1]?.role === "user" ? messages[messages.length - 1]?.content : undefined : undefined}
                 conversationHistory={messages.map(m => ({ role: m.role, content: m.content }))}
               />
               {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-                  <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center">
-                    <Heart className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-12">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
+                    <Heart className="h-10 w-10 text-accent" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Người Bạn Lắng Nghe</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xs">Không gian an toàn để bạn chia sẻ cảm xúc và suy nghĩ của mình</p>
+                  <h3 className="text-xl font-bold text-foreground">Nguoi Ban Lang Nghe</h3>
+                  <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">Khong gian an toan de ban chia se cam xuc va suy nghi cua minh. Toi luon o day lang nghe ban.</p>
                 </div>
               ) : (
                 <>
                   {messages.map((m) => (
-                    <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div key={m.id} className={`flex items-end gap-3 animate-message-in ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                      {m.role !== "user" && (
+                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                          <Heart className="h-4 w-4 text-white" />
+                        </div>
+                      )}
                       <div
-                        className={`max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                        className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                           m.role === "user" 
-                            ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md" 
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-50 border border-slate-200 dark:border-slate-700"
+                            ? "chat-bubble-user" 
+                            : "chat-bubble-bot border border-border/50"
                         }`}
                       >
                         {m.content}
-                        <div className={`text-xs mt-2 opacity-70 ${m.role === "user" ? "text-white" : "text-slate-600 dark:text-slate-400"}`}>
+                        <div className={`text-xs mt-2 opacity-60 ${m.role === "user" ? "text-white/80" : "text-muted-foreground"}`}>
                           {new Date(m.ts || nowTs()).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                         </div>
                       </div>
+                      {m.role === "user" && (
+                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                          <User className="h-4 w-4 text-white" />
+                        </div>
+                      )}
                     </div>
                   ))}
+                  
+                  {/* Music Recommendations */}
+                  {musicRecommendations && musicRecommendations.length > 0 && (
+                    <div className="flex justify-start animate-message-in">
+                      <div className="max-w-[95%] sm:max-w-[85%] rounded-2xl px-4 py-4 bg-gradient-to-br from-accent/10 to-primary/10 border border-accent/30">
+                        <div className="flex items-center gap-2 mb-4">
+                          <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                            <Music className="h-4 w-4 text-accent" />
+                          </div>
+                          <span className="text-sm font-semibold text-foreground">{musicMessage || "Nhac goi y cho ban"}</span>
+                          <button 
+                            onClick={() => { setMusicRecommendations(null); setPlayingVideoId(null) }}
+                            className="ml-auto p-1.5 rounded-full hover:bg-secondary transition-colors"
+                          >
+                            <X className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </div>
+                        
+                        {/* Playing video */}
+                        {playingVideoId && (
+                          <div className="mb-4 rounded-xl overflow-hidden shadow-lg">
+                            <iframe
+                              src={`https://www.youtube.com/embed/${playingVideoId}?autoplay=1&rel=0`}
+                              className="w-full aspect-video"
+                              allow="autoplay; encrypted-media"
+                              allowFullScreen
+                              title="Music Player"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Music list */}
+                        <div className="space-y-2">
+                          {musicRecommendations.map((track, idx) => (
+                            <div 
+                              key={`${track.videoId}-${idx}`}
+                              className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${
+                                playingVideoId === track.videoId 
+                                  ? "bg-accent/20 border border-accent/40 shadow-sm" 
+                                  : "bg-card hover:bg-secondary border border-transparent"
+                              }`}
+                              onClick={() => setPlayingVideoId(playingVideoId === track.videoId ? null : track.videoId)}
+                            >
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                playingVideoId === track.videoId ? "bg-accent" : "bg-accent/20"
+                              }`}>
+                                {playingVideoId === track.videoId ? (
+                                  <div className="flex items-end gap-0.5 h-4">
+                                    <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "60%" }} />
+                                    <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "100%", animationDelay: "0.2s" }} />
+                                    <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "40%", animationDelay: "0.4s" }} />
+                                  </div>
+                                ) : (
+                                  <Play className="h-4 w-4 text-accent" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{track.title}</p>
+                                <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                              </div>
+                              <a 
+                                href={`https://www.youtube.com/watch?v=${track.videoId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                              >
+                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Thinking Animation */}
+                  {isLoading && (
+                    <div className="flex items-end gap-3 animate-message-in">
+                      <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                        <Heart className="h-4 w-4 text-white animate-pulse" />
+                      </div>
+                      <div className="chat-bubble-bot border border-border/50 px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex gap-1.5">
+                            <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </div>
+                          <span className="text-sm text-muted-foreground font-medium">Dang suy nghi...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div ref={endRef} />
                 </>
               )}
             </div>
 
-            <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-end gap-2">
+            <div className="p-4 border-t border-border bg-card flex items-end gap-3">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

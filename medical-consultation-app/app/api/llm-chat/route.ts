@@ -6,7 +6,7 @@ import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 import { persistChatTurn } from '@/lib/chat-persistence'
 import crypto from 'crypto'
 import { assessSos, buildSosResponse } from '@/lib/sos-mode'
-import { planChunkedMessages } from '@/lib/chat-delivery'
+import { planChunkedMessages, verifyContentIntegrity } from '@/lib/chat-delivery'
 
 // Determine context based on the conversation or user input
 function determineContext(userMessage: string, conversationHistory?: any[]): string {
@@ -34,11 +34,36 @@ export async function POST(request: NextRequest) {
     const referer = request.headers.get('referer') || ''
     const deliveryMode = delivery_mode === 'live' ? 'live' : 'chunked'
     const planResponseMessages = (content: string) => {
-      if (deliveryMode === 'chunked') {
-        const planned = planChunkedMessages(content)
-        return planned.length ? planned : [{ content: String(content || '').trim() || ' ', kind: 'text', delay_ms: 0 }]
+      try {
+        const contentStr = String(content || '').trim()
+        if (!contentStr) {
+          return [{ content: ' ', kind: 'text', delay_ms: 0 }]
+        }
+        
+        let result = [{ content: contentStr, kind: 'text', delay_ms: 0 }]
+        
+        if (deliveryMode === 'chunked') {
+          try {
+            const planned = planChunkedMessages(contentStr, { maxMessages: 8, maxCharsPerMessage: 300 })
+            if (Array.isArray(planned) && planned.length > 0) {
+              // Verify content integrity before returning
+              const integrityOk = verifyContentIntegrity(contentStr, planned)
+              if (!integrityOk) {
+                console.warn('[LLM] Content integrity check failed, reverting to single message')
+              } else {
+                result = planned
+              }
+            }
+          } catch (e) {
+            console.error('[LLM] Error planning chunked messages:', e)
+          }
+        }
+        
+        return result
+      } catch (e) {
+        console.error('[LLM] Error in planResponseMessages:', e)
+        return [{ content: String(content || '').trim() || ' ', kind: 'text', delay_ms: 0 }]
       }
-      return [{ content: String(content || '').trim() || ' ', kind: 'text', delay_ms: 0 }]
     }
     
     const userMessage = message || question || prompt
@@ -146,7 +171,7 @@ export async function POST(request: NextRequest) {
           const BASE_SYSTEM_PROMPT = `Bạn là Trợ lý Y tế AI (Medical Consultant AI). Nhiệm vụ của bạn là cung cấp thông tin y tế hữu ích, chính xác và an toàn bằng Tiếng Việt.
 
 NGUYÊN TẮC QUAN TRỌNG:
-1. AN TOÀN LÀ TRÊN HẾT: Luôn khuyến cáo người dùng đi khám bác sĩ hoặc đến cơ sở y tế nếu có dấu hiệu nghiêm trọng. Không đưa ra chẩn đoán khẳng định hoặc kê đơn thuốc thay thế bác sĩ.
+1. AN TOÀN LÀ TRÊN HẾT: Luôn khuyến cáo ng��ời dùng đi khám bác sĩ hoặc đến cơ sở y tế nếu có dấu hiệu nghiêm trọng. Không đưa ra chẩn đoán khẳng định hoặc kê đơn thuốc thay thế bác sĩ.
 2. KHÁCH QUAN & KHOA HỌC: Dựa trên kiến thức y khoa đã được kiểm chứng.
 3. NGÔN NGỮ: Sử dụng Tiếng Việt chuẩn mực, dễ hiểu, giọng điệu ân cần, chuyên nghiệp.
 4. TỪ CHỐI TRẢ LỜI: Nếu câu hỏi không liên quan đến y tế/sức khỏe hoặc vi phạm đạo đức, hãy lịch sự từ chối hoặc lái về chủ đề y tế.`
@@ -461,12 +486,14 @@ NGUYÊN TẮC QUAN TRỌNG:
       : ((typeof conversation_id === 'string' && String(conversation_id).trim()) ? String(conversation_id).trim() : crypto.randomUUID())
 
     if (!content) {
-      console.error('No content in response:', data)
+      console.error('[LLM] No content in response:', JSON.stringify(data).substring(0, 500))
       return NextResponse.json(
-        { error: 'No content in response', details: JSON.stringify(data) },
+        { error: 'No content in response', details: JSON.stringify(data).substring(0, 500) },
         { status: 502 }
       )
     }
+    
+    console.log(`[LLM] Response content prepared: ${content.length} chars, mode: ${modeUsed}, delivery: ${deliveryMode}`)
     try {
       await persistChatTurn({
         sessionId: newConversationId,
