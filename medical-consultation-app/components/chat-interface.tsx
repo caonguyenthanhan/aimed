@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, ChevronRight, Search, MessageSquare } from "lucide-react"
+// Force hot reload - v2
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -336,8 +337,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content:
-        "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+      content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -351,6 +351,19 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [sosHotlines, setSosHotlines] = useState<Array<{ label: string; number: string }>>([])
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
+  const [selectedModel, setSelectedModel] = useState<'flash' | 'pro'>('flash')
+  const [showTools, setShowTools] = useState(false)
+  const [selectedDocName, setSelectedDocName] = useState<string | null>(null)
+  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [isDisclaimerCollapsed, setIsDisclaimerCollapsed] = useState<boolean>(false)
+  const [disclaimerDismissed, setDisclaimerDismissed] = useState<boolean>(false)
+  const [sidebarSearchOpen, setSidebarSearchOpen] = useState<boolean>(false)
+  const [sidebarSearch, setSidebarSearch] = useState<string>('')
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+
+  // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const sendingRef = useRef<boolean>(false)
@@ -364,6 +377,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const liveTextRunRef = useRef<number>(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const docInputRef = useRef<HTMLInputElement | null>(null)
+  const suggestionsTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Smart suggestion system based on context and conversation history
   const getSmartSuggestions = () => {
@@ -429,11 +443,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     return baseSuggestions
   }
 
-  // AI-powered suggestions state - moved before getSmartSuggestions
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
-  const suggestionsTimerRef = useRef<NodeJS.Timeout | null>(null)
-
   const suggestedQuestions = getSmartSuggestions()
   
   // Fetch AI-powered suggestions
@@ -489,17 +498,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     scrollToBottom()
     messagesRef.current = messages
   }, [messages])
-
-  const [selectedModel, setSelectedModel] = useState<'flash' | 'pro'>('flash')
-  const [showTools, setShowTools] = useState(false)
-  const [selectedDocName, setSelectedDocName] = useState<string | null>(null)
-  const [conversationId, setConversationId] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
-  const [isDisclaimerCollapsed, setIsDisclaimerCollapsed] = useState<boolean>(false)
-  const [disclaimerDismissed, setDisclaimerDismissed] = useState<boolean>(false)
-  const [sidebarSearchOpen, setSidebarSearchOpen] = useState<boolean>(false)
-  const [sidebarSearch, setSidebarSearch] = useState<string>('')
- 
 
   const startConversationIfNeeded = async (): Promise<string | null> => {
     if (conversationId) return conversationId
