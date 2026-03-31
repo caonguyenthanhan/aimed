@@ -1919,13 +1919,17 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         {isLoading && (
           <div className="flex justify-start">
             <div className="flex items-start space-x-2">
-              <div className="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+              <div className="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center animate-pulse">
                 <Bot className="h-3 w-3 text-white" />
               </div>
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-tl-[12px] rounded-tr-[12px] rounded-br-[12px] rounded-bl-[4px] px-3 py-2 shadow-[0px_2px_6px_rgba(0,0,0,0.05)]">
-                <div className="text-sm text-gray-700 dark:text-gray-200">
-                  <span>Đang trả lời</span>
-                  <span className="inline-block w-[8px] h-[16px] align-middle bg-gray-600 dark:bg-gray-300 ml-1 animate-pulse"></span>
+              <div className="bg-gray-100 dark:bg-gray-800 rounded-tl-[12px] rounded-tr-[12px] rounded-br-[12px] rounded-bl-[4px] px-4 py-3 shadow-[0px_2px_6px_rgba(0,0,0,0.05)]">
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  </div>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Đang suy nghĩ...</span>
                 </div>
               </div>
             </div>

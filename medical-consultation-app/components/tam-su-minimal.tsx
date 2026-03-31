@@ -5,7 +5,7 @@ import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Heart, Menu, X } from "lucide-react"
+import { Heart, Menu, X, Music, Play, ExternalLink } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { PageAiInsight } from "@/components/page-ai-insight"
@@ -178,6 +178,9 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   const [isRecording, setIsRecording] = useState(false)
   const [lastAudioUrl, setLastAudioUrl] = useState<string | null>(null)
   const [levels, setLevels] = useState<number[]>([6, 10, 16, 10, 6])
+  const [musicRecommendations, setMusicRecommendations] = useState<Array<{ videoId: string; title: string; artist: string; mood: string }> | null>(null)
+  const [musicMessage, setMusicMessage] = useState<string | null>(null)
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null)
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -458,6 +461,13 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
           setSosHotlines([])
         }
         setSosOpen(true)
+      }
+      
+      // Handle music recommendations
+      const musicData = (data as any)?.music
+      if (musicData && Array.isArray(musicData.recommendations) && musicData.recommendations.length > 0) {
+        setMusicRecommendations(musicData.recommendations)
+        setMusicMessage(musicData.message || "Đây là một số nhạc thư giãn cho bạn:")
       }
       const content =
         (data as any)?.choices?.[0]?.message?.content ||
@@ -806,6 +816,94 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                       </div>
                     </div>
                   ))}
+                  
+                  {/* Music Recommendations */}
+                  {musicRecommendations && musicRecommendations.length > 0 && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[95%] sm:max-w-[85%] rounded-2xl px-4 py-3 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border border-purple-200 dark:border-purple-800">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Music className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          <span className="text-sm font-medium text-purple-800 dark:text-purple-300">{musicMessage || "Nhạc gợi ý cho bạn"}</span>
+                          <button 
+                            onClick={() => { setMusicRecommendations(null); setPlayingVideoId(null) }}
+                            className="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                        
+                        {/* Playing video */}
+                        {playingVideoId && (
+                          <div className="mb-3 rounded-lg overflow-hidden">
+                            <iframe
+                              src={`https://www.youtube.com/embed/${playingVideoId}?autoplay=1&rel=0`}
+                              className="w-full aspect-video"
+                              allow="autoplay; encrypted-media"
+                              allowFullScreen
+                              title="Music Player"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Music list */}
+                        <div className="space-y-2">
+                          {musicRecommendations.map((track, idx) => (
+                            <div 
+                              key={`${track.videoId}-${idx}`}
+                              className={`flex items-center gap-3 p-2 rounded-lg transition-all cursor-pointer ${
+                                playingVideoId === track.videoId 
+                                  ? "bg-purple-100 dark:bg-purple-900/40 border border-purple-300 dark:border-purple-700" 
+                                  : "bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800"
+                              }`}
+                              onClick={() => setPlayingVideoId(playingVideoId === track.videoId ? null : track.videoId)}
+                            >
+                              <div className="w-8 h-8 rounded bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center flex-shrink-0">
+                                {playingVideoId === track.videoId ? (
+                                  <div className="flex items-end gap-0.5 h-4">
+                                    <div className="w-1 bg-purple-500 animate-pulse" style={{ height: "60%" }} />
+                                    <div className="w-1 bg-purple-500 animate-pulse" style={{ height: "100%", animationDelay: "0.2s" }} />
+                                    <div className="w-1 bg-purple-500 animate-pulse" style={{ height: "40%", animationDelay: "0.4s" }} />
+                                  </div>
+                                ) : (
+                                  <Play className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-slate-900 dark:text-slate-50 truncate">{track.title}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{track.artist}</p>
+                              </div>
+                              <a 
+                                href={`https://www.youtube.com/watch?v=${track.videoId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Thinking Animation */}
+                  {isLoading && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[85%] sm:max-w-[70%] rounded-2xl px-4 py-3 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                            <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                            <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          </div>
+                          <span className="text-sm text-slate-600 dark:text-slate-400">Đang suy nghĩ...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div ref={endRef} />
                 </>
               )}

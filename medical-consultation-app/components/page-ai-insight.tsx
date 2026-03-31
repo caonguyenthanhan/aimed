@@ -102,7 +102,16 @@ export function PageAiInsight({
       })
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`)
+        // Silently handle rate limit and server errors without flooding console
+        const status = response.status
+        if (status === 429 || status === 503) {
+          // Rate limit or service unavailable - just skip this insight
+          setError('rate_limited')
+          return
+        }
+        // For other errors, set error state but don't throw
+        setError(`API error: ${status}`)
+        return
       }
 
       const data: InsightResponse = await response.json()
@@ -114,7 +123,7 @@ export function PageAiInsight({
         }
       }
     } catch (err) {
-      console.error('[v0] Failed to fetch page insight:', err)
+      // Silently handle errors - page insight is optional feature
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setIsLoading(false)
