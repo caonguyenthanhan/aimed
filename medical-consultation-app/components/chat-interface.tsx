@@ -407,7 +407,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       if (conversationText.includes('đau') || conversationText.includes('nhức')) {
         return contextualSuggestions.pain
       }
-      if (conversationText.includes('lo âu') || conversationText.includes('stress') || 
+      if (conversationText.includes('lo ��u') || conversationText.includes('stress') || 
           conversationText.includes('trầm cảm') || conversationText.includes('tâm lý')) {
         return contextualSuggestions.mental
       }
@@ -649,7 +649,15 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const agentActions = agentMode ? normalizeActions((data as any)?.actions) : []
       if (agentActions.length) {
         const lastId = deliveredIds[deliveredIds.length - 1] || (Date.now() + 1).toString()
-        await executeAgentActions(agentActions, { speakMessageId: lastId, fallbackSpeakText: aiResponse })
+        let executionDelay = 1000
+        if (delivery_mode !== "live") {
+          const allDelays = deliverList.map((m: any) => (m?.delay_ms || 0))
+          const totalDelay = allDelays.reduce((a, b) => a + b, 0)
+          executionDelay = Math.max(totalDelay + 500, 1500)
+        }
+        setTimeout(async () => {
+          await executeAgentActions(agentActions, { speakMessageId: lastId, fallbackSpeakText: aiResponse })
+        }, executionDelay)
       }
     } catch {
       const fallbackMessage: Message = {

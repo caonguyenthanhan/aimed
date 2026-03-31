@@ -32,13 +32,21 @@ export function planChunkedMessages(text: string, opts?: { maxMessages?: number;
     if (buf) out.push({ content: buf, kind: "text" })
   }
 
-  const trimmed = out.slice(0, maxMessages)
+  const result: ChatDeliveryMessageDto[] = []
+  
+  for (let i = 0; i < out.length && result.length < maxMessages; i++) {
+    result.push(out[i])
+  }
+  
   if (out.length > maxMessages) {
-    const rest = out.slice(maxMessages).map((x) => x.content).join("\n\n").trim()
-    if (rest) trimmed[trimmed.length - 1] = { content: `${trimmed[trimmed.length - 1].content}\n\n${rest}`, kind: "text" }
+    const remaining = out.slice(maxMessages)
+    const restContent = remaining.map((x) => x.content).join("\n\n").trim()
+    if (restContent) {
+      result.push({ content: restContent, kind: "text" })
+    }
   }
 
-  return trimmed.map((m, i) => ({ ...m, delay_ms: i === 0 ? 0 : 450 }))
+  return result.map((m, i) => ({ ...m, delay_ms: i === 0 ? 0 : 450 }))
 }
 
 export function buildNavLinkMessage(path: string) {
