@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { } from "@/lib/llm-config"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { sanitizeTtsText } from "@/lib/tts-text"
@@ -407,7 +407,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       if (conversationText.includes('đau') || conversationText.includes('nhức')) {
         return contextualSuggestions.pain
       }
-      if (conversationText.includes('lo ��u') || conversationText.includes('stress') || 
+      if (conversationText.includes('lo ����u') || conversationText.includes('stress') || 
           conversationText.includes('trầm cảm') || conversationText.includes('tâm lý')) {
         return contextualSuggestions.mental
       }
@@ -486,8 +486,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const enqueueAssistantDelivery = (items: Array<{ content: string; delay_ms?: number }>) => {
     const safeItems = items
-      .map((m) => ({ id: (Date.now() + Math.random()).toString(), content: String(m?.content || "").trim(), delay_ms: typeof m?.delay_ms === "number" ? m.delay_ms : undefined }))
-      .filter((m) => m.content)
+      .map((m, idx) => {
+        const content = String(m?.content || "").trim()
+        const id = (Date.now() + Math.random()).toString()
+        if (!content) {
+          console.warn(`[v0] Item ${idx} has empty content after trim, preserving with placeholder to prevent loss`)
+        }
+        return { id, content: content || " ", delay_ms: typeof m?.delay_ms === "number" ? m.delay_ms : undefined }
+      })
     if (!safeItems.length) return
     assistantQueueRef.current.push(...safeItems)
     if (!assistantWorkerRef.current) {
@@ -1553,16 +1559,18 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
             <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
+            <DialogDescription className="text-red-600">
+              Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-slate-800">
-            <div>Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>
             <div className="space-y-1">
               {(sosHotlines.length ? sosHotlines : [{ label: "Cấp cứu", number: "115" }, { label: "Bảo vệ trẻ em", number: "111" }]).map((h) => (
                 <div key={`${h.label}-${h.number}`} className="font-medium">{h.label}: {h.number}</div>
               ))}
             </div>
-            <div>Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</div>
           </div>
+          <p className="text-sm text-slate-800">Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSosOpen(false)}>Đã hiểu</Button>
           </DialogFooter>
@@ -1572,6 +1580,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Đổi tên hội thoại</DialogTitle>
+            <DialogDescription>
+              Nhập tiêu đề mới cho hội thoại này
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input value={renameInput} onChange={(e) => setRenameInput(e.target.value)} placeholder="Nhập tiêu đề" />
@@ -1586,11 +1597,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent>
           <DialogHeader>
             <DialogTitle>API Key / Pass</DialogTitle>
+            <DialogDescription>
+              Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="text-sm text-slate-700 dark:text-slate-300">
-              Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
-            </div>
             <Input type="password" value={authSecret} onChange={(e) => setAuthSecret(e.target.value)} placeholder="Nhập API key hoặc pass" />
           </div>
           <DialogFooter>

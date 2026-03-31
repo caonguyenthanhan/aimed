@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state-client"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Heart, Menu, X } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
@@ -592,16 +592,18 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
             <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
+            <DialogDescription className="text-red-600">
+              Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-slate-800">
-            <div>Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay:</div>
             <div className="space-y-1">
               {(sosHotlines.length ? sosHotlines : [{ label: "Cấp cứu", number: "115" }, { label: "Bảo vệ trẻ em", number: "111" }]).map((h) => (
                 <div key={`${h.label}-${h.number}`} className="font-medium">{h.label}: {h.number}</div>
               ))}
             </div>
-            <div>Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</div>
           </div>
+          <p className="text-sm text-slate-800">Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSosOpen(false)}>Đã hiểu</Button>
           </DialogFooter>
