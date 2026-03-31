@@ -102,7 +102,7 @@ export function PageAiInsight({
       })
 
       if (!response.ok) {
-        // Silently handle rate limit and server errors without flooding console
+        // Handle errors silently - v2
         const status = response.status
         if (status === 429 || status === 503) {
           // Rate limit or service unavailable - just skip this insight

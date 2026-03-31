@@ -430,6 +430,54 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   const suggestedQuestions = getSmartSuggestions()
+  
+  // Fetch AI-powered suggestions
+  const fetchAiSuggestions = async () => {
+    if (isLoadingSuggestions) return
+    
+    setIsLoadingSuggestions(true)
+    try {
+      const response = await fetch('/api/suggest-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: messages.slice(-5) })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.suggestions && data.suggestions.length > 0) {
+          setAiSuggestions(data.suggestions)
+        }
+      }
+    } catch {
+      // Silently fail - will use fallback suggestions
+    } finally {
+      setIsLoadingSuggestions(false)
+    }
+  }
+  
+  // Fetch suggestions when messages change (with debounce)
+  useEffect(() => {
+    if (suggestionsTimerRef.current) {
+      clearTimeout(suggestionsTimerRef.current)
+    }
+    
+    // Only fetch if we have messages and last message is from AI
+    if (messages.length > 0 && !messages[messages.length - 1]?.isUser) {
+      suggestionsTimerRef.current = setTimeout(() => {
+        fetchAiSuggestions()
+      }, 1000) // Debounce 1 second after AI response
+    }
+    
+    return () => {
+      if (suggestionsTimerRef.current) {
+        clearTimeout(suggestionsTimerRef.current)
+      }
+    }
+  }, [messages])
+  
+  // Use AI suggestions if available, otherwise fallback to smart suggestions
+  const displaySuggestions = aiSuggestions.length > 0 ? aiSuggestions : suggestedQuestions
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -442,6 +490,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const [selectedModel, setSelectedModel] = useState<'flash' | 'pro'>('flash')
   const [showTools, setShowTools] = useState(false)
+  
+  // AI-powered suggestions
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  const suggestionsTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [selectedDocName, setSelectedDocName] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -936,6 +989,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             timestamp: new Date(),
           }
           setMessages([defaultMsg])
+          setAiSuggestions([]) // Reset AI suggestions for new conversation
           
           await fetchConversations()
           if (typeof window !== 'undefined') {
@@ -956,6 +1010,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setConversationId(newId)
       setMessages([])
       setSpecialMessages([])
+      setAiSuggestions([]) // Reset AI suggestions
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(`conv_messages_${newId}`, JSON.stringify([]))
@@ -1449,7 +1504,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               {
                 id: '1',
                 content:
-                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. B��n có câu hỏi gì không?',
+                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuy��n biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. B��n có câu hỏi gì không?',
                 isUser: false,
                 timestamp: new Date(),
               },
@@ -1749,7 +1804,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                       ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
                         <div key={c.id} className={`flex items-center justify-between p-3 rounded-2xl border ${conversationId === c.id ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'}`}>
                           <button className="text-left text-sm flex-1 pr-2" onClick={() => { openConversation(c.id); setShowSidebar(false) }} type="button">
-                            <div className="font-medium text-slate-800">{c.title || 'Chưa có tiêu đề'}</div>
+                            <div className="font-medium text-slate-800">{c.title || 'Chưa có tiêu ��ề'}</div>
                             <div className="text-[11px] text-slate-500 mt-0.5">{c.last_active ? new Date(c.last_active).toLocaleString('vi-VN') : ''}</div>
                           </button>
                           <div className="flex items-center gap-2">
@@ -1924,7 +1979,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onValueChange={setInput}
         onSubmit={handleSubmit}
         isLoading={isLoading}
-        suggestedQuestions={suggestedQuestions}
+        suggestedQuestions={displaySuggestions}
         onSuggestedQuestion={handleSuggestedQuestion}
         showTools={showTools}
         onToggleTools={() => setShowTools(!showTools)}
