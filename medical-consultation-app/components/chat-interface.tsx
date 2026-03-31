@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, ChevronRight, Search, MessageSquare } from "lucide-react"
-// Force hot reload - v2
+// Force refresh - clear cache - v3
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -986,7 +986,26 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           setMessages([defaultMsg])
           setAiSuggestions([]) // Reset AI suggestions for new conversation
           
-          await fetchConversations()
+      await fetchConversations()
+
+      // Auto-name conversation if it's the first message
+      if (messages.length === 1 && newId) {
+        try {
+          const nameResponse = await fetch('/api/auto-name-conversation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: [{ isUser: true, content: text }], conversationId: newId })
+          })
+          
+          if (nameResponse.ok) {
+            const { name } = await nameResponse.json()
+            // Optionally update conversation title in UI/backend
+            console.log('[v0] Auto-named conversation:', name)
+          }
+        } catch (err) {
+          console.debug('[v0] Auto-naming failed:', err)
+        }
+      }
           if (typeof window !== 'undefined') {
             try {
               const url = new URL(window.location.href)
@@ -1776,7 +1795,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                     <input
                       value={sidebarSearch}
                       onChange={(e) => setSidebarSearch(e.target.value)}
-                      placeholder="Lọc hội thoại..."
+                      placeholder="L���c hội thoại..."
                       className="w-full pl-9 pr-9 py-2 text-sm rounded-2xl border border-gray-200 focus:border-blue-400 outline-none bg-white"
                     />
                     {sidebarSearch && (
