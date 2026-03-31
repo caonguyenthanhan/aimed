@@ -3,7 +3,21 @@
 
 import { getNeonPool } from './neon-db'
 
-export type AgentType = 'doctor_finder' | 'health_screening' | 'symptom_checker' | 'medication_info' | 'appointment_scheduler' | 'medical_records'
+export type AgentType = 
+  | 'doctor_finder' 
+  | 'health_screening' 
+  | 'symptom_checker' 
+  | 'medication_info' 
+  | 'appointment_scheduler' 
+  | 'medical_records'
+  | 'sang_loc'
+  | 'tri_lieu'
+  | 'tra_cuu'
+  | 'bac_si'
+  | 'ke_hoach'
+  | 'thong_ke'
+  | 'tam_su'
+  | 'music_therapy'
 
 export interface Agent {
   id: AgentType
@@ -100,6 +114,87 @@ export class AgentRegistry {
         embeddable: false,
         hasApiEndpoint: true,
         metadata: { icon: 'file' }
+      },
+      // New embeddable agents for consultation hub
+      {
+        id: 'sang_loc',
+        name: 'Sàng Lọc Tâm Lý',
+        description: 'Đánh giá sức khỏe tâm thần với các bài test chuẩn (PHQ-9, GAD-7, DASS-21)',
+        category: 'diagnosis',
+        route: '/sang-loc',
+        embeddable: true,
+        hasApiEndpoint: true,
+        metadata: { icon: 'clipboard-check', featureId: 'sang-loc' }
+      },
+      {
+        id: 'tri_lieu',
+        name: 'Trị Liệu & Thư Giãn',
+        description: 'Bài tập thở, thiền định và kỹ thuật giảm stress',
+        category: 'consultation',
+        route: '/tri-lieu',
+        embeddable: true,
+        hasApiEndpoint: true,
+        metadata: { icon: 'heart-pulse', featureId: 'tri-lieu' }
+      },
+      {
+        id: 'tra_cuu',
+        name: 'Tra Cứu Thuốc/Bệnh',
+        description: 'Tìm kiếm thông tin chi tiết về thuốc và các bệnh lý',
+        category: 'information',
+        route: '/tra-cuu',
+        embeddable: true,
+        hasApiEndpoint: true,
+        metadata: { icon: 'search', featureId: 'tra-cuu' }
+      },
+      {
+        id: 'bac_si',
+        name: 'Tìm & Đặt Lịch Bác Sĩ',
+        description: 'Tìm bác sĩ phù hợp và đặt lịch hẹn khám',
+        category: 'scheduling',
+        route: '/bac-si',
+        embeddable: true,
+        hasApiEndpoint: true,
+        metadata: { icon: 'user-md', featureId: 'bac-si' }
+      },
+      {
+        id: 'ke_hoach',
+        name: 'Kế Hoạch Chăm Sóc',
+        description: 'Lập kế hoạch và theo dõi tiến trình sức khỏe cá nhân',
+        category: 'records',
+        route: '/ke-hoach',
+        embeddable: true,
+        hasApiEndpoint: true,
+        metadata: { icon: 'calendar-check', featureId: 'ke-hoach' }
+      },
+      {
+        id: 'thong_ke',
+        name: 'Thống Kê Sức Khỏe',
+        description: 'Xem báo cáo và phân tích dữ liệu sức khỏe của bạn',
+        category: 'records',
+        route: '/thong-ke',
+        embeddable: true,
+        hasApiEndpoint: true,
+        metadata: { icon: 'chart-bar', featureId: 'thong-ke' }
+      },
+      {
+        id: 'tam_su',
+        name: 'Tâm Sự',
+        description: 'Trò chuyện và chia sẻ cảm xúc với AI đồng cảm',
+        category: 'consultation',
+        route: '/tam-su',
+        embeddable: false, // Tâm sự không embed, luôn mở trang riêng
+        hasApiEndpoint: true,
+        metadata: { icon: 'message-heart', featureId: 'tam-su', hasMusic: true }
+      },
+      {
+        id: 'music_therapy',
+        name: 'Liệu Pháp Âm Nhạc',
+        description: 'Nghe nhạc thư giãn và chữa lành tâm hồn',
+        category: 'consultation',
+        route: '/tam-su',
+        embeddable: true, // Music player có thể embed vào chat Tâm sự
+        hasApiEndpoint: false,
+        metadata: { icon: 'music', forTamSu: true }
       }
     ]
 

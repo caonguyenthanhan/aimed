@@ -21,6 +21,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { AgentResponseSchema, isAllowedPath, normalizeActions, type AgentAction } from "@/lib/agent-actions"
 import { GoogleGenAI, Modality } from "@google/genai"
+import { ChatSpecialMessage, parseSpecialMessages, type SpecialMessageData } from "@/components/chat-special-message"
 
 interface Message {
   id: string
@@ -35,6 +36,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
   const [headerPad, setHeaderPad] = useState<string>('6rem')
   const [agentMode, setAgentMode] = useState(false)
+  const [specialMessages, setSpecialMessages] = useState<SpecialMessageData[]>([])
+  const handleCloseSpecialMessage = (id: string) => {
+    setSpecialMessages((prev) => prev.filter((m) => m.id !== id))
+  }
   const [authOpen, setAuthOpen] = useState(false)
   const [authSecret, setAuthSecret] = useState("")
   const [liveMode, setLiveMode] = useState(false)
@@ -626,9 +631,21 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
       const aiResponse = String((data as any)?.response || (data as any)?.choices?.[0]?.message?.content || "").trim()
       const planned = Array.isArray((data as any)?.messages) ? (data as any).messages : null
-      const deliverList = (planned && planned.length)
-        ? planned.map((m: any) => ({ content: String(m?.content || ""), delay_ms: typeof m?.delay_ms === "number" ? m.delay_ms : undefined }))
+      
+      // Parse special messages (embeds, music, navigation prompts)
+      const { textMessages: parsedTexts, specialMessages: parsedSpecials } = planned 
+        ? parseSpecialMessages(planned)
+        : { textMessages: [aiResponse || "Không nhận được phản hồi từ máy trả lời"], specialMessages: [] }
+      
+      // Add special messages to state (for embeds, music players, etc.)
+      if (parsedSpecials.length > 0) {
+        setSpecialMessages((prev) => [...prev, ...parsedSpecials])
+      }
+      
+      const deliverList = parsedTexts.length > 0
+        ? parsedTexts.map((content, i) => ({ content, delay_ms: i === 0 ? 0 : 450 }))
         : [{ content: aiResponse || "Không nhận được phản hồi từ máy trả lời", delay_ms: 0 }]
+      
       let deliveredIds: string[] = []
       if (delivery_mode === "live") {
         const lastId = await deliverLiveText(aiResponse || deliverList.map((x) => x.content).join("\n\n"))
@@ -938,6 +955,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
       setConversationId(newId)
       setMessages([])
+      setSpecialMessages([])
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(`conv_messages_${newId}`, JSON.stringify([]))
@@ -1886,6 +1904,15 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               </div>
             )}
           </div>
+        ))}
+
+        {/* Special Messages (Embeds, Music Players, Navigation Prompts) */}
+        {specialMessages.map((specialMsg) => (
+          <ChatSpecialMessage 
+            key={specialMsg.id} 
+            message={specialMsg} 
+            onClose={handleCloseSpecialMessage}
+          />
         ))}
 
         {/* Loading Animation */}
