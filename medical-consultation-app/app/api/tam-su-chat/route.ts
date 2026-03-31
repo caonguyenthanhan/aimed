@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     const auth = request.headers.get('authorization') || ''
 
     const userMessage: string = String(bodyIn?.message || bodyIn?.prompt || bodyIn?.question || '').trim()
-    const conversationHistory: any[] = Array.isArray(bodyIn?.conversationHistory) ? bodyIn.conversationHistory : (Array.isArray(bodyIn?.messages) ? bodyIn.messages : [])
+    const conversationHistory: any[] = Array.isArray(bodyIn?.conversationHistory) ? bodyIn.conversationHistory : (Array.isArray(bodyIn?.messages) ? bodyIn.messages.filter(m => m?.role === 'assistant').slice(-10) : [])
     const conversation_id: string | null = typeof bodyIn?.conversation_id === 'string' ? bodyIn.conversation_id : null
     const user_id: string | null = typeof bodyIn?.user_id === 'string' ? bodyIn.user_id : null
     const selectedModel = (typeof bodyIn?.model === 'string' ? String(bodyIn.model).toLowerCase() : 'flash')
