@@ -429,6 +429,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     return baseSuggestions
   }
 
+  // AI-powered suggestions state - moved before getSmartSuggestions
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  const suggestionsTimerRef = useRef<NodeJS.Timeout | null>(null)
+
   const suggestedQuestions = getSmartSuggestions()
   
   // Fetch AI-powered suggestions
@@ -475,9 +480,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       }
     }
   }, [messages])
-  
-  // Use AI suggestions if available, otherwise fallback to smart suggestions
-  const displaySuggestions = aiSuggestions.length > 0 ? aiSuggestions : suggestedQuestions
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -490,11 +492,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const [selectedModel, setSelectedModel] = useState<'flash' | 'pro'>('flash')
   const [showTools, setShowTools] = useState(false)
-  
-  // AI-powered suggestions
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
-  const suggestionsTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [selectedDocName, setSelectedDocName] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -788,7 +785,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     setInput("")
 
     try {
-      // Nếu có ảnh đã chọn, gửi tới VLM cùng với văn bản
+      // Nếu có ảnh đã chọn, gửi t���i VLM cùng với văn bản
       if (selectedImageBase64) {
         const parts: string[] = []
         if (currentInput.trim()) parts.push(`Nội dung: ${currentInput}`)
@@ -1979,7 +1976,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onValueChange={setInput}
         onSubmit={handleSubmit}
         isLoading={isLoading}
-        suggestedQuestions={displaySuggestions}
+        suggestedQuestions={aiSuggestions.length > 0 ? aiSuggestions : suggestedQuestions}
         onSuggestedQuestion={handleSuggestedQuestion}
         showTools={showTools}
         onToggleTools={() => setShowTools(!showTools)}
