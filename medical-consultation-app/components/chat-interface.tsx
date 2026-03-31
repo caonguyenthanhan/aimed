@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, Search } from "lucide-react"
+import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, ChevronRight, Search, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -1630,66 +1630,66 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         </DialogContent>
       </Dialog>
       {!isMobile && showSidebar && (
-        <div className="w-64 glass-panel dark:glass-panel-dark bg-white dark:bg-slate-900 p-0 flex-shrink-0 h-full flex flex-col rounded-r-2xl border-r border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
-            <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">Lịch sử hội thoại</span>
-            <div className="flex items-center gap-1">
-              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
-                <Search className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+        <div className="w-56 bg-card/95 backdrop-blur-sm p-0 flex-shrink-0 h-full flex flex-col border-r border-border">
+          {/* Compact Header */}
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
+            <span className="text-xs font-semibold text-foreground">Lich su</span>
+            <div className="flex items-center gap-0.5">
+              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Tim kiem">
+                <Search className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
-              <button onClick={beginNewConversation} className="h-8 w-8 rounded-lg bg-blue-600 dark:bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 dark:hover:bg-blue-700 transition shadow-sm">
-                <Plus className="h-4 w-4" />
+              <button onClick={beginNewConversation} className="h-7 w-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition" title="Moi">
+                <Plus className="h-3.5 w-3.5" />
               </button>
-              <button onClick={fetchConversations} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
-                <RefreshCcw className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              <button onClick={fetchConversations} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Lam moi">
+                <RefreshCcw className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
-              <button onClick={() => setShowSidebar(false)} className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition">
-                <ChevronLeft className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              <button onClick={() => setShowSidebar(false)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Dong">
+                <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             </div>
           </div>
           {sidebarSearchOpen && (
-            <div className="px-3 pb-2">
+            <div className="px-2 pb-2">
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                 <input
                   value={sidebarSearch}
                   onChange={(e) => setSidebarSearch(e.target.value)}
-                  placeholder="Lọc hội thoại..."
-                  className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl border border-gray-200 focus:border-blue-400 outline-none bg-white/60"
+                  placeholder="Tim kiem..."
+                  className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-border focus:border-primary outline-none bg-secondary/50"
                 />
                 {sidebarSearch && (
-                  <button onClick={() => setSidebarSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                    x
+                  <button onClick={() => setSidebarSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="h-3 w-3" />
                   </button>
                 )}
               </div>
             </div>
           )}
-          <div className="flex-1 space-y-1 overflow-y-auto px-3 pb-3">
+          <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2 custom-scrollbar">
             {isLoadingConversations ? (
-              <div className="text-xs text-gray-500">Đang tải...</div>
+              <div className="text-xs text-muted-foreground px-2 py-4">Dang tai...</div>
             ) : (
               serverUnavailable ? (
-                <div className="text-xs text-red-600">Không kết nối được với server</div>
+                <div className="text-xs text-destructive px-2 py-4">Khong ket noi duoc</div>
               ) : (
                 (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).length
                   ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
-                    <div key={c.id} className={`group flex items-center justify-between p-2 rounded-xl ${conversationId === c.id ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-100'}`}>
-                      <button className="text-left text-sm flex-1 pr-2" onClick={() => openConversation(c.id)}>
-                        {c.title || 'Chưa có tiêu đề'}
-                      </button>
-                      <div className="hidden group-hover:flex items-center gap-2">
-                        <button className="h-7 w-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center" onClick={() => { setRenameTargetId(c.id); setRenameInput(c.title || ''); setIsRenameOpen(true) }}>
-                          <Sparkles className="h-3.5 w-3.5 text-gray-700" />
+                    <div key={c.id} className={`group flex items-center gap-1.5 px-2 py-2 rounded-lg cursor-pointer transition-colors ${conversationId === c.id ? 'bg-primary/10 text-primary' : 'hover:bg-secondary text-foreground'}`} onClick={() => openConversation(c.id)}>
+                      <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
+                      <span className="text-xs font-medium flex-1 truncate">{c.title || 'Chua co tieu de'}</span>
+                      <div className="hidden group-hover:flex items-center gap-0.5">
+                        <button className="h-5 w-5 rounded hover:bg-secondary flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setRenameTargetId(c.id); setRenameInput(c.title || ''); setIsRenameOpen(true) }}>
+                          <Sparkles className="h-3 w-3 text-muted-foreground" />
                         </button>
-                        <button className="h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center" onClick={() => deleteConversation(c.id)}>
-                          <X className="h-3.5 w-3.5" />
+                        <button className="h-5 w-5 rounded hover:bg-destructive/10 flex items-center justify-center" onClick={(e) => { e.stopPropagation(); deleteConversation(c.id) }}>
+                          <X className="h-3 w-3 text-destructive" />
                         </button>
                       </div>
                     </div>
                   ))
-                  : <div className="text-xs text-gray-500">Chưa có hội thoại</div>
+                  : <div className="text-xs text-muted-foreground px-2 py-4 text-center">Chua co hoi thoai</div>
               )
             )}
           </div>
@@ -1771,50 +1771,30 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         </Drawer>
       )}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {!showSidebar && (
-          <div className="p-2">
-            <button onClick={() => setShowSidebar(true)} className="text-xs px-3 py-1.5 bg-gray-100 rounded-full hover:bg-gray-200">Mở lịch sử</button>
+        {!showSidebar && !isMobile && (
+          <div className="absolute top-20 left-3 z-20">
+            <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mo lich su">
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
           </div>
         )}
       {/* Input and actions moved to bottom */}
-      {/* Medical Disclaimer */}
+      {/* Medical Disclaimer - Compact */}
       {!disclaimerDismissed && (
-        isDisclaimerCollapsed ? (
-          <div className="mx-4 mb-3">
-            <div className="flex items-center justify-between bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-full px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 bg-amber-500 dark:bg-amber-600 rounded-md flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="h-3 w-3 text-white" />
-                </div>
-                <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">Lưu ý quan trọng</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setIsDisclaimerCollapsed(false)} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Mở</button>
-                <button onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Ẩn</button>
-              </div>
+        <div className="mx-3 sm:mx-4 mb-2">
+          <div className="flex items-center justify-between bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/50 rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <span className="text-xs text-amber-800 dark:text-amber-200">Thong tin chi mang tinh tham khao. Hay tham khao y kien bac si.</span>
             </div>
+            <button 
+              onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} 
+              className="ml-2 p-1 rounded-lg hover:bg-amber-200/50 dark:hover:bg-amber-800/30 transition flex-shrink-0"
+            >
+              <X className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+            </button>
           </div>
-        ) : (
-          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 m-4 mb-3 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-amber-500 dark:bg-amber-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                <AlertTriangle className="h-4 w-4 text-white" />
-              </div>
-              <div className="text-sm flex-1">
-                <div className="flex items-center justify-between gap-3 mb-2">
-                  <p className="text-amber-800 dark:text-amber-200 font-semibold">Lưu ý quan trọng</p>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => setIsDisclaimerCollapsed(true)} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Thu nhỏ</button>
-                    <button onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} className="text-xs px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/70 transition">Ẩn</button>
-                  </div>
-                </div>
-                <p className="text-amber-700 dark:text-amber-300 text-xs leading-relaxed">
-                  Thông tin này chỉ mang tính chất tham khảo. Vui lòng tham khảo ý kiến bác sĩ chuyên khoa để được chẩn đoán và điều trị chính xác.
-                </p>
-              </div>
-            </div>
-          </div>
-        )
+        </div>
       )}
 
       {/* Messages Container */}

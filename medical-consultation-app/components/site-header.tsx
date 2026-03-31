@@ -93,25 +93,22 @@ export default function SiteHeader() {
   const navItems = mainItems
 
   return (
-    <div className="fixed top-4 left-0 right-0 z-50 flex justify-center px-3 sm:px-4">
-      {/* Modern Glass Header */}
-      <div data-site-header className="relative w-full max-w-5xl glass-panel rounded-2xl px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between transition-all duration-300 hover:shadow-md dark:glass-panel-dark">
+    <div className="fixed top-3 left-0 right-0 z-50 flex justify-center px-3">
+      {/* Compact Glass Header */}
+      <div data-site-header className="relative w-full max-w-4xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-full px-4 h-12 flex items-center justify-between shadow-lg shadow-black/5 dark:shadow-black/20 border border-white/20 dark:border-slate-700/50 transition-all duration-300">
         
-        {/* Logo Section */}
+        {/* Logo Section - Compact */}
         <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-          <div className="bg-blue-600/10 dark:bg-blue-500/20 p-2 rounded-lg group-hover:bg-blue-600/15 dark:group-hover:bg-blue-500/25 transition-colors duration-200">
-            <BrainCircuit className="text-blue-600 dark:text-blue-400" size={22} />
+          <div className="bg-gradient-to-br from-primary to-accent p-1.5 rounded-lg">
+            <BrainCircuit className="text-white" size={18} />
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-slate-900 dark:text-slate-50 tracking-tight text-sm sm:text-base">
-              <span className="text-blue-600 dark:text-blue-400">AI</span>Med
-            </span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Health Companion</span>
-          </div>
+          <span className="font-bold text-foreground tracking-tight text-sm hidden sm:block">
+            <span className="text-primary">AI</span>Med
+          </span>
         </Link>
 
-        {/* Navigation Section - Desktop */}
-        <nav className="hidden md:flex items-center gap-0.5">
+        {/* Navigation Section - Desktop - Compact pills */}
+        <nav className="hidden md:flex items-center gap-1 bg-secondary/50 rounded-full p-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href
             return (
@@ -119,10 +116,10 @@ export default function SiteHeader() {
                 key={item.href} 
                 href={item.href} 
                 className={`
-                  relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                  relative px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200
                   ${isActive 
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' 
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
+                    ? 'bg-primary text-primary-foreground shadow-sm' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                   }
                 `}
               >
@@ -135,19 +132,20 @@ export default function SiteHeader() {
           <div className="relative">
             <button
               onClick={() => setToolsOpen(!toolsOpen)}
-              className="relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200"
+              className={`relative px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1 ${toolsOpen ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
             >
-              Công cụ ▼
+              Cong cu
+              <svg className={`w-3 h-3 transition-transform ${toolsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
             {toolsOpen && (
-              <div className="absolute top-full mt-2 left-0 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50">
+              <div className="absolute top-full mt-2 right-0 w-48 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
                 {toolItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 last:border-0 transition"
+                    className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-medium text-foreground hover:bg-secondary transition"
                   >
-                    <item.icon size={18} />
+                    <item.icon size={14} className="text-muted-foreground" />
                     {item.label}
                   </Link>
                 ))}
@@ -156,15 +154,13 @@ export default function SiteHeader() {
           </div>
         </nav>
 
-        {/* Action Section */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
+        {/* Action Section - Compact */}
+        <div className="flex items-center gap-1.5">
           <ComputeToggle />
-          <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block"></div>
           {!authed ? (
-            <Link href="/login" className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-blue-600 dark:bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-700 transition-colors duration-200 whitespace-nowrap">
-              <LogIn size={16} />
-              <span className="hidden sm:inline">Đăng nhập</span>
+            <Link href="/login" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity whitespace-nowrap shadow-sm">
+              <LogIn size={14} />
+              <span className="hidden sm:inline">Dang nhap</span>
             </Link>
           ) : (
             <AccountMenu
