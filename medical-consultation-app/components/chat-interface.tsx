@@ -1702,18 +1702,18 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <div className="w-56 bg-card/95 backdrop-blur-sm p-0 flex-shrink-0 h-full flex flex-col border-r border-border">
           {/* Compact Header */}
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
-            <span className="text-xs font-semibold text-foreground">Lich su</span>
+            <span className="text-xs font-semibold text-foreground">Lịch sử</span>
             <div className="flex items-center gap-0.5">
-              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Tim kiem">
+              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Tìm kiếm">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
-              <button onClick={beginNewConversation} className="h-7 w-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition" title="Moi">
+              <button onClick={beginNewConversation} className="h-7 w-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition" title="Mới">
                 <Plus className="h-3.5 w-3.5" />
               </button>
-              <button onClick={fetchConversations} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Lam moi">
+              <button onClick={fetchConversations} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Làm mới">
                 <RefreshCcw className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
-              <button onClick={() => setShowSidebar(false)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Dong">
+              <button onClick={() => setShowSidebar(false)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Đóng">
                 <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
               </button>
             </div>
@@ -1725,7 +1725,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                 <input
                   value={sidebarSearch}
                   onChange={(e) => setSidebarSearch(e.target.value)}
-                  placeholder="Tim kiem..."
+                  placeholder="Tìm kiếm..."
                   className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-border focus:border-primary outline-none bg-secondary/50"
                 />
                 {sidebarSearch && (
@@ -1738,16 +1738,16 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           )}
           <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2 custom-scrollbar">
             {isLoadingConversations ? (
-              <div className="text-xs text-muted-foreground px-2 py-4">Dang tai...</div>
+              <div className="text-xs text-muted-foreground px-2 py-4">Đang tải...</div>
             ) : (
               serverUnavailable ? (
-                <div className="text-xs text-destructive px-2 py-4">Khong ket noi duoc</div>
+                <div className="text-xs text-destructive px-2 py-4">Không kết nối được</div>
               ) : (
                 (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).length
                   ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
                     <div key={c.id} className={`group flex items-center gap-1.5 px-2 py-2 rounded-lg cursor-pointer transition-colors ${conversationId === c.id ? 'bg-primary/10 text-primary' : 'hover:bg-secondary text-foreground'}`} onClick={() => openConversation(c.id)}>
                       <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
-                      <span className="text-xs font-medium flex-1 truncate">{c.title || 'Chua co tieu de'}</span>
+                      <span className="text-xs font-medium flex-1 truncate">{c.title || 'Chưa có tiêu đề'}</span>
                       <div className="hidden group-hover:flex items-center gap-0.5">
                         <button className="h-5 w-5 rounded hover:bg-secondary flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setRenameTargetId(c.id); setRenameInput(c.title || ''); setIsRenameOpen(true) }}>
                           <Sparkles className="h-3 w-3 text-muted-foreground" />
@@ -1758,7 +1758,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                       </div>
                     </div>
                   ))
-                  : <div className="text-xs text-muted-foreground px-2 py-4 text-center">Chua co hoi thoai</div>
+                  : <div className="text-xs text-muted-foreground px-2 py-4 text-center">Chưa có hội thoại</div>
               )
             )}
           </div>
@@ -1842,7 +1842,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {!showSidebar && !isMobile && (
           <div className="absolute top-20 left-3 z-20">
-            <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mo lich su">
+            <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
@@ -1854,7 +1854,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           <div className="flex items-center justify-between bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/50 rounded-xl px-3 py-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              <span className="text-xs text-amber-800 dark:text-amber-200">Thong tin chi mang tinh tham khao. Hay tham khao y kien bac si.</span>
+              <span className="text-xs text-amber-800 dark:text-amber-200">Thông tin chỉ mang tính tham khảo. Hãy tham khảo ý kiến bác sĩ.</span>
             </div>
             <button 
               onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} 

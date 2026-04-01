@@ -131,7 +131,7 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                 props.onSubmit()
               }
             }}
-            placeholder="Nhap cau hoi cua ban..."
+            placeholder="Nhập câu hỏi của bạn..."
             className="flex-1 border-0 focus:ring-0 focus:outline-none text-sm bg-transparent text-foreground resize-none py-2.5 max-h-28 overflow-y-auto placeholder-muted-foreground"
             style={{ WebkitTapHighlightColor: "transparent", minHeight: "40px" }}
             disabled={props.isLoading}
@@ -146,7 +146,7 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                 : "bg-secondary text-muted-foreground cursor-not-allowed"
             }`}
             style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}
-            aria-label="Gui tin nhan"
+            aria-label="Gửi tin nhắn"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -169,7 +169,7 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                   onClick={() => props.fileInputRef.current?.click()}
                   className="px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-accent hover:text-accent-foreground text-muted-foreground text-xs font-medium transition-all"
                 >
-                  Anh
+                  Ảnh
                 </button>
                 <input
                   ref={props.docInputRef}
@@ -212,9 +212,9 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
             <button
               onClick={props.onStartNewConversation}
               className="px-2.5 py-1.5 rounded-lg bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all text-xs font-medium"
-              title="New conversation"
+              title="Cuộc hội thoại mới"
             >
-              new
+              Mới
             </button>
             <button
               onClick={props.onToggleRecording}

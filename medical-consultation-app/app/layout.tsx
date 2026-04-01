@@ -8,6 +8,7 @@ import SiteHeader from "@/components/site-header"
 import FloatingQuickMenu from "@/components/floating-quick-menu"
 import { MobileBottomNav } from "@/components/mobile-bottom-nav"
 import { Toaster } from "@/components/ui/toaster"
+import { LanguageProvider } from "@/contexts/language-context"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" })
@@ -52,16 +53,18 @@ export default function RootLayout({
             mo.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:['bis_skin_checked'],childList:true});
           }catch(e){}})();`}
         </Script>
-        <SiteHeader />
-        <div className="fixed inset-0 -z-10 h-full w-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
-          <div className="absolute -top-[15%] -left-[10%] w-[45%] h-[45%] rounded-full bg-blue-200/20 dark:bg-blue-500/10 blur-[120px] animate-blob" />
-          <div className="absolute top-[10%] -right-[15%] w-[50%] h-[50%] rounded-full bg-teal-200/15 dark:bg-teal-400/8 blur-[120px] animate-blob animation-delay-2000" />
-          <div className="absolute -bottom-[10%] left-[25%] w-[40%] h-[40%] rounded-full bg-blue-100/15 dark:bg-blue-500/5 blur-[120px] animate-blob animation-delay-4000" />
-        </div>
-        <Suspense fallback={null}>{children}</Suspense>
-        <MobileBottomNav />
-        <FloatingQuickMenu />
-        <div suppressHydrationWarning><Toaster /></div>
+        <LanguageProvider>
+          <SiteHeader />
+          <div className="fixed inset-0 -z-10 h-full w-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
+            <div className="absolute -top-[15%] -left-[10%] w-[45%] h-[45%] rounded-full bg-blue-200/20 dark:bg-blue-500/10 blur-[120px] animate-blob" />
+            <div className="absolute top-[10%] -right-[15%] w-[50%] h-[50%] rounded-full bg-teal-200/15 dark:bg-teal-400/8 blur-[120px] animate-blob animation-delay-2000" />
+            <div className="absolute -bottom-[10%] left-[25%] w-[40%] h-[40%] rounded-full bg-blue-100/15 dark:bg-blue-500/5 blur-[120px] animate-blob animation-delay-4000" />
+          </div>
+          <Suspense fallback={null}>{children}</Suspense>
+          <MobileBottomNav />
+          <FloatingQuickMenu />
+          <div suppressHydrationWarning><Toaster /></div>
+        </LanguageProvider>
       </body>
     </html>
   )
