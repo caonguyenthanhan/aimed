@@ -14,7 +14,7 @@ const localeFlags: Record<Locale, string> = {
   hi: '🇮🇳',
 }
 
-export function LanguageSwitcher() {
+export default function LanguageSwitcher() {
   const { locale, setLocale, localeNames } = useLanguage()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)

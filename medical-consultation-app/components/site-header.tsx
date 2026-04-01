@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper, Smile, BookOpenText, Bell, Menu, X, Stethoscope, Users, FileText, BarChart3, Calendar } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import AccountMenu from './account-menu'
+import LanguageSwitcher from './language-switcher'
 const ComputeToggle = dynamic(() => import('./compute-toggle'), { ssr: false })
 
 export default function SiteHeader() {
@@ -156,11 +157,12 @@ export default function SiteHeader() {
 
         {/* Action Section - Compact */}
         <div className="flex items-center gap-1.5">
+          <LanguageSwitcher />
           <ComputeToggle />
           {!authed ? (
             <Link href="/login" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity whitespace-nowrap shadow-sm">
               <LogIn size={14} />
-              <span className="hidden sm:inline">Dang nhap</span>
+              <span className="hidden sm:inline">Đăng nhập</span>
             </Link>
           ) : (
             <AccountMenu
