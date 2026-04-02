@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { } from "@/lib/llm-config"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/contexts/language-context"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -34,6 +35,7 @@ interface Message {
 export function ChatInterface({ initialConversationId }: { initialConversationId?: string }) {
   const router = useRouter()
   const { toast } = useToast()
+  const { getSuggestedQuestions } = useLanguage()
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
   const [headerPad, setHeaderPad] = useState<string>('6rem')
   const [agentMode, setAgentMode] = useState(false)
@@ -381,13 +383,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   // Smart suggestion system based on context and conversation history
   const getSmartSuggestions = () => {
-    // Base suggestions for new conversations
-    const baseSuggestions = [
-      "Tôi bị đau đầu, có phải cảm cúm không?",
-      "Liệu pháp nào giúp giảm lo âu?",
-      "Thông tin về thuốc Paracetamol?",
-      "Cách phòng ngừa cảm cúm?",
-    ]
+    // Base suggestions from language context
+    const baseSuggestions = getSuggestedQuestions()
 
     // Advanced suggestions based on conversation context
     const contextualSuggestions = {
