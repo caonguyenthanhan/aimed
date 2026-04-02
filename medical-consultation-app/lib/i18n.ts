@@ -332,7 +332,6 @@ export function getSuggestedQuestions(locale: Locale = 'vi'): string[] {
   return [
     t('suggest.headache', locale),
     t('suggest.anxiety', locale),
-    t('suggest.paracetamol', locale),
     t('suggest.preventFlu', locale),
   ]
 }

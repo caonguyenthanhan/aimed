@@ -6,7 +6,6 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 const DEFAULT_SUGGESTIONS = [
   "Tôi bị đau đầu, có phải cảm cúm không?",
   "Liệu pháp nào giúp giảm lo âu?",
-  "Thông tin về thuốc Paracetamol?",
   "Cách phòng ngừa cảm cúm?"
 ]
 
@@ -25,7 +24,7 @@ export async function POST(request: Request) {
       .map((m: any) => `${m.isUser ? 'User' : 'AI'}: ${m.content}`)
       .join('\n')
 
-    const prompt = `Bạn là trợ lý AI y tế. Dựa vào cuộc hội thoại sau, hãy tạo ra 4 câu hỏi gợi ý phù hợp để người dùng có thể hỏi tiếp. Các câu hỏi phải:
+    const prompt = `Bạn là trợ lý AI y tế. Dựa vào cuộc hội thoại sau, hãy tạo ra 3 câu hỏi gợi ý phù hợp để người dùng có thể hỏi tiếp. Các câu hỏi phải:
 1. Liên quan đến nội dung đã trao đổi
 2. Giúp người dùng tìm hiểu sâu hơn về vấn đề sức khỏe
 3. Ngắn gọn (dưới 50 ký tự mỗi câu)
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
 Cuộc hội thoại:
 ${conversationContext || 'Chưa có cuộc hội thoại'}
 
-Chỉ trả về 4 câu hỏi, mỗi câu 1 dòng, không đánh số, không giải thích. Nếu chưa có cuộc hội thoại thì gợi ý các câu hỏi sức khỏe chung.`
+Chỉ trả về 3 câu hỏi, mỗi câu 1 dòng, không đánh số, không giải thích. Nếu chưa có cuộc hội thoại thì gợi ý các câu hỏi sức khỏe chung.`
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
@@ -64,7 +63,7 @@ Chỉ trả về 4 câu hỏi, mỗi câu 1 dòng, không đánh số, không gi
       .split('\n')
       .map((line: string) => line.trim())
       .filter((line: string) => line.length > 5 && line.length < 80)
-      .slice(0, 4)
+      .slice(0, 3)
 
     // Return parsed suggestions or defaults if parsing failed
     if (suggestions.length >= 2) {
