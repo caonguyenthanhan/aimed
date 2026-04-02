@@ -1267,6 +1267,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [])
 
+  // Load conversations on mount
+  useEffect(() => {
+    fetchConversations()
+  }, [])
+
   const loadLocalConversations = () => {
     if (typeof window === 'undefined') return
     try {
@@ -1294,8 +1299,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
       }
       items.sort((a, b) => (a.last_active > b.last_active ? -1 : 1))
+      console.log('[v0] Loaded local conversations:', items.length)
       setConversations(items)
-    } catch {}
+    } catch (e) {
+      console.error('[v0] Error loading local conversations:', e)
+    }
   }
 
   const fetchConversations = async () => {
