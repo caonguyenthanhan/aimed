@@ -1019,13 +1019,21 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } else {
       const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
       setConversationId(newId)
-      setMessages([])
+      const defaultMsg: Message = {
+        id: Date.now().toString(),
+        content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+        isUser: false,
+        timestamp: new Date(),
+      }
+      setMessages([defaultMsg])
       setSpecialMessages([])
       setAiSuggestions([]) // Reset AI suggestions
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem(`conv_messages_${newId}`, JSON.stringify([]))
-          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại')
+          const serial = [{ id: defaultMsg.id, content: defaultMsg.content, isUser: false, timestamp: defaultMsg.timestamp.toISOString() }]
+          localStorage.setItem(`conv_messages_${newId}`, JSON.stringify(serial))
+          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại mới')
+          loadLocalConversations()
         } catch {}
       }
       if (typeof window !== 'undefined') {
@@ -1267,9 +1275,29 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [])
 
-  // Load conversations on mount
+  // Load conversations on mount and auto-create if none exists
   useEffect(() => {
     fetchConversations()
+    
+    // Auto-create a conversation if user is not logged in and no conversation exists
+    if (!authToken && !conversationId) {
+      const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
+      setConversationId(newId)
+      const defaultMsg: Message = {
+        id: Date.now().toString(),
+        content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+        isUser: false,
+        timestamp: new Date(),
+      }
+      setMessages([defaultMsg])
+      if (typeof window !== 'undefined') {
+        try {
+          const serial = [{ id: defaultMsg.id, content: defaultMsg.content, isUser: false, timestamp: defaultMsg.timestamp.toISOString() }]
+          localStorage.setItem(`conv_messages_${newId}`, JSON.stringify(serial))
+          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại mới')
+        } catch {}
+      }
+    }
   }, [])
 
   const loadLocalConversations = () => {
@@ -1299,11 +1327,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
       }
       items.sort((a, b) => (a.last_active > b.last_active ? -1 : 1))
-      console.log('[v0] Loaded local conversations:', items.length)
       setConversations(items)
-    } catch (e) {
-      console.error('[v0] Error loading local conversations:', e)
-    }
+    } catch {}
   }
 
   const fetchConversations = async () => {
@@ -1671,7 +1696,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Đổi tên hội thoại</DialogTitle>
+            <DialogTitle>Đổi tên hội tho���i</DialogTitle>
             <DialogDescription>
               Nhập tiêu đề mới cho hội thoại này
             </DialogDescription>
