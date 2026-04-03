@@ -67,9 +67,9 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
       onDrop={props.onDrop}
     >
       <div className="max-w-2xl mx-auto">
-        {/* Suggested Questions - Grid on desktop, horizontal scroll on mobile */}
-        <div className="mb-3 grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
-          {props.suggestedQuestions.slice(0, 4).map((q, i) => (
+        {/* Suggested Questions - 3 items in a row */}
+        <div className="mb-3 grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2">
+          {props.suggestedQuestions.slice(0, 3).map((q, i) => (
             <button
               key={i}
               onClick={() => props.onSuggestedQuestion(q)}

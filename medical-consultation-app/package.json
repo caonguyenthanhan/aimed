@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.46.0",
+    "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
@@ -66,6 +67,7 @@
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
+    "uuid": "^9.0.0",
     "vaul": "^0.9.9",
     "zod": "3.25.67"
   },

@@ -144,10 +144,10 @@
 }
 html, body {
   height: 100%;
+  width: 100%;
 }
 body {
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .glass-panel {
@@ -193,7 +193,16 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Smooth scrollbar */
+/* Hide scrollbar for html and body */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar for message areas only */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }

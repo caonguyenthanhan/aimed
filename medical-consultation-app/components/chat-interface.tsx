@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { } from "@/lib/llm-config"
 import { useToast } from "@/hooks/use-toast"
+import { useLanguage } from "@/contexts/language-context"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -34,6 +35,7 @@ interface Message {
 export function ChatInterface({ initialConversationId }: { initialConversationId?: string }) {
   const router = useRouter()
   const { toast } = useToast()
+  const { getSuggestedQuestions } = useLanguage()
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
   const [headerPad, setHeaderPad] = useState<string>('6rem')
   const [agentMode, setAgentMode] = useState(false)
@@ -381,13 +383,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   // Smart suggestion system based on context and conversation history
   const getSmartSuggestions = () => {
-    // Base suggestions for new conversations
-    const baseSuggestions = [
-      "Tôi bị đau đầu, có phải cảm cúm không?",
-      "Liệu pháp nào giúp giảm lo âu?",
-      "Thông tin về thuốc Paracetamol?",
-      "Cách phòng ngừa cảm cúm?",
-    ]
+    // Base suggestions from language context
+    const baseSuggestions = getSuggestedQuestions()
 
     // Advanced suggestions based on conversation context
     const contextualSuggestions = {
@@ -1022,13 +1019,21 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } else {
       const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
       setConversationId(newId)
-      setMessages([])
+      const defaultMsg: Message = {
+        id: Date.now().toString(),
+        content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+        isUser: false,
+        timestamp: new Date(),
+      }
+      setMessages([defaultMsg])
       setSpecialMessages([])
       setAiSuggestions([]) // Reset AI suggestions
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem(`conv_messages_${newId}`, JSON.stringify([]))
-          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại')
+          const serial = [{ id: defaultMsg.id, content: defaultMsg.content, isUser: false, timestamp: defaultMsg.timestamp.toISOString() }]
+          localStorage.setItem(`conv_messages_${newId}`, JSON.stringify(serial))
+          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại mới')
+          loadLocalConversations()
         } catch {}
       }
       if (typeof window !== 'undefined') {
@@ -1267,6 +1272,31 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } catch {
       mq.addListener(update)
       return () => mq.removeListener(update)
+    }
+  }, [])
+
+  // Load conversations on mount and auto-create if none exists
+  useEffect(() => {
+    fetchConversations()
+    
+    // Auto-create a conversation if user is not logged in and no conversation exists
+    if (!authToken && !conversationId) {
+      const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
+      setConversationId(newId)
+      const defaultMsg: Message = {
+        id: Date.now().toString(),
+        content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+        isUser: false,
+        timestamp: new Date(),
+      }
+      setMessages([defaultMsg])
+      if (typeof window !== 'undefined') {
+        try {
+          const serial = [{ id: defaultMsg.id, content: defaultMsg.content, isUser: false, timestamp: defaultMsg.timestamp.toISOString() }]
+          localStorage.setItem(`conv_messages_${newId}`, JSON.stringify(serial))
+          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại mới')
+        } catch {}
+      }
     }
   }, [])
 
@@ -1666,7 +1696,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Đổi tên hội thoại</DialogTitle>
+            <DialogTitle>Đổi tên hội tho���i</DialogTitle>
             <DialogDescription>
               Nhập tiêu đề mới cho hội thoại này
             </DialogDescription>

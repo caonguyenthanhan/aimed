@@ -4,10 +4,9 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 
 // Default suggestions when AI is unavailable
 const DEFAULT_SUGGESTIONS = [
-  "Toi bi dau dau, co phai cam cum khong?",
-  "Lieu phap nao giup giam lo au?",
-  "Thong tin ve thuoc Paracetamol?",
-  "Cach phong ngua cam cum?"
+  "Tôi bị đau đầu, có phải cảm cúm không?",
+  "Liệu pháp nào giúp giảm lo âu?",
+  "Cách phòng ngừa cảm cúm?"
 ]
 
 export async function POST(request: Request) {
@@ -25,16 +24,16 @@ export async function POST(request: Request) {
       .map((m: any) => `${m.isUser ? 'User' : 'AI'}: ${m.content}`)
       .join('\n')
 
-    const prompt = `Ban la tro ly y te AI. Dua vao cuoc hoi thoai sau, hay tao ra 4 cau hoi goi y phu hop de nguoi dung co the hoi tiep. Cac cau hoi phai:
-1. Lien quan den noi dung da trao doi
-2. Giup nguoi dung tim hieu sau hon ve van de suc khoe
-3. Ngan gon (duoi 50 ky tu moi cau)
-4. Dang cau hoi tu nhien
+    const prompt = `Bạn là trợ lý AI y tế. Dựa vào cuộc hội thoại sau, hãy tạo ra 3 câu hỏi gợi ý phù hợp để người dùng có thể hỏi tiếp. Các câu hỏi phải:
+1. Liên quan đến nội dung đã trao đổi
+2. Giúp người dùng tìm hiểu sâu hơn về vấn đề sức khỏe
+3. Ngắn gọn (dưới 50 ký tự mỗi câu)
+4. Đặc câu hỏi tự nhiên
 
-Cuoc hoi thoai:
-${conversationContext || 'Chua co cuoc hoi thoai'}
+Cuộc hội thoại:
+${conversationContext || 'Chưa có cuộc hội thoại'}
 
-Chi tra ve 4 cau hoi, moi cau 1 dong, khong danh so, khong giai thich. Neu chua co cuoc hoi thoai thi goi y cac cau hoi suc khoe chung.`
+Chỉ trả về 3 câu hỏi, mỗi câu 1 dòng, không đánh số, không giải thích. Nếu chưa có cuộc hội thoại thì gợi ý các câu hỏi sức khỏe chung.`
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
@@ -64,7 +63,7 @@ Chi tra ve 4 cau hoi, moi cau 1 dong, khong danh so, khong giai thich. Neu chua 
       .split('\n')
       .map((line: string) => line.trim())
       .filter((line: string) => line.length > 5 && line.length < 80)
-      .slice(0, 4)
+      .slice(0, 3)
 
     // Return parsed suggestions or defaults if parsing failed
     if (suggestions.length >= 2) {
