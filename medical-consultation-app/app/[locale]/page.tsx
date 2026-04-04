@@ -1,5 +1,6 @@
 "use client"
 
+import { use } from 'react'
 import { useLanguage } from '@/contexts/language-context'
 import { Locale } from '@/lib/i18n'
 import Link from 'next/link'
@@ -14,9 +15,10 @@ const localeFlags: Record<Locale, string> = {
   hi: '🇮🇳',
 }
 
-export default function LocalePage({ params }: { params: { locale: string } }) {
-  const { locale, t, localeNames } = useLanguage()
-  const currentLocale = params.locale as Locale
+export default function LocalePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale: urlLocale } = use(params)
+  const { t, localeNames } = useLanguage()
+  const currentLocale = urlLocale as Locale
 
   return (
     <main className="flex-1 flex flex-col items-center justify-center p-6 overflow-auto">
@@ -26,7 +28,9 @@ export default function LocalePage({ params }: { params: { locale: string } }) {
           <div className="inline-flex items-center gap-3 px-6 py-3 bg-primary/10 rounded-full">
             <span className="text-4xl">{localeFlags[currentLocale] || localeFlags['vi']}</span>
             <div className="text-left">
-              <p className="text-sm text-muted-foreground">Current Language</p>
+              <p className="text-sm text-muted-foreground">
+                {currentLocale === 'vi' ? 'Ngon ngu hien tai' : 'Current Language'}
+              </p>
               <p className="text-lg font-semibold text-primary">{localeNames[currentLocale] || localeNames['vi']}</p>
             </div>
           </div>
@@ -50,7 +54,9 @@ export default function LocalePage({ params }: { params: { locale: string } }) {
           >
             <MessageCircle className="h-8 w-8 text-primary mb-2" />
             <h3 className="font-semibold text-foreground">{t('nav.consult')}</h3>
-            <p className="text-xs text-muted-foreground mt-1">AI Medical Assistant</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {currentLocale === 'vi' ? 'Tro ly y te AI' : 'AI Medical Assistant'}
+            </p>
           </Link>
 
           <Link 
@@ -59,7 +65,9 @@ export default function LocalePage({ params }: { params: { locale: string } }) {
           >
             <Heart className="h-8 w-8 text-pink-500 mb-2" />
             <h3 className="font-semibold text-foreground">{t('nav.confide')}</h3>
-            <p className="text-xs text-muted-foreground mt-1">Mental Health Support</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {currentLocale === 'vi' ? 'Ho tro suc khoe tam than' : 'Mental Health Support'}
+            </p>
           </Link>
 
           <Link 
@@ -68,7 +76,9 @@ export default function LocalePage({ params }: { params: { locale: string } }) {
           >
             <BookOpen className="h-8 w-8 text-green-500 mb-2" />
             <h3 className="font-semibold text-foreground">{t('nav.guide')}</h3>
-            <p className="text-xs text-muted-foreground mt-1">Health Guides</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {currentLocale === 'vi' ? 'Huong dan suc khoe' : 'Health Guides'}
+            </p>
           </Link>
 
           <Link 
@@ -77,7 +87,9 @@ export default function LocalePage({ params }: { params: { locale: string } }) {
           >
             <Wrench className="h-8 w-8 text-orange-500 mb-2" />
             <h3 className="font-semibold text-foreground">{t('nav.tools')}</h3>
-            <p className="text-xs text-muted-foreground mt-1">Health Tools</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {currentLocale === 'vi' ? 'Cong cu suc khoe' : 'Health Tools'}
+            </p>
           </Link>
         </div>
 
@@ -85,7 +97,7 @@ export default function LocalePage({ params }: { params: { locale: string } }) {
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Globe className="h-4 w-4" />
-            <span>Switch Language:</span>
+            <span>{currentLocale === 'vi' ? 'Chon ngon ngu:' : 'Switch Language:'}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {(Object.keys(localeNames) as Locale[]).map((loc) => (
@@ -108,7 +120,7 @@ export default function LocalePage({ params }: { params: { locale: string } }) {
         {/* CTA to main chat */}
         <div className="pt-4">
           <Link
-            href="/tu-van"
+            href={`/${currentLocale}/tu-van`}
             className="flex items-center justify-center gap-2 w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:opacity-90 transition-opacity"
           >
             <span>{t('nav.consult')}</span>
