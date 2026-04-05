@@ -107,30 +107,24 @@ export async function POST(request: NextRequest) {
     const pageName = PAGE_NAMES[pageContext] || pageContext
     const pageDescription = PAGE_DESCRIPTIONS[pageContext] || pageContext
 
-    const systemPrompt = `Bạn là Trợ lý Y tế AI. Nhiệm vụ: phân tích câu hỏi/tình huống người dùng và cung cấp insight.
+    const systemPrompt = `Bạn là Trợ lý Y tế AI hỗ trợ người dùng trên trang "${pageName}".
 
-TRANG HIỆN TẠI: ${pageName} - ${pageDescription}
+NGỮ CẢNH: Người dùng đang ở trang ${pageName} - ${pageDescription}
 
-HƯỚNG DẪN TRẢ VỀ:
-Trả về CHÍNH XÁC một JSON object (không markdown, không wrapper):
-{
-  "show_insight": true/false,
-  "main_response": "câu trả lời 1-2 câu",
-  "suggested_page": "/tam-su" hoặc "/tra-cuu" hoặc "/sang-loc" hoặc "/tri-lieu" hoặc null,
-  "suggestion_reason": "lý do gợi ý trang" hoặc null,
-  "insight_type": "advice"
-}
+HƯỚNG DẪN:
+1. Nếu người dùng đặt câu hỏi, trả lời ngắn gọn (1-2 câu).
+2. Nếu câu hỏi phù hợp trang này, không gợi ý chuyển.
+3. Nếu câu hỏi nên chuyển sang trang khác, gợi ý trang tương ứng:
+   - Tâm sự (/tam-su): cho các vấn đề cảm xúc, tâm trạng
+   - Tra cứu (/tra-cuu): cho thông tin y tế, bệnh tật
+   - Sàng lọc (/sang-loc): cho đánh giá tâm lý
+   - Điều trị (/tri-lieu): cho kế hoạch điều trị
 
-LUẬT:
-- Nếu không có câu hỏi: show_insight=false
-- Nếu câu hỏi phù hợp trang hiện tại: show_insight=true, suggested_page=null
-- Nếu câu hỏi nên chuyển trang: show_insight=true, suggested_page=trang thích hợp
-- main_response: câu trả lời ngắn gọn, bằng tiếng Việt
-- Chỉ trả về JSON, không có text khác`
+LƯU Ý: Giọng điệu ấm áp, chuyên nghiệp, hỗ trợ. Chỉ trả về plain text, không markdown.`
 
     const userMessage = userQuestion
       ? userQuestion
-      : 'Người dùng vừa truy cập trang này. Hãy quyết định xem có cần insight hay không.'
+      : 'Người dùng vừa truy cập trang này. Có thể cần insight gì không?'
 
     try {
       if (!process.env.GEMINI_API_KEY) {
@@ -150,6 +144,7 @@ LUẬT:
         generationConfig: { temperature: 0.7, maxOutputTokens: 512 },
       })
 
+      // LLM returns plain text now, no need to parse JSON
       const responseText = String(out?.text || '').trim()
       if (!responseText) {
         return NextResponse.json(
@@ -158,52 +153,13 @@ LUẬT:
         )
       }
 
-      // Parse JSON response from LLM
-      let parsedResponse: Partial<PageInsight> = {}
-      try {
-        // Try to extract JSON from markdown code blocks first
-        let jsonStr = responseText
-        const jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
-        if (jsonMatch) {
-          jsonStr = jsonMatch[1]
-        } else {
-          // Try to find JSON object directly in response
-          const directMatch = responseText.match(/\{[\s\S]*\}/)
-          if (directMatch) {
-            jsonStr = directMatch[0]
-          }
-        }
-        
-        parsedResponse = JSON.parse(jsonStr)
-      } catch (parseErr) {
-        console.error('[v0] Failed to parse LLM JSON response:', responseText)
-        // If parsing fails, treat response as plain text advice
-        // This handles cases where LLM doesn't return valid JSON
-        parsedResponse = {
-          show_insight: true,
-          main_response: responseText.substring(0, 512), // Limit to reasonable length
-          suggested_page: null,
-          suggestion_reason: null,
-          insight_type: 'advice',
-        }
-      }
-
-      // Validate and sanitize response
+      // Create insight from plain text response
       const insight: PageInsight = {
-        show_insight:
-          typeof parsedResponse.show_insight === 'boolean'
-            ? parsedResponse.show_insight
-            : false,
-        main_response:
-          String(parsedResponse.main_response || '').trim() || '',
-        suggested_page: validatePageRoute(
-          parsedResponse.suggested_page as string
-        ),
-        suggestion_reason:
-          String(parsedResponse.suggestion_reason || '').trim() || null,
-        insight_type: validateInsightType(
-          parsedResponse.insight_type as string
-        ),
+        show_insight: userQuestion ? true : false, // Show insight if user asked question
+        main_response: responseText.substring(0, 512), // Limit length
+        suggested_page: null, // Can be enhanced with keywords detection if needed
+        suggestion_reason: null,
+        insight_type: 'advice',
         timestamp: Date.now(),
       }
 
