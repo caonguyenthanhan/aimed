@@ -107,41 +107,26 @@ export async function POST(request: NextRequest) {
     const pageName = PAGE_NAMES[pageContext] || pageContext
     const pageDescription = PAGE_DESCRIPTIONS[pageContext] || pageContext
 
-    const systemPrompt = `Bạn là Trợ lý Y tế AI thông minh, hỗ trợ người dùng trên ứng dụng tư vấn y tế.
+    const systemPrompt = `Bạn là Trợ lý Y tế AI. Nhiệm vụ: phân tích câu hỏi/tình huống người dùng và cung cấp insight.
 
-NGỮ CẢNH HIỆN TẠI: 
-- Trang: ${pageName} 
-- Mô tả: ${pageDescription}
+TRANG HIỆN TẠI: ${pageName} - ${pageDescription}
 
-HƯỚNG DẪN:
-1. Nếu người dùng đặt một câu hỏi, hãy trả lời ngắn gọn (2-3 câu) một cách thân thiện và hữu ích.
-2. Sau câu trả lời, hãy nhận xét xem câu hỏi/nhu cầu của họ có liên quan đến các trang chức năng khác không.
-3. Nếu có, hãy khéo léo gợi ý họ chuyển sang trang phù hợp với lý do tại sao nó sẽ giúp ích.
-4. Nếu không cần thiết, hãy set "show_insight" = false.
-
-LƯU Ý QUAN TRỌNG:
-- Chỉ gợi ý chuyển trang nếu nó thực sự phù hợp và sẽ giúp họ tốt hơn.
-- Không bắt buộc gợi ý mỗi lần - LLM quyết định nếu cần thiết.
-- Giọng điệu ấm áp, hỗ trợ, chuyên nghiệp.
-- Trả về JSON hợp lệ theo định dạng được yêu cầu.
-
-TRẢ VỀ JSON CÓ CẤU TRÚC:
-\`\`\`json
+HƯỚNG DẪN TRẢ VỀ:
+Trả về CHÍNH XÁC một JSON object (không markdown, không wrapper):
 {
-  "show_insight": boolean,
-  "main_response": "string (câu trả lời chính)",
-  "suggested_page": "string | null (/tam-su, /tra-cuu, /sang-loc, /tri-lieu, or null)",
-  "suggestion_reason": "string | null (tại sao nên chuyển sang trang đó)",
-  "insight_type": "advice" | "clarification" | "guidance"
+  "show_insight": true/false,
+  "main_response": "câu trả lời 1-2 câu",
+  "suggested_page": "/tam-su" hoặc "/tra-cuu" hoặc "/sang-loc" hoặc "/tri-lieu" hoặc null,
+  "suggestion_reason": "lý do gợi ý trang" hoặc null,
+  "insight_type": "advice"
 }
-\`\`\`
 
-Ví dụ nếu người dùng đang ở trang Tâm sự và hỏi về triệu chứng của bệnh:
-- show_insight: true
-- main_response: "Những triệu chứng đó có thể liên quan đến ... Bạn nên tìm hiểu kỹ hơn."
-- suggested_page: "/tra-cuu"
-- suggestion_reason: "Trang Tra cứu sẽ giúp bạn tìm thêm thông tin chi tiết về bệnh và triệu chứng."
-- insight_type: "guidance"`
+LUẬT:
+- Nếu không có câu hỏi: show_insight=false
+- Nếu câu hỏi phù hợp trang hiện tại: show_insight=true, suggested_page=null
+- Nếu câu hỏi nên chuyển trang: show_insight=true, suggested_page=trang thích hợp
+- main_response: câu trả lời ngắn gọn, bằng tiếng Việt
+- Chỉ trả về JSON, không có text khác`
 
     const userMessage = userQuestion
       ? userQuestion
@@ -176,18 +161,27 @@ Ví dụ nếu người dùng đang ở trang Tâm sự và hỏi về triệu c
       // Parse JSON response from LLM
       let parsedResponse: Partial<PageInsight> = {}
       try {
-        // Extract JSON from markdown code blocks if present
-        const jsonMatch = responseText.match(
-          /```(?:json)?\s*(\{[\s\S]*?\})\s*```/
-        )
-        const jsonStr = jsonMatch ? jsonMatch[1] : responseText
+        // Try to extract JSON from markdown code blocks first
+        let jsonStr = responseText
+        const jsonMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1]
+        } else {
+          // Try to find JSON object directly in response
+          const directMatch = responseText.match(/\{[\s\S]*\}/)
+          if (directMatch) {
+            jsonStr = directMatch[0]
+          }
+        }
+        
         parsedResponse = JSON.parse(jsonStr)
       } catch (parseErr) {
         console.error('[v0] Failed to parse LLM JSON response:', responseText)
-        // Fallback: create a safe default insight
+        // If parsing fails, treat response as plain text advice
+        // This handles cases where LLM doesn't return valid JSON
         parsedResponse = {
-          show_insight: false,
-          main_response: '',
+          show_insight: true,
+          main_response: responseText.substring(0, 512), // Limit to reasonable length
           suggested_page: null,
           suggestion_reason: null,
           insight_type: 'advice',
