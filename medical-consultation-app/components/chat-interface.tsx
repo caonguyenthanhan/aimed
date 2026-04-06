@@ -1481,27 +1481,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       } catch {}
     }
   }
-                merged.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-                setMessages(merged)
-              }
-              sessionStorage.removeItem(`pending_conv_messages_${id}`)
-            }
-          }
-        } catch {}
-      }
-    } catch (e) {
-      console.error('Open conversation error:', e)
-      setServerUnavailable(true)
-      setMessages([
-        {
-          id: 'error-1',
-          content: 'Không thể kết n���i đến server để tải lịch sử hội thoại. Vui lòng kiểm tra kết nối và thử lại.',
-          isUser: false,
-          timestamp: new Date(),
-        },
-      ])
-    }
-  }
 
   useEffect(() => {
     if (!initialConversationId) {
