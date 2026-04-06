@@ -1445,68 +1445,40 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         timestamp: new Date(),
       },
     ])
-                  content:
-                    'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
-                  isUser: false,
-                  timestamp: new Date(),
-                },
-              ])
-            }
-          } else {
-            setMessages([
-              {
-                id: '1',
-                content:
-                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
-                isUser: false,
-                timestamp: new Date(),
-              },
-            ])
-          }
-        } catch {
-          setMessages([
-            {
-              id: '1',
-              content:
-                'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
-              isUser: false,
-              timestamp: new Date(),
-            },
-          ])
-        }
-      } else {
-        setMessages(mapped)
-        try {
-          if (typeof window !== 'undefined') {
-            const rawPend = sessionStorage.getItem(`pending_conv_messages_${id}`)
-            if (rawPend) {
-              const arr = JSON.parse(rawPend)
-              const pend: Message[] = Array.isArray(arr) ? arr.map((m: any) => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: new Date(m.timestamp) })) : []
-              if (pend.length) {
-                const existing = new Set(mapped.map(m => m.id))
-                const merged = [...mapped]
-                for (const pm of pend) {
-                  if (!existing.has(pm.id)) merged.push(pm)
-                }
-                merged.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-                setMessages(merged)
-              }
-              sessionStorage.removeItem(`pending_conv_messages_${id}`)
-            }
-          }
-        } catch {}
-      }
-    } catch (e) {
-      console.error('Open conversation error:', e)
-      setServerUnavailable(true)
+  }
+
+  const openConversationWithMessages = (mapped: Message[]) => {
+    if (!mapped.length) {
       setMessages([
         {
-          id: 'error-1',
-          content: 'Không thể kết n���i đến server để tải lịch sử hội thoại. Vui lòng kiểm tra kết nối và thử lại.',
+          id: '1',
+          content: 'Xin chào! Tôi là trợ lý AI y tế. Bạn có câu hỏi gì không?',
           isUser: false,
           timestamp: new Date(),
         },
       ])
+    } else {
+      setMessages(mapped)
+      // Merge with pending messages from sessionStorage
+      try {
+        if (typeof window !== 'undefined') {
+          const rawPend = sessionStorage.getItem(`pending_conv_messages_${id}`)
+          if (rawPend) {
+            const arr = JSON.parse(rawPend)
+            const pend: Message[] = Array.isArray(arr) ? arr.map((m: any) => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: new Date(m.timestamp) })) : []
+            if (pend.length) {
+              const existing = new Set(mapped.map(m => m.id))
+              const merged = [...mapped]
+              for (const pm of pend) {
+                if (!existing.has(pm.id)) merged.push(pm)
+              }
+              merged.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+              setMessages(merged)
+            }
+            sessionStorage.removeItem(`pending_conv_messages_${id}`)
+          }
+        }
+      } catch {}
     }
   }
 
