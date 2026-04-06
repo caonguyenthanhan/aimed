@@ -1487,8 +1487,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setMessages([
         {
           id: '1',
-          content:
-            'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
+          content: 'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
           isUser: false,
           timestamp: new Date(),
         },
@@ -1496,6 +1495,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setConversationId(null)
     }
   }, [initialConversationId])
+
+  // Initialize on mount
 
   const renameConversation = async (id: string, title: string) => {
     if (!authToken || String(id).startsWith('conv-')) {
@@ -1683,7 +1684,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           <DialogHeader>
             <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
             <DialogDescription className="text-red-600">
-              Nếu bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay
+              N���u bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-slate-800">
