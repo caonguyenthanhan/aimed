@@ -1333,40 +1333,38 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const fetchConversations = async () => {
     if (!authToken) {
+      // Not logged in: load from localStorage only
       loadLocalConversations()
       return
     }
+    
+    // Logged in: try to load from database first, fall back to localStorage
     setIsLoadingConversations(true)
     try {
-      const resp = await fetch('/api/backend/v1/conversations', {
-        headers: { 'Authorization': `Bearer ${authToken}` }
+      // Try to load from our Neon API endpoints
+      const resp = await fetch('/api/conversations/list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ userId: authToken }) // Use token as user identifier for now
       })
       
-      // Check if response is OK and is JSON
-      if (!resp.ok) {
-        setServerUnavailable(true)
+      if (resp.ok) {
+        const data = await resp.json()
+        const serverItems = Array.isArray(data?.conversations) ? data.conversations : []
+        const sorted = serverItems.slice().sort((a: any, b: any) => (a.last_active > b.last_active ? -1 : 1))
+        setConversations(sorted)
+        setServerUnavailable(false)
         setIsLoadingConversations(false)
         return
       }
-      
-      const contentType = resp.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        setServerUnavailable(true)
-        setIsLoadingConversations(false)
-        return
-      }
-      
-      const data = await resp.json()
-      const serverItems = Array.isArray(data?.conversations) ? data.conversations : []
-      const sorted = serverItems.slice().sort((a: any, b: any) => (a.last_active > b.last_active ? -1 : 1))
-      setConversations(sorted)
-      setServerUnavailable(false)
     } catch (e) {
-      // Silently handle error - server is likely unavailable
-      setServerUnavailable(true)
-    } finally {
-      setIsLoadingConversations(false)
+      console.debug('[v0] Database load failed, falling back to localStorage:', e)
     }
+    
+    // Fallback: load from localStorage
+    loadLocalConversations()
+    setServerUnavailable(true)
+    setIsLoadingConversations(false)
   }
 
   const openConversation = async (id: string) => {
@@ -1396,41 +1394,57 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       } catch {}
       return
     }
+    // Logged in: try to load from database
     try {
-      const resp = await fetch(`/api/backend/v1/conversations/${id}`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
+      const resp = await fetch('/api/conversations/load', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+        body: JSON.stringify({ conversationId: id, userId: authToken })
       })
-      if (!resp.ok) {
-        if (resp.status === 404) {
-          throw new Error('Không tìm thấy hội thoại hoặc bạn không có quyền truy cập.')
-        }
-        throw new Error(`Lỗi server: ${resp.status}`)
-      }
-      const data = await resp.json()
-      const src = Array.isArray(data?.messages) ? data.messages : (Array.isArray(data?.items) ? data.items : [])
-      const lastTs = typeof data?.last_active === 'string' ? data.last_active : new Date().toISOString()
-      let mapped: Message[] = src.map((m: any, idx: number) => ({
-        id: String(m?.id || `${id}-${idx}`),
-        content: String(m?.content || ''),
-        isUser: String(m?.role || 'user') === 'user',
-        timestamp: new Date(m?.timestamp || lastTs)
-      }))
-
       
-
-      if (!mapped.length && typeof window !== 'undefined') {
-        try {
-          const raw = sessionStorage.getItem(`pending_conv_messages_${id}`)
-          if (raw) {
-            const arr = JSON.parse(raw)
-            const snap: Message[] = Array.isArray(arr) ? arr.map((m: any) => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: new Date(m.timestamp) })) : []
-            if (snap.length) {
-              setMessages(snap)
-              sessionStorage.removeItem(`pending_conv_messages_${id}`)
-            } else {
-              setMessages([
-                {
-                  id: '1',
+      if (resp.ok) {
+        const data = await resp.json()
+        const src = Array.isArray(data?.messages) ? data.messages : []
+        const mapped: Message[] = src.map((m: any, idx: number) => ({
+          id: String(m?.id || `${id}-${idx}`),
+          content: String(m?.content || ''),
+          isUser: m?.isUser ?? false,
+          timestamp: new Date(m?.timestamp || new Date().toISOString())
+        }))
+        
+        if (mapped.length) {
+          setMessages(mapped)
+          return
+        }
+      }
+    } catch (err) {
+      console.debug('[v0] Failed to load from database, trying localStorage:', err)
+    }
+    
+    // Fallback: try localStorage if database fails
+    try {
+      if (typeof window !== 'undefined') {
+        const raw = localStorage.getItem(`conv_messages_${id}`)
+        if (raw) {
+          const arr = JSON.parse(raw)
+          const mapped: Message[] = Array.isArray(arr) ? arr.map((m: any) => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: new Date(m.timestamp) })) : []
+          if (mapped.length) {
+            setMessages(mapped)
+            return
+          }
+        }
+      }
+    } catch {}
+    
+    // Last resort: create empty conversation
+    setMessages([
+      {
+        id: '1',
+        content: 'Xin chào! Tôi là trợ lý AI y tế. Bạn có câu hỏi gì không?',
+        isUser: false,
+        timestamp: new Date(),
+      },
+    ])
                   content:
                     'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
                   isUser: false,
@@ -1632,24 +1646,44 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   
 
   useEffect(() => {
-    if (!authToken && conversationId) {
-      try {
-        if (typeof window !== 'undefined') {
-          const serial = messages.map(m => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: m.timestamp.toISOString() }))
-          localStorage.setItem(`conv_messages_${conversationId}`, JSON.stringify(serial))
-          const titleKey = `conv_title_${conversationId}`
-          const existingTitle = localStorage.getItem(titleKey) || ''
-          if (!existingTitle) {
-            const lastUser = [...messages].reverse().find(m => m.isUser && m.content && m.content.trim())
-            if (lastUser) {
-              const first6 = lastUser.content.trim().split(/\s+/).slice(0, 6).join(' ')
-              localStorage.setItem(titleKey, first6)
-            }
-          }
-          loadLocalConversations()
+    if (!conversationId) return
+    
+    try {
+      const serial = messages.map(m => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: m.timestamp.toISOString() }))
+      
+      // Generate title from first user message
+      const titleKey = `conv_title_${conversationId}`
+      let title = localStorage.getItem(titleKey) || ''
+      if (!title) {
+        const lastUser = [...messages].reverse().find(m => m.isUser && m.content && m.content.trim())
+        if (lastUser) {
+          title = lastUser.content.trim().split(/\s+/).slice(0, 6).join(' ')
+          localStorage.setItem(titleKey, title)
         }
-      } catch {}
-    }
+      }
+      
+      if (authToken) {
+        // Logged in: save to database
+        fetch('/api/conversations/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+          body: JSON.stringify({
+            conversationId,
+            userId: authToken,
+            messages: serial,
+            title: title || `Chat ${new Date().toLocaleDateString('vi-VN')}`
+          })
+        }).catch(err => console.debug('[v0] Failed to sync to database:', err))
+      } else {
+        // Not logged in: save to localStorage only
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`conv_messages_${conversationId}`, JSON.stringify(serial))
+        }
+      }
+      
+      // Always update sidebar
+      loadLocalConversations()
+    } catch {}
   }, [messages, authToken, conversationId])
 
   useEffect(() => {

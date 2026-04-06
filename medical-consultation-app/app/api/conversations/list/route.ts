@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@vercel/postgres'
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const userId = request.nextUrl.searchParams.get('userId')
+    const { userId } = await request.json()
     
     if (!userId) {
       return NextResponse.json(
