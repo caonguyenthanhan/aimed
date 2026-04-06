@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@vercel/postgres'
+import { Client } from 'pg'
 import { v4 as uuidv4 } from 'uuid'
 
 interface Message {
@@ -9,7 +9,16 @@ interface Message {
   timestamp: string
 }
 
+async function getDbClient() {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+  })
+  await client.connect()
+  return client
+}
+
 export async function POST(request: NextRequest) {
+  let client
   try {
     const { conversationId, messages, title, userId } = await request.json()
 
@@ -20,40 +29,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    client = await getDbClient()
+
     // Check if conversation exists
-    const existingConv = await sql`
-      SELECT id FROM conversations WHERE id = ${conversationId}
-    `
+    const existingConv = await client.query(
+      'SELECT id FROM conversations WHERE id = $1',
+      [conversationId]
+    )
 
     if (existingConv.rows.length === 0) {
       // Create new conversation
-      await sql`
-        INSERT INTO conversations (id, user_id, title, created_at, last_active)
-        VALUES (${conversationId}, ${userId}, ${title || 'Hội thoại mới'}, NOW(), NOW())
-      `
+      await client.query(
+        'INSERT INTO conversations (id, user_id, title, created_at, last_active) VALUES ($1, $2, $3, NOW(), NOW())',
+        [conversationId, userId, title || 'Hội thoại mới']
+      )
     } else {
       // Update existing conversation title and last_active
-      await sql`
-        UPDATE conversations 
-        SET title = ${title || 'Hội thoại'}, last_active = NOW()
-        WHERE id = ${conversationId}
-      `
+      await client.query(
+        'UPDATE conversations SET title = $1, last_active = NOW() WHERE id = $2',
+        [title || 'Hội thoại', conversationId]
+      )
     }
 
     // Delete old messages for this conversation
-    await sql`DELETE FROM conversation_messages WHERE conv_id = ${conversationId}`
+    await client.query('DELETE FROM conversation_messages WHERE conv_id = $1', [conversationId])
 
     // Insert all messages
     for (const msg of messages) {
-      await sql`
-        INSERT INTO conversation_messages (conv_id, role, content, created_at)
-        VALUES (
-          ${conversationId},
-          ${msg.isUser ? 'user' : 'assistant'},
-          ${msg.content},
-          ${msg.timestamp || new Date().toISOString()}
-        )
-      `
+      await client.query(
+        'INSERT INTO conversation_messages (conv_id, role, content, created_at) VALUES ($1, $2, $3, $4)',
+        [
+          conversationId,
+          msg.isUser ? 'user' : 'assistant',
+          msg.content,
+          msg.timestamp || new Date().toISOString()
+        ]
+      )
     }
 
     return NextResponse.json({ 
@@ -66,5 +77,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to save conversation' },
       { status: 500 }
     )
+  } finally {
+    if (client) await client.end()
   }
 }
