@@ -1445,28 +1445,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         timestamp: new Date(),
       },
     ])
-                  content:
-                    'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
-                  isUser: false,
-                  timestamp: new Date(),
-                },
-              ])
-            }
-          } else {
-            setMessages([
-              {
-                id: '1',
-                content:
-                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
-                isUser: false,
-                timestamp: new Date(),
-              },
-            ])
-          }
-        } catch {
-          setMessages([
-            {
-              id: '1',
+    
+  }
               content:
                 'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
               isUser: false,
