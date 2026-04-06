@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { sql } from '@vercel/postgres'
+import { Client } from 'pg'
+
+async function getDbClient() {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+  })
+  await client.connect()
+  return client
+}
 
 export async function POST(request: NextRequest) {
+  let client
   try {
     const { conversationId } = await request.json()
 
@@ -12,12 +21,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    client = await getDbClient()
+
     // Get conversation metadata
-    const convResult = await sql`
-      SELECT id, title, created_at, last_active
-      FROM conversations
-      WHERE id = ${conversationId}
-    `
+    const convResult = await client.query(
+      'SELECT id, title, created_at, last_active FROM conversations WHERE id = $1',
+      [conversationId]
+    )
 
     if (convResult.rows.length === 0) {
       return NextResponse.json(
@@ -27,16 +37,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all messages for this conversation
-    const messagesResult = await sql`
-      SELECT 
+    const messagesResult = await client.query(
+      `SELECT 
         id,
         role,
         content,
         created_at
       FROM conversation_messages
-      WHERE conv_id = ${conversationId}
-      ORDER BY created_at ASC
-    `
+      WHERE conv_id = $1
+      ORDER BY created_at ASC`,
+      [conversationId]
+    )
 
     // Map database messages to app format
     const messages = messagesResult.rows.map(msg => ({
@@ -56,5 +67,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to load conversation' },
       { status: 500 }
     )
+  } finally {
+    if (client) await client.end()
   }
 }
