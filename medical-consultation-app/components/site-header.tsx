@@ -94,16 +94,16 @@ export default function SiteHeader() {
   const navItems = mainItems
 
   return (
-    <div className="fixed top-3 left-0 right-0 z-50 flex justify-center px-3">
+    <div className="fixed top-2 sm:top-3 left-0 right-0 z-50 flex justify-center px-2 sm:px-3">
       {/* Compact Glass Header */}
-      <div data-site-header className="relative w-full max-w-4xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-full px-4 h-12 flex items-center justify-between shadow-lg shadow-black/5 dark:shadow-black/20 border border-white/20 dark:border-slate-700/50 transition-all duration-300">
+      <div data-site-header className="relative w-full max-w-4xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl sm:rounded-full px-3 sm:px-4 h-14 sm:h-12 flex items-center justify-between shadow-lg shadow-black/5 dark:shadow-black/20 border border-white/20 dark:border-slate-700/50 transition-all duration-300">
         
         {/* Logo Section - Compact */}
-        <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
+        <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
           <div className="bg-gradient-to-br from-primary to-accent p-1.5 rounded-lg">
-            <BrainCircuit className="text-white" size={18} />
+            <BrainCircuit className="text-white w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </div>
-          <span className="font-bold text-foreground tracking-tight text-sm hidden sm:block">
+          <span className="font-bold text-foreground tracking-tight text-xs sm:text-sm hidden sm:block">
             <span className="text-primary">AI</span>Med
           </span>
         </Link>
@@ -156,12 +156,12 @@ export default function SiteHeader() {
         </nav>
 
         {/* Action Section - Compact */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           <LanguageSwitcher />
           <ComputeToggle />
           {!authed ? (
-            <Link href="/login" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity whitespace-nowrap shadow-sm">
-              <LogIn size={14} />
+            <Link href="/login" className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity whitespace-nowrap shadow-sm">
+              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Đăng nhập</span>
             </Link>
           ) : (

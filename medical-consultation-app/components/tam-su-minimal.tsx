@@ -619,7 +619,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="max-w-6xl mx-auto p-4 w-full h-full">
+      <div className="w-full h-full px-2 sm:px-4 py-3 sm:py-4">
         <div className="rounded-2xl border bg-white shadow-sm overflow-hidden flex h-full">
           {!isMobile && showSidebar ? (
             <div className="w-72 border-r bg-white flex flex-col">
@@ -692,42 +692,42 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
           ) : null}
 
           <div className="flex-1 flex flex-col">
-            <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
-              <div className="min-w-0">
+            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto">
+              <div className="min-w-0 flex-1">
                 {conversationId && renamingId === conversationId ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <input
-                      className="text-sm border rounded px-2 py-1 w-64 max-w-full"
+                      className="text-xs sm:text-sm border rounded px-2 py-1 w-40 sm:w-64 max-w-full"
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
                       placeholder="Đặt tên hội thoại"
                     />
-                    <button className="text-xs px-2 py-1 border rounded" type="button" onClick={() => renameConversation(conversationId)}>Lưu</button>
-                    <button className="text-xs px-2 py-1 border rounded" type="button" onClick={() => { setRenamingId(null); setRenameValue("") }}>Hủy</button>
+                    <button className="text-xs px-2 py-1 border rounded whitespace-nowrap" type="button" onClick={() => renameConversation(conversationId)}>Lưu</button>
+                    <button className="text-xs px-2 py-1 border rounded whitespace-nowrap" type="button" onClick={() => { setRenamingId(null); setRenameValue("") }}>Hủy</button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="text-base font-bold text-slate-900 dark:text-slate-50 truncate">{conversationId ? loadLocalTitle(conversationId) : "Tâm sự"}</div>
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-50 truncate">{conversationId ? loadLocalTitle(conversationId) : "Tâm sự"}</div>
                     {conversationId ? (
                       <>
-                        <button className="text-xs px-3 py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 hover:border-blue-300 dark:hover:border-blue-600 transition" type="button" onClick={() => { setRenamingId(conversationId); setRenameValue(loadLocalTitle(conversationId)) }}>✏️ Đổi tên</button>
-                        <button className="text-xs px-3 py-1.5 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:border-red-300 dark:hover:border-red-700 transition" type="button" onClick={() => deleteConversation(conversationId)}>🗑️ Xóa</button>
+                        <button className="text-xs px-2 sm:px-3 py-1 sm:py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 hover:border-blue-300 dark:hover:border-blue-600 transition whitespace-nowrap" type="button" onClick={() => { setRenamingId(conversationId); setRenameValue(loadLocalTitle(conversationId)) }}>✏️</button>
+                        <button className="text-xs px-2 sm:px-3 py-1 sm:py-1.5 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:border-red-300 dark:hover:border-red-700 transition whitespace-nowrap" type="button" onClick={() => deleteConversation(conversationId)}>🗑️</button>
                       </>
                     ) : null}
                   </div>
                 )}
-                <div className="text-xs text-slate-600 dark:text-slate-400">Chia sẻ cảm xúc, tâm sự với trợ lý thông minh</div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">Chia sẻ cảm xúc, tâm sự</div>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 {isMobile ? (
-                  <button className="h-9 w-9 rounded-xl border border-border bg-card flex items-center justify-center hover:bg-secondary transition-colors" type="button" onClick={() => setShowSidebar(true)} aria-label="Mo lich su">
-                    <Menu className="h-4 w-4 text-foreground" />
+                  <button className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl border border-border bg-card flex items-center justify-center hover:bg-secondary transition-colors" type="button" onClick={() => setShowSidebar(true)} aria-label="Mo lich su">
+                    <Menu className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-foreground" />
                   </button>
                 ) : null}
                 <select
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value as any)}
-                  className="text-xs px-3 py-2 border border-border rounded-xl bg-card text-foreground font-medium hover:bg-secondary transition-colors cursor-pointer"
+                  className="text-xs px-2 sm:px-3 py-1 sm:py-2 border border-border rounded-xl bg-card text-foreground font-medium hover:bg-secondary transition-colors cursor-pointer"
                 >
                   <option value="flash">flash</option>
                   <option value="pro">pro</option>
@@ -735,7 +735,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 <select
                   value={friendStyle}
                   onChange={(e) => setFriendStyle(e.target.value as any)}
-                  className="text-xs px-3 py-2 border border-border rounded-xl bg-card text-foreground font-medium hover:bg-secondary transition-colors cursor-pointer"
+                  className="text-xs px-2 sm:px-3 py-1 sm:py-2 border border-border rounded-xl bg-card text-foreground font-medium hover:bg-secondary transition-colors cursor-pointer"
                 >
                   <option value="standard">gon</option>
                   <option value="deep">sau</option>
@@ -762,12 +762,12 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               </div>
             </div>
 
-            <div className="px-4 py-3 flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b border-border bg-secondary/30">
+            <div className="px-2 sm:px-4 py-2 sm:py-3 flex gap-1.5 sm:gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b border-border bg-secondary/30">
               {suggestedQuestions.slice(0, 4).map((q) => (
                 <button 
                   key={q} 
                   type="button" 
-                  className="shrink-0 text-xs px-4 py-2 rounded-full border border-border bg-card text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all font-medium shadow-sm" 
+                  className="shrink-0 text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-border bg-card text-foreground hover:bg-accent hover:text-accent-foreground hover:border-accent transition-all font-medium shadow-sm" 
                   onClick={() => setInput(q)}
                 >
                   {q}
@@ -926,7 +926,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               )}
             </div>
 
-            <div className="p-4 border-t border-border bg-card flex items-end gap-3">
+            <div className="px-2 sm:px-4 py-2 sm:py-4 border-t border-border bg-card flex items-end gap-2 sm:gap-3">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -937,14 +937,14 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                   }
                 }}
                 placeholder="Bạn đang nghĩ gì, nói với mình nhé..."
-                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 text-sm resize-none max-h-40 text-slate-900 dark:text-slate-50 placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm resize-none max-h-40 text-slate-900 dark:text-slate-50 placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows={1}
                 disabled={isLoading}
               />
               <button
                 onClick={() => void send()}
                 disabled={!canSend}
-                className={`px-5 py-3 text-sm font-medium rounded-lg transition-all ${
+                className={`px-3 sm:px-5 py-2 sm:py-3 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap flex-shrink-0 ${
                   canSend 
                     ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-700 active:scale-95" 
                     : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"

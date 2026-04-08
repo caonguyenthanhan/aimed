@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Client } from 'pg'
-import { v4 as uuidv4 } from 'uuid'
+import crypto from 'crypto'
+
+// Convert token string to consistent UUID using namespace hash
+function tokenToUUID(token: string): string {
+  const hash = crypto.createHash('sha256').update(token).digest()
+  return `${hash.toString('hex', 0, 4)}-${hash.toString('hex', 4, 6)}-${hash.toString('hex', 6, 8)}-${hash.toString('hex', 8, 10)}-${hash.toString('hex', 10, 16)}`
+}
 
 interface Message {
   id: string
@@ -30,6 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     client = await getDbClient()
+    const userUUID = tokenToUUID(userId)
 
     // Check if conversation exists
     const existingConv = await client.query(
@@ -38,10 +45,10 @@ export async function POST(request: NextRequest) {
     )
 
     if (existingConv.rows.length === 0) {
-      // Create new conversation
+      // Create new conversation with converted UUID
       await client.query(
-        'INSERT INTO conversations (id, user_id, title, created_at, last_active) VALUES ($1, $2, $3, NOW(), NOW())',
-        [conversationId, userId, title || 'Hội thoại mới']
+        'INSERT INTO conversations (id, user_id, title, created_at, last_active) VALUES ($1, $2::uuid, $3, NOW(), NOW())',
+        [conversationId, userUUID, title || 'Hội thoại mới']
       )
     } else {
       // Update existing conversation title and last_active

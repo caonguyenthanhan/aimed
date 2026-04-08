@@ -75,7 +75,7 @@ function QuickAccessCard({
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-50" suppressHydrationWarning>
+    <div className="h-screen overflow-y-auto bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-50" suppressHydrationWarning>
       <main className="flex-grow">
         {/* Hero Section */}
         <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">

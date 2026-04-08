@@ -8,6 +8,8 @@ import { AgentResponseSchema, isAllowedPath, normalizeActions } from "@/lib/agen
 import { persistChatTurn } from "@/lib/chat-persistence"
 import { runLocalAgent } from "@/lib/agent-local-provider"
 import { buildNavLinkMessage, planChunkedMessages } from "@/lib/chat-delivery"
+import { getRateLimit } from "@/lib/rate-limiter"
+import { retryWithBackoff } from "@/lib/retry-backoff"
 
 export async function POST(req: Request) {
   const started = Date.now()
@@ -20,8 +22,22 @@ export async function POST(req: Request) {
     const category = body?.category === "friend" ? "friend" : "consultation"
     const accessPass = String(body?.access_pass || "").trim()
     const deliveryMode = body?.delivery_mode === "live" ? "live" : "chunked"
+    const userId = String(body?.user_id || conversation_id || "unknown").trim()
 
     if (!message) return NextResponse.json({ error: "Message is required" }, { status: 400 })
+
+    // Check rate limit
+    const rateLimitCheck = getRateLimit(userId)
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Rate limit exceeded",
+          details: `Too many requests. Please wait ${rateLimitCheck.retryAfter}s before trying again`,
+          retry_after: rateLimitCheck.retryAfter,
+        },
+        { status: 429, headers: { "Retry-After": String(rateLimitCheck.retryAfter || 60) } }
+      )
+    }
 
     const planResponseMessages = (content: string, actions: any[]) => {
       const msgs: any[] = []
@@ -265,7 +281,12 @@ export async function POST(req: Request) {
     let r: Awaited<ReturnType<typeof geminiService.generateAgent>> | null = null
     try {
       const svc = keyToUse === String(process.env.GEMINI_API_KEY || "").trim() ? geminiService : new GeminiService(keyToUse)
-      r = await svc.generateAgent({ category, tier, question: message, messages, tools: toolDecl })
+      
+      // Wrap Gemini call with exponential backoff retry
+      r = await retryWithBackoff(
+        () => svc.generateAgent({ category, tier, question: message, messages, tools: toolDecl }),
+        { maxRetries: 3, initialDelayMs: 500, maxDelayMs: 5000, backoffMultiplier: 2 }
+      )
     } catch (e: any) {
       geminiErr = String(e?.message || e || "").trim() || "unknown_error"
       if (geminiErr.length > 280) geminiErr = geminiErr.slice(0, 280)
