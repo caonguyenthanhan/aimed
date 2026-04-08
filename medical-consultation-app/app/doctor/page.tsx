@@ -34,7 +34,10 @@ export default function DoctorDashboard() {
   ]
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50 mb-2">
@@ -165,6 +168,8 @@ export default function DoctorDashboard() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
         </div>
       </div>
     </div>
