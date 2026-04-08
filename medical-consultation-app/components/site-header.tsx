@@ -101,7 +101,7 @@ export default function SiteHeader() {
         {/* Logo Section - Compact */}
         <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
           <div className="bg-gradient-to-br from-primary to-accent p-1.5 rounded-lg">
-            <BrainCircuit className="text-white" size={16} sm:size={18} />
+            <BrainCircuit className="text-white w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </div>
           <span className="font-bold text-foreground tracking-tight text-xs sm:text-sm hidden sm:block">
             <span className="text-primary">AI</span>Med
@@ -161,7 +161,7 @@ export default function SiteHeader() {
           <ComputeToggle />
           {!authed ? (
             <Link href="/login" className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity whitespace-nowrap shadow-sm">
-              <LogIn size={12} sm:size={14} />
+              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">Đăng nhập</span>
             </Link>
           ) : (
