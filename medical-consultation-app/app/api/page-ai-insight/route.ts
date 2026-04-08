@@ -177,11 +177,40 @@ LƯU Ý: Giọng điệu ấm áp, chuyên nghiệp, hỗ trợ. Chỉ trả v�
         },
       })
     } catch (error: any) {
-      console.error('[v0] Error generating page insight:', error?.message)
+      const errorMessage = error?.message || 'unknown error'
+      const errorStatus = error?.status || error?.response?.status || 502
+      
+      // Log with context
+      console.error('[v0] Error generating page insight:', errorMessage, { 
+        status: errorStatus,
+        code: error?.code 
+      })
+      
+      // Handle specific error cases
+      if (errorStatus === 503 || errorMessage.includes('UNAVAILABLE')) {
+        return NextResponse.json(
+          {
+            error: 'Service temporarily unavailable',
+            details: 'AI model overloaded, please try again in a moment',
+          },
+          { status: 503 }
+        )
+      }
+      
+      if (errorStatus === 429) {
+        return NextResponse.json(
+          {
+            error: 'Rate limit exceeded',
+            details: 'Too many requests, please wait before trying again',
+          },
+          { status: 429 }
+        )
+      }
+      
       return NextResponse.json(
         {
           error: 'Failed to generate insight',
-          details: error?.message || 'unknown',
+          details: errorMessage,
         },
         { status: 502 }
       )

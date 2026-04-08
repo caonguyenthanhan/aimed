@@ -1703,11 +1703,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Đổi tên hội tho���i</DialogTitle>
-            <DialogDescription>
-              Nhập tiêu đề mới cho hội thoại này
-            </DialogDescription>
+            <DialogTitle>Đổi tên hội thoại</DialogTitle>
           </DialogHeader>
+          <DialogDescription className="sr-only">
+            Nhập tiêu đề mới cho hội thoại này
+          </DialogDescription>
           <div className="space-y-3">
             <Input value={renameInput} onChange={(e) => setRenameInput(e.target.value)} placeholder="Nhập tiêu đề" />
           </div>
@@ -1721,10 +1721,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent>
           <DialogHeader>
             <DialogTitle>API Key / Pass</DialogTitle>
-            <DialogDescription>
-              Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
-            </DialogDescription>
           </DialogHeader>
+          <DialogDescription className="sr-only">
+            Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
+          </DialogDescription>
           <div className="space-y-3">
             <Input type="password" value={authSecret} onChange={(e) => setAuthSecret(e.target.value)} placeholder="Nhập API key hoặc pass" />
           </div>
