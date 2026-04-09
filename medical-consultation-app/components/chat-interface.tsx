@@ -393,7 +393,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [showTools, setShowTools] = useState(false)
   const [selectedDocName, setSelectedDocName] = useState<string | null>(null)
   const [conversationId, setConversationId] = useState<string | null>(null)
-  const [userId, setUserId] = useState<string | null>(null)
   const [isDisclaimerCollapsed, setIsDisclaimerCollapsed] = useState<boolean>(false)
   const [disclaimerDismissed, setDisclaimerDismissed] = useState<boolean>(false)
   const [sidebarSearchOpen, setSidebarSearchOpen] = useState<boolean>(false)
