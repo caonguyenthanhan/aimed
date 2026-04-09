@@ -156,8 +156,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }, [])
 
   // Multi-device sync: poll for changes
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''
-  useMultiDeviceSync(userId, (syncEvent) => {
+  useMultiDeviceSync(userId || '', (syncEvent) => {
     if (syncEvent.type === 'message-added' && syncEvent.data.conversationId === conversationId) {
       // New message in current conversation from another device
       if (!syncEvent.data.role.includes('user')) {
