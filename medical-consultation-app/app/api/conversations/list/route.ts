@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Client } from 'pg'
 import crypto from 'crypto'
+import { getConversationsList } from '@/lib/db-queries'
 
-// Convert token string to consistent UUID using namespace hash
+// Convert token string to consistent UUID
 function tokenToUUID(token: string): string {
   const hash = crypto.createHash('sha256').update(token).digest()
-  // Create UUID v5-like format from hash
   return `${hash.toString('hex', 0, 4)}-${hash.toString('hex', 4, 6)}-${hash.toString('hex', 6, 8)}-${hash.toString('hex', 8, 10)}-${hash.toString('hex', 10, 16)}`
 }
 
@@ -20,7 +20,7 @@ async function getDbClient() {
 export async function POST(request: NextRequest) {
   let client
   try {
-    const { userId } = await request.json()
+    const { userId, limit = 100, offset = 0 } = await request.json()
     
     if (!userId) {
       return NextResponse.json(
@@ -32,20 +32,17 @@ export async function POST(request: NextRequest) {
     client = await getDbClient()
     const userUUID = tokenToUUID(userId)
 
-    // Get all conversations for user, ordered by last_active DESC
-    const result = await client.query(`
-      SELECT 
-        id,
-        title,
-        created_at,
-        last_active
-      FROM conversations
-      WHERE user_id = $1::uuid
-      ORDER BY last_active DESC
-      LIMIT 100
-    `, [userUUID])
+    // Use optimized query with indexes
+    const { rows, error } = await getConversationsList(
+      client,
+      userUUID,
+      Math.min(limit, 100),
+      offset
+    )
 
-    return NextResponse.json({ conversations: result.rows })
+    if (error) throw error
+
+    return NextResponse.json({ conversations: rows })
   } catch (error) {
     console.error('[v0] Error fetching conversations:', error)
     return NextResponse.json(

@@ -24,6 +24,9 @@ import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { AgentResponseSchema, isAllowedPath, normalizeActions, type AgentAction } from "@/lib/agent-actions"
 import { GoogleGenAI, Modality } from "@google/genai"
 import { ChatSpecialMessage, parseSpecialMessages, type SpecialMessageData } from "@/components/chat-special-message"
+import { VirtualChatList } from "@/components/virtual-chat-list"
+import { OptimizedMessage } from "@/components/optimized-message"
+import { useMultiDeviceSync, useLocalSyncListener } from "@/lib/multi-device-sync"
 
 interface Message {
   id: string
@@ -151,6 +154,39 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setAuthSecret("")
     }
   }, [])
+
+  // Multi-device sync: poll for changes
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''
+  useMultiDeviceSync(userId, (syncEvent) => {
+    if (syncEvent.type === 'message-added' && syncEvent.data.conversationId === conversationId) {
+      // New message in current conversation from another device
+      if (!syncEvent.data.role.includes('user')) {
+        const newMsg: Message = {
+          id: String(syncEvent.data.id),
+          content: syncEvent.data.content,
+          isUser: syncEvent.data.role === 'user',
+          timestamp: new Date(syncEvent.timestamp),
+        }
+        setMessages(prev => [...prev, newMsg])
+      }
+    } else if (syncEvent.type === 'conversation-created') {
+      // New conversation from another device
+      loadLocalConversations()
+    }
+  })
+
+  // Listen for sync events from other tabs via localStorage
+  useLocalSyncListener((syncEvent) => {
+    if (syncEvent.type === 'message-added' && syncEvent.data.conversationId === conversationId) {
+      const newMsg: Message = {
+        id: String(syncEvent.data.id),
+        content: syncEvent.data.content,
+        isUser: syncEvent.data.role === 'user',
+        timestamp: new Date(syncEvent.timestamp),
+      }
+      setMessages(prev => [...prev, newMsg])
+    }
+  })
 
   const hasSecret = () => !!String(authSecret || "").trim()
 
@@ -1905,92 +1941,160 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
       {/* Messages Container */}
       <div 
-        className="flex-1 overflow-y-auto px-4 sm:px-6 min-h-0 custom-scrollbar"
+        className="flex-1 overflow-hidden px-4 sm:px-6 min-h-0 custom-scrollbar"
         style={{ 
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain'
         }}
       >
-        <div className="space-y-4 py-4">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex items-end gap-3 animate-message-in ${
-              message.isUser ? 'justify-end' : 'justify-start'
-            }`}
-          >
-            {!message.isUser && (
-              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
-                <Bot className="h-4 w-4 text-white" />
-              </div>
-            )}
-            
-            <div
-              className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 ${
-                message.isUser
-                  ? 'chat-bubble-user'
-                  : 'chat-bubble-bot border border-border/50'
-              }`}
-              style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-            >
-              {message.isUser ? (
-                <p className="text-sm whitespace-pre-wrap leading-relaxed font-medium">{message.content}</p>
-              ) : (
-                <div className="text-sm prose prose-sm dark:prose-invert leading-relaxed prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-                </div>
-              )}
-              {!message.isUser && (
-                <div className="flex justify-end mt-3 pt-2 border-t border-border/30 gap-1.5">
-                  {/* Nút Play/Pause */}
-                  {isPlayingAudio === message.id ? (
-                    <button
-                      onClick={() => handlePauseAudio(message.id)}
-                      className="p-1.5 rounded-full bg-primary text-primary-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
-                      title="Tạm dừng"
-                    >
-                      <Pause className="h-3.5 w-3.5" />
-                    </button>
-                  ) : isPausedAudio === message.id ? (
-                    <button
-                      onClick={() => handleResumeAudio(message.id)}
-                      className="p-1.5 rounded-full bg-accent text-accent-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
-                      title="Tiếp tục"
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                    </button>
+        {messages.length > 100 ? (
+          // Use virtual scroll for large message lists
+          <VirtualChatList
+            messages={messages}
+            renderMessage={(msg, idx) => (
+              <div
+                key={msg.id || idx}
+                className={`flex items-end gap-3 animate-message-in ${
+                  msg.isUser ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                {!msg.isUser && (
+                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                    <Bot className="h-4 w-4 text-white" />
+                  </div>
+                )}
+                
+                <div
+                  className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 ${
+                    msg.isUser
+                      ? 'chat-bubble-user'
+                      : 'chat-bubble-bot border border-border/50'
+                  }`}
+                  style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                >
+                  {msg.isUser ? (
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed font-medium">{msg.content}</p>
                   ) : (
-                    <button
-                      onClick={() => handleTextToSpeech(message.id, message.content)}
-                      className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200"
-                      title="Nghe tin nhắn"
-                    >
-                      <Volume2 className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="text-sm prose prose-sm dark:prose-invert leading-relaxed prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                    </div>
                   )}
-                  
-                  {/* Nút Stop - chỉ hiện khi đang phát hoặc tạm dừng */}
-                  {(isPlayingAudio === message.id || isPausedAudio === message.id) && (
-                    <button
-                      onClick={handleStopAudio}
-                      className="p-1.5 rounded-full bg-destructive text-destructive-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
-                      title="Dừng"
-                    >
-                      <Square className="h-3.5 w-3.5" />
-                    </button>
+                  {!msg.isUser && (
+                    <div className="flex justify-end mt-3 pt-2 border-t border-border/30 gap-1.5">
+                      {isPlayingAudio === msg.id ? (
+                        <button onClick={() => handlePauseAudio(msg.id)} className="p-1.5 rounded-full bg-primary text-primary-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Tạm dừng">
+                          <Pause className="h-3.5 w-3.5" />
+                        </button>
+                      ) : isPausedAudio === msg.id ? (
+                        <button onClick={() => handleResumeAudio(msg.id)} className="p-1.5 rounded-full bg-accent text-accent-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Tiếp tục">
+                          <Play className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        <button onClick={() => handleTextToSpeech(msg.id, msg.content)} className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200" title="Nghe tin nhắn">
+                          <Volume2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {(isPlayingAudio === msg.id || isPausedAudio === msg.id) && (
+                        <button onClick={handleStopAudio} className="p-1.5 rounded-full bg-destructive text-destructive-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Dừng">
+                          <Square className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {message.isUser && (
-              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
-                <User className="h-4 w-4 text-white" />
+                {msg.isUser && (
+                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                )}
               </div>
             )}
+            itemHeight={100}
+            overscan={5}
+          />
+        ) : (
+          // Normal rendering for small message lists
+          <div className="space-y-4 py-4">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex items-end gap-3 animate-message-in ${
+                  message.isUser ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                {!message.isUser && (
+                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                    <Bot className="h-4 w-4 text-white" />
+                  </div>
+                )}
+                
+                <div
+                  className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 ${
+                    message.isUser
+                      ? 'chat-bubble-user'
+                      : 'chat-bubble-bot border border-border/50'
+                  }`}
+                  style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                >
+                  {message.isUser ? (
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed font-medium">{message.content}</p>
+                  ) : (
+                    <div className="text-sm prose prose-sm dark:prose-invert leading-relaxed prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                    </div>
+                  )}
+                  {!message.isUser && (
+                    <div className="flex justify-end mt-3 pt-2 border-t border-border/30 gap-1.5">
+                      {isPlayingAudio === message.id ? (
+                        <button
+                          onClick={() => handlePauseAudio(message.id)}
+                          className="p-1.5 rounded-full bg-primary text-primary-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
+                          title="Tạm dừng"
+                        >
+                          <Pause className="h-3.5 w-3.5" />
+                        </button>
+                      ) : isPausedAudio === message.id ? (
+                        <button
+                          onClick={() => handleResumeAudio(message.id)}
+                          className="p-1.5 rounded-full bg-accent text-accent-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
+                          title="Tiếp tục"
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleTextToSpeech(message.id, message.content)}
+                          className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200"
+                          title="Nghe tin nhắn"
+                        >
+                          <Volume2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      
+                      {(isPlayingAudio === message.id || isPausedAudio === message.id) && (
+                        <button
+                          onClick={handleStopAudio}
+                          className="p-1.5 rounded-full bg-destructive text-destructive-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
+                          title="Dừng"
+                        >
+                          <Square className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {message.isUser && (
+                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-        ))}
+        )}
 
         {/* Special Messages (Embeds, Music Players, Navigation Prompts) */}
         {specialMessages.map((specialMsg) => (
