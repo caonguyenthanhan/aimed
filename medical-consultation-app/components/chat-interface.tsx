@@ -1952,7 +1952,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           // Use virtual scroll for large message lists
           <VirtualChatList
             messages={messages}
-            renderMessage={(msg, idx) => (
+            renderMessage={(msg, idx) => {
+              return (
               <div
                 key={msg.id || idx}
                 className={`flex items-end gap-3 animate-message-in ${
@@ -2010,7 +2011,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                   </div>
                 )}
               </div>
-            )}
+            )
+            }}
             itemHeight={100}
             overscan={5}
           />
