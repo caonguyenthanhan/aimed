@@ -9,6 +9,8 @@ import { Heart, Menu, X, Music, Play, ExternalLink, User } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { PageAiInsight } from "@/components/page-ai-insight"
+import { InlineEmbed } from "@/components/inline-embed"
+import { ChatMusicRecommendations } from "@/components/music/chat-music-recommendations"
 
 type Message = {
   id: string
