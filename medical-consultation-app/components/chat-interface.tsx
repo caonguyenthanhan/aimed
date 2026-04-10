@@ -398,6 +398,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [sidebarSearch, setSidebarSearch] = useState<string>('')
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([])
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [authToken, setAuthToken] = useState<string | null>(null)
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -1163,7 +1165,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [selectedImageBase64, setSelectedImageBase64] = useState<string | null>(null)
   const [selectedImageMime, setSelectedImageMime] = useState<string | null>(null)
   const [selectedDocContent, setSelectedDocContent] = useState<string | null>(null)
-  const [authToken, setAuthToken] = useState<string | null>(null)
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
