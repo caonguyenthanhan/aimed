@@ -4,6 +4,7 @@ import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 import { assessSos, buildSosResponse } from '@/lib/sos-mode'
 import { pageInsightStore, PageInsight } from '@/lib/page-insight-store'
 import { getRateLimit } from '@/lib/rate-limiter'
+import { retryWithBackoff } from '@/lib/retry-backoff'
 import crypto from 'crypto'
 
 interface PageInsightRequest {
@@ -150,14 +151,25 @@ LƯU Ý: Giọng điệu ấm áp, chuyên nghiệp, hỗ trợ. Chỉ trả v�
       }
 
       const startTime = Date.now()
-      const out = await geminiService.generateFromConfig({
-        category: 'consultation',
-        tier: 'flash',
-        question: userMessage,
-        persona: '',
-        messages: conversationHistory,
-        generationConfig: { temperature: 0.7, maxOutputTokens: 512 },
-      })
+      const out = await retryWithBackoff(
+        () => geminiService.generateFromConfig({
+          category: 'consultation',
+          tier: 'flash',
+          question: userMessage,
+          persona: '',
+          messages: conversationHistory,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 512 },
+        }),
+        { 
+          maxRetries: 3, 
+          initialDelayMs: 1000, 
+          maxDelayMs: 8000, 
+          backoffMultiplier: 2,
+          onRetry: (attempt, error) => {
+            console.log(`[v0] Retry attempt ${attempt} for page insight. Error: ${error.message}`)
+          }
+        }
+      )
 
       // LLM returns plain text now, no need to parse JSON
       const responseText = String(out?.text || '').trim()
@@ -201,15 +213,26 @@ LƯU Ý: Giọng điệu ấm áp, chuyên nghiệp, hỗ trợ. Chỉ trả v�
         code: error?.code 
       })
       
-      // Handle specific error cases
+      // Handle specific error cases - return graceful degradation
       if (errorStatus === 503 || errorMessage.includes('UNAVAILABLE')) {
-        return NextResponse.json(
-          {
-            error: 'Service temporarily unavailable',
-            details: 'AI model overloaded, please try again in a moment',
+        // Return a generic helpful response instead of error
+        const fallbackInsight: PageInsight = {
+          show_insight: false, // Don't show insight but don't crash
+          main_response: '',
+          suggested_page: null,
+          suggestion_reason: null,
+          insight_type: 'advice',
+          timestamp: Date.now(),
+        }
+        return NextResponse.json({
+          success: true,
+          cached: false,
+          insight: fallbackInsight,
+          metadata: {
+            degraded: true,
+            reason: 'AI model temporarily overloaded',
           },
-          { status: 503 }
-        )
+        })
       }
       
       if (errorStatus === 429) {
