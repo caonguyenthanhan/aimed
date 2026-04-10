@@ -155,38 +155,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [])
 
-  // Multi-device sync: poll for changes
-  useMultiDeviceSync(userId || '', (syncEvent) => {
-    if (syncEvent.type === 'message-added' && syncEvent.data.conversationId === conversationId) {
-      // New message in current conversation from another device
-      if (!syncEvent.data.role.includes('user')) {
-        const newMsg: Message = {
-          id: String(syncEvent.data.id),
-          content: syncEvent.data.content,
-          isUser: syncEvent.data.role === 'user',
-          timestamp: new Date(syncEvent.timestamp),
-        }
-        setMessages(prev => [...prev, newMsg])
-      }
-    } else if (syncEvent.type === 'conversation-created') {
-      // New conversation from another device
-      loadLocalConversations()
-    }
-  })
-
-  // Listen for sync events from other tabs via localStorage
-  useLocalSyncListener((syncEvent) => {
-    if (syncEvent.type === 'message-added' && syncEvent.data.conversationId === conversationId) {
-      const newMsg: Message = {
-        id: String(syncEvent.data.id),
-        content: syncEvent.data.content,
-        isUser: syncEvent.data.role === 'user',
-        timestamp: new Date(syncEvent.timestamp),
-      }
-      setMessages(prev => [...prev, newMsg])
-    }
-  })
-
   const hasSecret = () => !!String(authSecret || "").trim()
 
   const canUseSystemGemini = () => {
@@ -531,6 +499,38 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     scrollToBottom()
     messagesRef.current = messages
   }, [messages])
+
+  // Multi-device sync: poll for changes (after all state declarations)
+  useMultiDeviceSync(userId || '', (syncEvent) => {
+    if (syncEvent.type === 'message-added' && syncEvent.data.conversationId === conversationId) {
+      // New message in current conversation from another device
+      if (!syncEvent.data.role.includes('user')) {
+        const newMsg: Message = {
+          id: String(syncEvent.data.id),
+          content: syncEvent.data.content,
+          isUser: syncEvent.data.role === 'user',
+          timestamp: new Date(syncEvent.timestamp),
+        }
+        setMessages(prev => [...prev, newMsg])
+      }
+    } else if (syncEvent.type === 'conversation-created') {
+      // New conversation from another device
+      loadLocalConversations()
+    }
+  })
+
+  // Listen for sync events from other tabs via localStorage
+  useLocalSyncListener((syncEvent) => {
+    if (syncEvent.type === 'message-added' && syncEvent.data.conversationId === conversationId) {
+      const newMsg: Message = {
+        id: String(syncEvent.data.id),
+        content: syncEvent.data.content,
+        isUser: syncEvent.data.role === 'user',
+        timestamp: new Date(syncEvent.timestamp),
+      }
+      setMessages(prev => [...prev, newMsg])
+    }
+  })
 
   const startConversationIfNeeded = async (): Promise<string | null> => {
     if (conversationId) return conversationId
