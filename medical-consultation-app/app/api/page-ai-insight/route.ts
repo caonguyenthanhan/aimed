@@ -3,6 +3,7 @@ import { geminiService } from '@/lib/gemini-service'
 import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 import { assessSos, buildSosResponse } from '@/lib/sos-mode'
 import { pageInsightStore, PageInsight } from '@/lib/page-insight-store'
+import { getRateLimit } from '@/lib/rate-limiter'
 import crypto from 'crypto'
 
 interface PageInsightRequest {
@@ -51,6 +52,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'page_context is required' },
         { status: 400 }
+      )
+    }
+
+    // Apply rate limiting per page context (5 requests per minute)
+    const rateLimitKey = `page-insight:${pageContext}`
+    const rateLimitCheck = getRateLimit(rateLimitKey)
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          details: `Too many requests. Please wait ${rateLimitCheck.retryAfter}s before trying again`,
+          retry_after: rateLimitCheck.retryAfter,
+        },
+        { status: 429, headers: { 'Retry-After': String(rateLimitCheck.retryAfter || 60) } }
       )
     }
 
