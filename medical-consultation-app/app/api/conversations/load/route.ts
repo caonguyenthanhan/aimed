@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Client } from 'pg'
+import { getConversationTitle, getConversationMessages } from '@/lib/db-queries'
 
 async function getDbClient() {
   const client = new Client({
@@ -12,7 +13,7 @@ async function getDbClient() {
 export async function POST(request: NextRequest) {
   let client
   try {
-    const { conversationId } = await request.json()
+    const { conversationId, limit = 1000, offset = 0 } = await request.json()
 
     if (!conversationId) {
       return NextResponse.json(
@@ -23,34 +24,26 @@ export async function POST(request: NextRequest) {
 
     client = await getDbClient()
 
-    // Get conversation metadata
-    const convResult = await client.query(
-      'SELECT id, title, created_at, last_active FROM conversations WHERE id = $1',
-      [conversationId]
-    )
-
-    if (convResult.rows.length === 0) {
+    // Get conversation metadata using optimized query
+    const { row: conv, error: convError } = await getConversationTitle(client, conversationId)
+    if (convError || !conv) {
       return NextResponse.json(
         { error: 'Conversation not found' },
         { status: 404 }
       )
     }
 
-    // Get all messages for this conversation
-    const messagesResult = await client.query(
-      `SELECT 
-        id,
-        role,
-        content,
-        created_at
-      FROM conversation_messages
-      WHERE conv_id = $1
-      ORDER BY created_at ASC`,
-      [conversationId]
+    // Get messages using optimized query with index
+    const { rows: messages, error: msgError } = await getConversationMessages(
+      client,
+      conversationId,
+      Math.min(limit, 1000),
+      offset
     )
+    if (msgError) throw msgError
 
     // Map database messages to app format
-    const messages = messagesResult.rows.map(msg => ({
+    const mappedMessages = messages.map(msg => ({
       id: String(msg.id),
       content: msg.content,
       isUser: msg.role === 'user',
@@ -58,8 +51,8 @@ export async function POST(request: NextRequest) {
     }))
 
     return NextResponse.json({
-      conversation: convResult.rows[0],
-      messages,
+      conversation: conv,
+      messages: mappedMessages,
     })
   } catch (error) {
     console.error('[v0] Error loading conversation:', error)
