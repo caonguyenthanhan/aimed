@@ -368,19 +368,74 @@ export async function POST(req: Request) {
       const msg = String(message || '').toLowerCase()
       const response = String(r?.text || '').toLowerCase()
       
+      const actions: any[] = []
+      
       // User asks about therapy methods/exercises and LLM offers to help
       if ((msg.includes('liệu pháp') || msg.includes('trị liệu') || msg.includes('bài tập') || msg.includes('cách') || msg.includes('phương pháp')) &&
           (response.includes('hỗ trợ') || response.includes('tập') || response.includes('phương pháp') || response.includes('liệu pháp'))) {
-        return [{ type: 'ask_navigation', args: { feature: 'tri-lieu', reason: 'Bạn muốn xem các bài tập trị liệu được gợi ý không?' } }]
+        actions.push({ 
+          type: 'embed', 
+          args: { 
+            feature: 'tri-lieu', 
+            context: { fromAgent: true, reason: 'Dựa trên câu hỏi của bạn' } 
+          } 
+        })
+        actions.push({
+          type: 'ask_navigation',
+          args: { feature: 'tri-lieu', reason: 'Bạn muốn xem các bài tập trị liệu được gợi ý không?' }
+        })
+      }
+      
+      // User asks about anxiety/stress relief + agent mentions it can help
+      if ((msg.includes('lo âu') || msg.includes('stress') || msg.includes('căng thẳng') || msg.includes('thư giãn')) &&
+          (response.includes('nhạc') || response.includes('thư giãn') || response.includes('bài tập'))) {
+        // Add music recommendations
+        actions.push({
+          type: 'recommend_music',
+          args: {
+            mood: 'calm',
+            recommendations: [
+              { videoId: 'ZHf2bTjvXr0', title: 'Relaxing Piano Music', mood: 'calm' },
+              { videoId: 'cjVVmezr-t8', title: 'Peaceful Meditation Music', mood: 'meditation' },
+              { videoId: 'Js8Qf4vGI70', title: 'Calming Sleep Music', mood: 'sleep' }
+            ],
+            message: 'Hãy nghe một số bài nhạc thư giãn để giảm lo âu'
+          }
+        })
+        // Also add therapy embed
+        actions.push({
+          type: 'embed',
+          args: { feature: 'tri-lieu', context: { fromAgent: true } }
+        })
       }
       
       // User asks about screening/assessment
-      if ((msg.includes('sàng lọc') || msg.includes('kiểm tra') || msg.includes('đánh giá') || msg.includes('test')) &&
+      if ((msg.includes('sàng lọc') || msg.includes('kiểm tra') || msg.includes('đánh giá') || msg.includes('test') || msg.includes('tâm lý')) &&
           !msg.includes('trị liệu')) {
-        return [{ type: 'ask_navigation', args: { feature: 'sang-loc', reason: 'Bạn muốn thử sàng lọc tâm lý không?' } }]
+        actions.push({
+          type: 'ask_navigation',
+          args: { feature: 'sang-loc', reason: 'Bạn muốn thử sàng lọc tâm lý để hiểu bản thân tốt hơn không?' }
+        })
       }
       
-      return []
+      // User asks about doctors/appointments
+      if (msg.includes('bác sĩ') || msg.includes('tư vấn') || msg.includes('đặt lịch')) {
+        actions.push({
+          type: 'ask_navigation',
+          args: { feature: 'bac-si', reason: 'Bạn muốn tìm và đặt lịch với bác sĩ chuyên khoa không?' }
+        })
+      }
+      
+      // User asks about diseases/medicines
+      if ((msg.includes('bệnh') || msg.includes('thuốc') || msg.includes('triệu chứng')) &&
+          !msg.includes('liệu pháp')) {
+        actions.push({
+          type: 'ask_navigation',
+          args: { feature: 'tra-cuu', reason: 'Bạn muốn tra cứu thêm thông tin chi tiết về bệnh/thuốc không?' }
+        })
+      }
+      
+      return actions.filter(a => a?.type)
     }
     
     const forcedActions = intelligentActionForcing()
