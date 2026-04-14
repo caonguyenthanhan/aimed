@@ -216,7 +216,13 @@ export class GeminiService {
     const historyBlock = this.buildHistoryBlock(opts.messages)
     const personaText = String(opts.persona || '').trim()
     const personaBlock = personaText ? `VAI TRÒ: ${personaText}` : ''
-    const prompt = `${system}\n${personaBlock}\n${historyBlock}\nYêu cầu: ${String(opts.question || '').trim()}`.trim()
+    
+    // Add explicit instruction to call tool when user asks about features
+    const toolCallInstruction = Array.isArray(opts.tools) && opts.tools.length > 0 ? 
+      '\n\nLƯU Ý QUAN TRỌNG: Nếu người dùng hỏi về các chức năng (liệu pháp, sàng lọc, tra cứu, bác sĩ, nhạc), BẮT BUỘC gọi tool functionCall ngay lập tức. Không bao giờ bỏ qua!' :
+      ''
+    
+    const prompt = `${system}${toolCallInstruction}\n${personaBlock}\n${historyBlock}\nYêu cầu: ${String(opts.question || '').trim()}`.trim()
 
     const requestBody: GeminiRequest = {
       contents: [{ parts: [{ text: prompt }] }],

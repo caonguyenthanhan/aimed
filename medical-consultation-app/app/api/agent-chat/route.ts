@@ -355,9 +355,37 @@ export async function POST(req: Request) {
       // Silently ignore JSON parsing errors
     }
     
-    // Combine tool call actions with text-extracted actions
-    const combinedActions = [...actionsRaw, ...textActions]
-    const actions = normalizeActions(combinedActions)
+    // Debug logging
+    console.log('[v0] Agent response:', {
+      toolCallsCount: r.toolCalls?.length || 0,
+      textActionsCount: textActions.length,
+      messagePreview: r.text.substring(0, 100),
+      hasJson: !!textActions.length,
+    })
+    
+    // Intelligent action detection - if LLM says it can help with therapy/exercises, FORCE navigate to tri-lieu
+    const intelligentActionForcing = () => {
+      const msg = String(message || '').toLowerCase()
+      const response = String(r?.text || '').toLowerCase()
+      
+      // User asks about therapy methods/exercises and LLM offers to help
+      if ((msg.includes('liệu pháp') || msg.includes('trị liệu') || msg.includes('bài tập') || msg.includes('cách') || msg.includes('phương pháp')) &&
+          (response.includes('hỗ trợ') || response.includes('tập') || response.includes('phương pháp') || response.includes('liệu pháp'))) {
+        return [{ type: 'ask_navigation', args: { feature: 'tri-lieu', reason: 'Bạn muốn xem các bài tập trị liệu được gợi ý không?' } }]
+      }
+      
+      // User asks about screening/assessment
+      if ((msg.includes('sàng lọc') || msg.includes('kiểm tra') || msg.includes('đánh giá') || msg.includes('test')) &&
+          !msg.includes('trị liệu')) {
+        return [{ type: 'ask_navigation', args: { feature: 'sang-loc', reason: 'Bạn muốn thử sàng lọc tâm lý không?' } }]
+      }
+      
+      return []
+    }
+    
+    const forcedActions = intelligentActionForcing()
+    const combinedActions = [...actionsRaw, ...textActions, ...forcedActions]
+    const actions = normalizeActions(combinedActions.filter(a => a?.type))
       .map((a) => {
         if (a.type === "open_screening") return { type: "navigate", args: { path: "/sang-loc" } }
         if (a.type === "open_therapy") return { type: "navigate", args: { path: "/tri-lieu" } }
