@@ -341,7 +341,23 @@ export async function POST(req: Request) {
     }
 
     const actionsRaw = toolCallsToActions(r.toolCalls)
-    const actions = normalizeActions(actionsRaw)
+    // Also try to extract actions from text response (JSON format)
+    let textActions: any[] = []
+    try {
+      const jsonMatch = r.text.match(/\{[\s\S]*"actions"[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        if (Array.isArray(parsed.actions)) {
+          textActions = parsed.actions
+        }
+      }
+    } catch (e) {
+      // Silently ignore JSON parsing errors
+    }
+    
+    // Combine tool call actions with text-extracted actions
+    const combinedActions = [...actionsRaw, ...textActions]
+    const actions = normalizeActions(combinedActions)
       .map((a) => {
         if (a.type === "open_screening") return { type: "navigate", args: { path: "/sang-loc" } }
         if (a.type === "open_therapy") return { type: "navigate", args: { path: "/tri-lieu" } }

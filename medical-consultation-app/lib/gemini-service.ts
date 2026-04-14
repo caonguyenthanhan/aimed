@@ -194,6 +194,23 @@ export class GeminiService {
       'Bạn có thể gọi các tool để thực thi hành động trên UI.',
       'Chỉ gọi tool khi cần thao tác cụ thể (mở trang, điều hướng).',
       'Nếu gọi tool, vẫn trả lời ngắn gọn để người dùng hiểu bạn đang làm gì.',
+      '',
+      'LUẬT TRÍCH XUẤT HÀNH ĐỘNG:',
+      '- Nếu người dùng muốn mở một chức năng (sàng lọc, trị liệu, tra cứu, v.v.), PHẢI gọi tool "navigate" hoặc "embed"',
+      '- Nếu yêu cầu là "xem thống kê", "kế hoạch", "bác sĩ", "nhạc" → GỌI TOOL NGAY',
+      '- Không được bỏ qua lời yêu cầu mà không gọi tool',
+      '- Luôn trích xuất ý định của người dùng thành hành động cụ thể',
+      '',
+      'ĐỊNH DẠNG JSON (nếu không dùng tool calling):',
+      'Nếu bạn có thể, trả về JSON như sau:',
+      '```json',
+      '{',
+      '  "response": "Lời trả lời của bạn",',
+      '  "actions": [',
+      '    { "type": "navigate", "args": { "path": "/sang-loc" } }',
+      '  ]',
+      '}',
+      '```',
     ].join('\n')
 
     const historyBlock = this.buildHistoryBlock(opts.messages)
