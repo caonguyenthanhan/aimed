@@ -132,9 +132,14 @@ export function PageAiInsight({
     }
   }, [pageContext, userQuestion, pageData, conversationHistory, isDismissed])
 
-  // Fetch insight on mount or when dependencies change
+  // Fetch insight on mount or when dependencies change - with delay to avoid rate limiting
   useEffect(() => {
-    fetchInsight()
+    // Defer fetch by 2 seconds to avoid thundering herd on page load
+    const timer = setTimeout(() => {
+      fetchInsight()
+    }, 2000)
+    
+    return () => clearTimeout(timer)
   }, [fetchInsight])
 
   // Don't show if dismissed or no insight

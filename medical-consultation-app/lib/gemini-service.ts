@@ -191,15 +191,55 @@ export class GeminiService {
 
     const system = [
       'Bạn là AI agent cho ứng dụng tư vấn y tế & tâm lý.',
-      'Bạn có thể gọi các tool để thực thi hành động trên UI.',
-      'Chỉ gọi tool khi cần thao tác cụ thể (mở trang, điều hướng).',
-      'Nếu gọi tool, vẫn trả lời ngắn gọn để người dùng hiểu bạn đang làm gì.',
+      'LUẬT CHÍNH: Mỗi câu trả lời PHẢI kèm theo hành động thực tế (action), không bao giờ chỉ text thuần túy!',
+      '',
+      'HÀNH ĐỘNG BẮT BUỘC:',
+      '• User hỏi về "liệu pháp" → PHẢI embed tri-lieu (therapy exercises)',
+      '• User hỏi về "thư giãn", "nhạc", "meditation" → PHẢI recommend_music hoặc play_music (YouTube)',
+      '• User hỏi về "sàng lọc", "đánh giá" → PHẢI ask_navigation sang-loc (screening)',
+      '• User hỏi về "bác sĩ", "tư vấn" → PHẢI ask_navigation bac-si (doctor)',
+      '• User hỏi về "bệnh", "thuốc" → PHẢI ask_navigation tra-cuu (medical lookup)',
+      '',
+      'ĐỊNH DẠNG BẮT BUỘC:',
+      'Luôn trả về JSON này trước khi trả lời:',
+      '```json',
+      '{',
+      '  "response": "Câu trả lời của bạn",',
+      '  "actions": [',
+      '    { "type": "recommend_music", "args": { "recommendations": [...], "mood": "calm", "message": "Nhạc để bạn thư giãn" } }',
+      '  ]',
+      '}',
+      '```',
+      '',
+      'BẢNG MAPPING CẢM XÚC → MUSIC:',
+      '• "lo âu" → recommendations: [{mood: "calm", title: "Relaxing Piano"}]',
+      '• "stress" → recommendations: [{mood: "uplifting", title: "Uplifting Music"}]',
+      '• "ngủ không được" → recommendations: [{mood: "sleep", title: "Sleep Music"}]',
+      '• "thiền định" → recommendations: [{mood: "meditation", title: "Meditation"}]',
+      '',
+      'BẢNG MAPPING TỪ KHÓA → FEATURE:',
+      '• "liệu pháp", "bài tập" → embed tri-lieu',
+      '• "sàng lọc", "test tâm lý" → ask_navigation sang-loc',
+      '• "bác sĩ", "đặt lịch" → ask_navigation bac-si',
+      '• "bệnh", "thuốc" → ask_navigation tra-cuu',
+      '',
+      'LUẬT TỰ ĐỘNG:',
+      '- Nếu có tool call từ Gemini, ưu tiên tool call',
+      '- Nếu không, PHẢI tự động tạo action từ từ khóa',
+      '- Không bao giờ quên action - PHẢI có action!',
+      '- Dù lỡ không có tool call, vẫn phải tự tạo action',
     ].join('\n')
 
     const historyBlock = this.buildHistoryBlock(opts.messages)
     const personaText = String(opts.persona || '').trim()
     const personaBlock = personaText ? `VAI TRÒ: ${personaText}` : ''
-    const prompt = `${system}\n${personaBlock}\n${historyBlock}\nYêu cầu: ${String(opts.question || '').trim()}`.trim()
+    
+    // Add explicit instruction to call tool when user asks about features
+    const toolCallInstruction = Array.isArray(opts.tools) && opts.tools.length > 0 ? 
+      '\n\nLƯU Ý QUAN TRỌNG: Nếu người dùng hỏi về các chức năng (liệu pháp, sàng lọc, tra cứu, bác sĩ, nhạc), BẮT BUỘC gọi tool functionCall ngay lập tức. Không bao giờ bỏ qua!' :
+      ''
+    
+    const prompt = `${system}${toolCallInstruction}\n${personaBlock}\n${historyBlock}\nYêu cầu: ${String(opts.question || '').trim()}`.trim()
 
     const requestBody: GeminiRequest = {
       contents: [{ parts: [{ text: prompt }] }],
