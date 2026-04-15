@@ -344,6 +344,7 @@ export async function POST(req: Request) {
     // Also try to extract actions from text response (JSON format)
     let textActions: any[] = []
     let extractedResponse: string = ""
+    let suggestedInvestigation: string = ""
     try {
       const jsonMatch = r.text.match(/\{[\s\S]*"actions"[\s\S]*\}/);
       if (jsonMatch) {
@@ -353,6 +354,9 @@ export async function POST(req: Request) {
         }
         if (typeof parsed.response === "string") {
           extractedResponse = parsed.response
+        }
+        if (typeof parsed.suggested_investigation === "string") {
+          suggestedInvestigation = parsed.suggested_investigation
         }
       }
     } catch (e) {
@@ -366,6 +370,7 @@ export async function POST(req: Request) {
       messagePreview: r.text.substring(0, 100),
       hasJson: !!textActions.length,
       hasExtractedResponse: !!extractedResponse,
+      hasSuggestedInvestigation: !!suggestedInvestigation,
     })
     
     // Intelligent action detection - if LLM says it can help with therapy/exercises, FORCE navigate to tri-lieu
@@ -470,17 +475,23 @@ export async function POST(req: Request) {
       .filter(Boolean) as any
 
     const content = extractedResponse || r.text || (actions.length ? "Đã thực hiện yêu cầu." : "Mình chưa rõ bạn muốn mình thực hiện hành động nào.")
+    
+    // Include suggested investigation questions in the response if available
+    const fullContent = suggestedInvestigation 
+      ? `${content}\n\n❓ ${suggestedInvestigation}`
+      : content
+    
     try {
-      await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
+      await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: fullContent })
     } catch {}
 
     const out = AgentResponseSchema.parse({
-      response: content,
-      messages: planResponseMessages(content, actions),
+      response: fullContent,
+      messages: planResponseMessages(fullContent, actions),
       delivery: { mode: deliveryMode },
       actions,
       conversation_id,
-      metadata: { mode: "gpu", provider: "gemini", access, model: r.model, duration_ms: Date.now() - started },
+      metadata: { mode: "gpu", provider: "gemini", access, model: r.model, duration_ms: Date.now() - started, hasInvestigation: !!suggestedInvestigation },
     })
     return NextResponse.json(out)
   } catch (e: any) {
