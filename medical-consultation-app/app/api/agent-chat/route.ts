@@ -4,6 +4,7 @@ import { GeminiService, geminiService } from "@/lib/gemini-service"
 import { shouldBlock, buildBlockResponse } from "@/lib/safety"
 import { assessSos, buildSosResponse } from "@/lib/sos-mode"
 import { geminiToolDeclarations, toolCallsToActions } from "@/lib/agent-tools"
+import { detectPatientScenario, getConsultationStylePrompt } from "@/lib/patient-scenarios"
 import { AgentResponseSchema, isAllowedPath, normalizeActions } from "@/lib/agent-actions"
 import { persistChatTurn } from "@/lib/chat-persistence"
 import { runLocalAgent } from "@/lib/agent-local-provider"
@@ -277,6 +278,11 @@ export async function POST(req: Request) {
     }
 
     const toolDecl = geminiToolDeclarations()
+    
+    // Detect patient scenario and get appropriate consultation style
+    const patientScenario = detectPatientScenario(message)
+    const consultationStylePrompt = getConsultationStylePrompt(patientScenario)
+    
     let geminiErr: string | null = null
     let r: Awaited<ReturnType<typeof geminiService.generateAgent>> | null = null
     try {
@@ -284,7 +290,15 @@ export async function POST(req: Request) {
       
       // Wrap Gemini call with exponential backoff retry
       r = await retryWithBackoff(
-        () => svc.generateAgent({ category, tier, question: message, messages, tools: toolDecl }),
+        () => svc.generateAgent({ 
+          category, 
+          tier, 
+          question: message, 
+          messages, 
+          tools: toolDecl,
+          // Pass consultation style as persona hint
+          persona: consultationStylePrompt ? `CONSULTATION_STYLE:\n${consultationStylePrompt}` : undefined
+        }),
         { maxRetries: 3, initialDelayMs: 500, maxDelayMs: 5000, backoffMultiplier: 2 }
       )
     } catch (e: any) {
@@ -491,7 +505,19 @@ export async function POST(req: Request) {
       delivery: { mode: deliveryMode },
       actions,
       conversation_id,
-      metadata: { mode: "gpu", provider: "gemini", access, model: r.model, duration_ms: Date.now() - started, hasInvestigation: !!suggestedInvestigation },
+      metadata: { 
+        mode: "gpu", 
+        provider: "gemini", 
+        access, 
+        model: r.model, 
+        duration_ms: Date.now() - started, 
+        hasInvestigation: !!suggestedInvestigation,
+        // Patient scenario info
+        patientScenarioId: patientScenario?.id,
+        patientScenarioName: patientScenario?.name,
+        consultationStyle: patientScenario?.consultationStyle,
+        riskLevel: patientScenario?.riskLevel,
+      },
     })
     return NextResponse.json(out)
   } catch (e: any) {
