@@ -155,6 +155,35 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [])
 
+  // Handle body scroll prevention and scrollbar shift when dialogs open
+  useEffect(() => {
+    const htmlEl = document.documentElement
+    const bodyEl = document.body
+    const isDialogOpen = authOpen || sosOpen || isRenameOpen
+    
+    if (isDialogOpen) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+      htmlEl.style.overflow = 'hidden'
+      bodyEl.style.overflow = 'hidden'
+      if (scrollbarWidth > 0) {
+        bodyEl.style.paddingRight = `${scrollbarWidth}px`
+        htmlEl.style.paddingRight = `${scrollbarWidth}px`
+      }
+    } else {
+      htmlEl.style.overflow = ''
+      bodyEl.style.overflow = ''
+      bodyEl.style.paddingRight = ''
+      htmlEl.style.paddingRight = ''
+    }
+    
+    return () => {
+      htmlEl.style.overflow = ''
+      bodyEl.style.overflow = ''
+      bodyEl.style.paddingRight = ''
+      htmlEl.style.paddingRight = ''
+    }
+  }, [authOpen, sosOpen, isRenameOpen])
+
   const hasSecret = () => !!String(authSecret || "").trim()
 
   const canUseSystemGemini = () => {
@@ -393,7 +422,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     // Advanced suggestions based on conversation context
     const contextualSuggestions = {
       pain: [
-        "Đau đầu kéo dài bao lâu thì cần đi khám?",
+        "Đau đ��u kéo dài bao lâu thì cần đi khám?",
         "Cách giảm đau tự nhiên không dùng thuốc?",
         "Phân biệt đau đầu thường và đau đầu nguy hiểm?",
         "Thuốc giảm đau nào an toàn nhất?"
@@ -1713,7 +1742,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [messages, conversationId])
   return (
-    <div className="flex h-screen overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning style={{ paddingTop: headerPad }}>
+    <div className="flex h-screen overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning style={{ paddingTop: headerPad, boxSizing: 'border-box' }}>
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
