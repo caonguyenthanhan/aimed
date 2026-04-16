@@ -49,8 +49,47 @@ function detectMood(message: string, history: any[]): string {
   return 'default'
 }
 
-// Check if should recommend music
-function shouldRecommendMusic(message: string, history: any[]): boolean {
+// Detect if user needs professional screening/support based on keywords
+function detectSuggestionNeeded(message: string, history: any[]): { feature: string; reason: string } | null {
+  const text = message.toLowerCase()
+  const allText = [...history.map(h => h.content?.toLowerCase() || ''), text].join(' ')
+  
+  // Check for anxiety/panic symptoms - suggest GAD-7 screening
+  if (/lo lắng|lo âu|sợ|hoang mang|bất an|căng thẳng|áp lực|tim đập mạnh|thở không ra hơi|shock|hoảng sợ/.test(allText)) {
+    return {
+      feature: 'sang-loc',
+      reason: 'Để hiểu rõ hơn về tình trạng lo âu của bạn, bạn có muốn thử bài đánh giá GAD-7 không?'
+    }
+  }
+  
+  // Check for depression symptoms - suggest PHQ-9 screening
+  if (/buồn|khóc|mất mát|chia tay|cô đơn|đau|thất vọng|tuyệt vọng|mất ngủ|không có hy vọng|vô nghĩa|tự tử/.test(allText)) {
+    return {
+      feature: 'sang-loc',
+      reason: 'Hãy thử bài đánh giá PHQ-9 để đánh giá tâm trạng của bạn'
+    }
+  }
+  
+  // Check for stress - suggest therapy exercises
+  if (/stress|mệt|kiệt sức|quá tải|không ngủ được|áp lực công việc|quá nhiều việc/.test(allText)) {
+    return {
+      feature: 'tri-lieu',
+      reason: 'Các bài tập thư giãn và thiền định có thể giúp bạn giảm stress. Bạn có muốn thử không?'
+    }
+  }
+  
+  // Check for sleep issues - suggest therapy or music
+  if (/ngủ|mất ngủ|không ngủ được|thức đêm|hôm kia không ngủ/.test(allText)) {
+    return {
+      feature: 'tri-lieu',
+      reason: 'Tôi có một số bài tập thư giãn và nhạc giúp ngủ tốt. Bạn có muốn thử?'
+    }
+  }
+  
+  return null
+}
+
+
   const text = message.toLowerCase()
   // Direct requests
   if (/nhạc|music|nghe|bài hát|thư giãn|relax|thiền|meditation/.test(text)) return true
@@ -145,32 +184,50 @@ export async function POST(request: NextRequest) {
         messages: conversationHistory,
         generationConfig: { temperature, maxOutputTokens: max_tokens }
       })
-      const durationGemini = Date.now() - startGemini
-      const content = String(out?.text || '').trim()
-      if (!content) {
-        return NextResponse.json({ error: 'No content in response' }, { status: 502 })
-      }
-      const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
-      try {
-        await persistChatTurn({
-          sessionId: sid,
-          kind: 'friend',
-          userText: userMessage,
-          assistantText: content
-        })
-      } catch {}
-      return NextResponse.json({
-        response: content,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          mode: 'gpu',
-          fallback: false,
-          provider: 'gemini',
-          duration_ms: durationGemini,
-          model: out?.model || process.env.GEMINI_MODEL || 'gemini'
-        },
-        conversation_id: sid
-      })
+              const durationGemini = Date.now() - startGemini
+              const content = String(out?.text || '').trim()
+              if (!content) {
+                return NextResponse.json({ error: 'No content in response' }, { status: 502 })
+              }
+              const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+              try {
+                await persistChatTurn({
+                  sessionId: sid,
+                  kind: 'friend',
+                  userText: userMessage,
+                  assistantText: content
+                })
+              } catch {}
+              
+              // Check for suggestions in Gemini response
+              const suggestionNeeded = detectSuggestionNeeded(userMessage, conversationHistory)
+              const mood = detectMood(userMessage, conversationHistory)
+              const includeMusic = shouldRecommendMusic(userMessage, conversationHistory)
+              const musicRecommendations = includeMusic ? (HEALING_MUSIC[mood] || HEALING_MUSIC.default) : undefined
+              
+              return NextResponse.json({
+                response: content,
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                  mode: 'gpu',
+                  fallback: false,
+                  provider: 'gemini',
+                  duration_ms: durationGemini,
+                  model: out?.model || process.env.GEMINI_MODEL || 'gemini'
+                },
+                conversation_id: sid,
+                suggestion: suggestionNeeded ? {
+                  feature: suggestionNeeded.feature,
+                  reason: suggestionNeeded.reason
+                } : undefined,
+                music: musicRecommendations ? {
+                  mood,
+                  recommendations: musicRecommendations,
+                  message: mood !== 'default' 
+                    ? `Mình gợi ý một vài bản nhạc để giúp bạn cảm thấy tốt hơn nhé:`
+                    : `Đây là một số nhạc thư giãn cho bạn:`
+                } : undefined
+              })
     }
 
     const dataDir = path.join(process.cwd(), 'data')
@@ -382,6 +439,9 @@ export async function POST(request: NextRequest) {
     const includeMusic = shouldRecommendMusic(userMessage, conversationHistory)
     const mood = detectMood(userMessage, conversationHistory)
     const musicRecommendations = includeMusic ? (HEALING_MUSIC[mood] || HEALING_MUSIC.default) : undefined
+    
+    // Check if should suggest professional support/tools
+    const suggestionNeeded = detectSuggestionNeeded(userMessage, conversationHistory)
 
     return NextResponse.json({
       response: content,
@@ -392,6 +452,11 @@ export async function POST(request: NextRequest) {
         provider: 'server'
       },
       conversation_id: newConversationId,
+      // Suggestion for professional screening/support
+      suggestion: suggestionNeeded ? {
+        feature: suggestionNeeded.feature,
+        reason: suggestionNeeded.reason
+      } : undefined,
       // Music recommendations for Tam Su
       music: musicRecommendations ? {
         mood,
