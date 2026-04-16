@@ -229,7 +229,6 @@ export class GeminiService {
       '2. Thăm hỏi: "Bạn có bị sốt, ho, hoặc đau cơ không? Đau đầu kéo dài bao lâu?"',
       '3. Gợi ý: "Hãy tra cứu các triệu chứng cảm/cúm chi tiết hoặc làm bài sàng lọc"',
     ].join('\n')
-    ].join('\n')
 
     const historyBlock = this.buildHistoryBlock(opts.messages)
     const personaText = String(opts.persona || '').trim()
@@ -425,7 +424,7 @@ Trả lời bằng tiếng Việt:`
   // Cấu hình generation cho nội dung y tế
   private getGenerationConfig() {
     return {
-      temperature: 0.3, // Giảm tính ngẫu nhiên cho độ chính xác cao
+      temperature: 0.3, // Giảm tính ngẫu nhi��n cho độ chính xác cao
       topK: 40,
       topP: 0.8,
       maxOutputTokens: 1024,
