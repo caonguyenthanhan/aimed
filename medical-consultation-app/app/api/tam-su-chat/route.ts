@@ -88,8 +88,8 @@ function detectSuggestionNeeded(message: string, history: any[]): { feature: str
   
   return null
 }
-
-
+// Check if should recommend music
+function shouldRecommendMusic(message: string, history: any[]): boolean {
   const text = message.toLowerCase()
   // Direct requests
   if (/nhạc|music|nghe|bài hát|thư giãn|relax|thiền|meditation/.test(text)) return true
