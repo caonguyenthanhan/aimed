@@ -191,12 +191,6 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   const analyserRef = useRef<AnalyserNode | null>(null)
 
   const endRef = useRef<HTMLDivElement | null>(null)
-  
-  // Get last assistant message for suggestion rendering
-  const lastAssistantMessage = useMemo(() => {
-    const assistantMsgs = messages.filter(m => m.role === "assistant")
-    return assistantMsgs.length ? assistantMsgs[assistantMsgs.length - 1] : null
-  }, [messages])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -853,38 +847,8 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                     </div>
                   ))}
                   
-                  {/* AI Suggestions (Screening, Therapy, etc) */}
-                  {lastAssistantMessage && (() => {
-                    try {
-                      const parsed = JSON.parse(lastAssistantMessage.content)
-                      if (parsed.type === "suggestion" && parsed.feature && parsed.reason) {
-                        return (
-                          <div key={`suggestion-${lastAssistantMessage.id}`} className="flex justify-start animate-message-in">
-                            <div className="max-w-[85%] sm:max-w-[75%] rounded-xl px-4 py-3 bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-950/40 dark:to-blue-900/30 border border-blue-200 dark:border-blue-800/50">
-                              <div className="flex items-start gap-3">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                                  <span className="text-white font-bold text-xs">AI</span>
-                                </div>
-                                <div className="flex-grow">
-                                  <p className="text-sm text-blue-900 dark:text-blue-100 font-medium">{parsed.reason}</p>
-                                  <button 
-                                    onClick={() => {
-                                      // Navigate to feature or show embed
-                                      window.location.href = `/${parsed.feature}`
-                                    }}
-                                    className="mt-2 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:text-blue-800 dark:hover:text-blue-200 transition-colors"
-                                  >
-                                    Thử ngay →
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      }
-                    } catch {}
-                    return null
-                  })()}
+                  {/* AI Suggestions (Screening, Therapy, etc) - Temporarily disabled for debugging */}
+                  {/* Will be re-enabled after fixing initialization issue */}
                   
                   {/* Music Recommendations */}
                   {musicRecommendations && musicRecommendations.length > 0 && (
