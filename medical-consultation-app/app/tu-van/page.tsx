@@ -1,9 +1,18 @@
 'use client'
-import dynamic from "next/dynamic"
 import { useSearchParams } from "next/navigation"
-const ChatInterface = dynamic(() => import("@/components/chat-interface").then(m => m.ChatInterface), { ssr: false })
-export default function TuVanPage() {
+import { ChatInterface } from "@/components/chat-interface"
+import { Suspense } from "react"
+
+function TuVanContent() {
   const params = useSearchParams()
   const id = params.get('id') || undefined
-  return <div suppressHydrationWarning><ChatInterface initialConversationId={id} /></div>
+  return <ChatInterface initialConversationId={id} />
+}
+
+export default function TuVanPage() {
+  return (
+    <Suspense fallback={<div>Đang tải...</div>}>
+      <TuVanContent />
+    </Suspense>
+  )
 }
