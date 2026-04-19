@@ -155,34 +155,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [])
 
-  // Handle body scroll prevention and scrollbar shift when dialogs open
-  useEffect(() => {
-    const htmlEl = document.documentElement
-    const bodyEl = document.body
-    const isDialogOpen = authOpen || sosOpen || isRenameOpen
-    
-    if (isDialogOpen) {
-      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-      htmlEl.style.overflow = 'hidden'
-      bodyEl.style.overflow = 'hidden'
-      if (scrollbarWidth > 0) {
-        bodyEl.style.paddingRight = `${scrollbarWidth}px`
-        htmlEl.style.paddingRight = `${scrollbarWidth}px`
-      }
-    } else {
-      htmlEl.style.overflow = ''
-      bodyEl.style.overflow = ''
-      bodyEl.style.paddingRight = ''
-      htmlEl.style.paddingRight = ''
-    }
-    
-    return () => {
-      htmlEl.style.overflow = ''
-      bodyEl.style.overflow = ''
-      bodyEl.style.paddingRight = ''
-      htmlEl.style.paddingRight = ''
-    }
-  }, [authOpen, sosOpen, isRenameOpen])
+  // Handle body scroll prevention and scrollbar shift when dialogs open - MOVED AFTER STATE DECLARATIONS
+  // This effect is declared here as a placeholder but moved below state definitions
 
   const hasSecret = () => !!String(authSecret || "").trim()
 
@@ -397,6 +371,35 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [authToken, setAuthToken] = useState<string | null>(null)
+
+  // Handle body scroll prevention and scrollbar shift when dialogs open
+  useEffect(() => {
+    const htmlEl = document.documentElement
+    const bodyEl = document.body
+    const isDialogOpen = authOpen || sosOpen || isRenameOpen
+    
+    if (isDialogOpen) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+      htmlEl.style.overflow = 'hidden'
+      bodyEl.style.overflow = 'hidden'
+      if (scrollbarWidth > 0) {
+        bodyEl.style.paddingRight = `${scrollbarWidth}px`
+        htmlEl.style.paddingRight = `${scrollbarWidth}px`
+      }
+    } else {
+      htmlEl.style.overflow = ''
+      bodyEl.style.overflow = ''
+      bodyEl.style.paddingRight = ''
+      htmlEl.style.paddingRight = ''
+    }
+    
+    return () => {
+      htmlEl.style.overflow = ''
+      bodyEl.style.overflow = ''
+      bodyEl.style.paddingRight = ''
+      htmlEl.style.paddingRight = ''
+    }
+  }, [authOpen, sosOpen, isRenameOpen])
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
