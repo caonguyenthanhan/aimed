@@ -376,7 +376,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   useEffect(() => {
     const htmlEl = document.documentElement
     const bodyEl = document.body
-    const isDialogOpen = authOpen || sosOpen || isRenameOpen
+    const isDialogOpen = authOpen || sosOpen
     
     if (isDialogOpen) {
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
@@ -399,7 +399,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       bodyEl.style.paddingRight = ''
       htmlEl.style.paddingRight = ''
     }
-  }, [authOpen, sosOpen, isRenameOpen])
+  }, [authOpen, sosOpen])
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
