@@ -146,9 +146,7 @@ html, body {
   height: 100%;
   width: 100%;
 }
-body {
-  overflow: hidden;
-}
+/* Allow scrolling by default - overflow:hidden applied dynamically by JS when dialogs open */
 
 .glass-panel {
   background: rgba(255, 255, 255, 0.8);
