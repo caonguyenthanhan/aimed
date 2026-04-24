@@ -51,6 +51,20 @@ except ImportError:
 
 import requests
 try:
+    from .gpu_llm_host import (
+        build_openai_chat_payload,
+        extract_openai_chat_content,
+        post_openai_chat_completions,
+        resolve_gpu_model,
+    )
+except Exception:
+    from gpu_llm_host import (
+        build_openai_chat_payload,
+        extract_openai_chat_content,
+        post_openai_chat_completions,
+        resolve_gpu_model,
+    )
+try:
     import jwt
 except Exception:
     jwt = None
@@ -212,7 +226,7 @@ def _get_proxy_base():
                 return cand[0].get("url", LLAMA_SERVER_URL)
     except Exception:
         pass
-    default_gpu = os.environ.get("DEFAULT_GPU_URL", "https://miyoko-trichomonadal-reconditely.ngrok-free.dev")
+    default_gpu = os.environ.get("DEFAULT_GPU_URL", "https://elissa-villous-scourgingly.ngrok-free.dev")
     return default_gpu or LLAMA_SERVER_URL
 
 _LB_INDEX = 0
@@ -1072,50 +1086,22 @@ Lưu ý: Luôn khuyến cáo người dùng đi khám bác sĩ nếu có dấu h
     target = _current_target()
     if target == "gpu":
         try:
-            payload = req.dict()
-            payload["messages"] = full_messages
             base = _get_proxy_base()
-            headers = {"Content-Type": "application/json", "ngrok-skip-browser-warning": "true"}
             auth = os.environ.get("LLAMA_SERVER_AUTH", "").strip()
-            if auth:
-                headers["Authorization"] = auth
-            mode_sel = "pro" if (req.model or "").lower() == "pro" else "flash"
-            headers["X-Mode"] = mode_sel
-            payload["mode"] = mode_sel
-            proxied = requests.post(
-                f"{base.rstrip('/')}/v1/chat/completions",
-                headers=headers,
-                data=json.dumps(payload),
-                timeout=60,
+            gpu_default_model = (
+                os.environ.get("GPU_OPENAI_MODEL", "").strip()
+                or os.environ.get("GPU_LLM_MODEL", "").strip()
+                or os.environ.get("DEFAULT_GPU_MODEL", "").strip()
             )
-            if not proxied.ok:
-                fallback = requests.post(
-                    f"{base.rstrip('/')}/v1/chat",
-                    headers=headers,
-                    data=json.dumps({"messages": payload["messages"], "mode": mode_sel}),
-                    timeout=60,
-                )
-                if fallback.ok:
-                    proxied_data = fallback.json()
-                else:
-                    alt = requests.post(
-                        f"{base.rstrip('/')}/v1/chat/completions",
-                        headers=headers,
-                        data=json.dumps(payload),
-                        timeout=60,
-                    )
-                    if alt.ok:
-                        proxied_data = alt.json()
-                    else:
-                        proxied.raise_for_status()
-                        proxied_data = proxied.json()
-            else:
-                proxied_data = proxied.json()
-            content = ""
-            if "choices" in proxied_data:
-                content = proxied_data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            else:
-                content = str(proxied_data.get("reply", "")) or f"Xin lỗi, tôi đang gặp sự cố kỹ thuật: {proxied_data.get('error', 'Unknown error')}"
+            gpu_model = resolve_gpu_model(req.model, gpu_default_model)
+            payload = build_openai_chat_payload(
+                model=gpu_model,
+                messages=full_messages,
+                max_tokens=req.max_tokens,
+                temperature=req.temperature,
+            )
+            proxied_data = post_openai_chat_completions(base_url=base, payload=payload, auth=auth, timeout=60)
+            content = extract_openai_chat_content(proxied_data) or f"Xin lỗi, tôi đang gặp sự cố kỹ thuật."
             last_user = None
             for m in reversed(base_messages):
                 if m["role"] == "user":
@@ -1135,7 +1121,7 @@ Lưu ý: Luôn khuyến cáo người dùng đi khám bác sĩ nếu có dấu h
             data = response.dict()
             data["mode_used"] = "gpu"
             try:
-                data["mode_tier"] = headers.get("X-Mode", "").lower() or (str(req.model or "").lower() or "flash")
+                data["mode_tier"] = str(gpu_model or "").strip() or (str(req.model or "").lower() or "flash")
             except Exception:
                 data["mode_tier"] = str(req.model or "").lower() or "flash"
             if isinstance(proxied_data, dict) and "rag" in proxied_data:
@@ -1308,41 +1294,22 @@ async def friend_chat_completions(req: ChatRequest, request: Request):
     target = _current_target()
     if target == "gpu":
         try:
-            payload = req.dict()
-            payload["messages"] = full_messages
             base = _get_proxy_base()
-            headers = {"Content-Type": "application/json", "ngrok-skip-browser-warning": "true"}
             auth = os.environ.get("LLAMA_SERVER_AUTH", "").strip()
-            if auth:
-                headers["Authorization"] = auth
-            mode_sel = "pro" if (req.model or "").lower() == "pro" else "flash"
-            headers["X-Mode"] = mode_sel
-            payload["mode"] = mode_sel
-            proxied = requests.post(
-                f"{base.rstrip('/')}/v1/friend-chat/completions",
-                headers=headers,
-                data=json.dumps(payload),
-                timeout=60,
+            gpu_default_model = (
+                os.environ.get("GPU_OPENAI_MODEL", "").strip()
+                or os.environ.get("GPU_LLM_MODEL", "").strip()
+                or os.environ.get("DEFAULT_GPU_MODEL", "").strip()
             )
-            if not proxied.ok:
-                fallback = requests.post(
-                    f"{base.rstrip('/')}/v1/chat/completions",
-                    headers=headers,
-                    data=json.dumps({"messages": payload["messages"], "mode": mode_sel}),
-                    timeout=60,
-                )
-                if fallback.ok:
-                    proxied_data = fallback.json()
-                else:
-                    proxied.raise_for_status()
-                    proxied_data = proxied.json()
-            else:
-                proxied_data = proxied.json()
-            content = ""
-            if "choices" in proxied_data:
-                content = proxied_data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            else:
-                content = str(proxied_data.get("reply", "")) or f"Xin lỗi, tôi đang gặp sự cố kỹ thuật: {proxied_data.get('error', 'Unknown error')}"
+            gpu_model = resolve_gpu_model(req.model, gpu_default_model)
+            payload = build_openai_chat_payload(
+                model=gpu_model,
+                messages=full_messages,
+                max_tokens=req.max_tokens,
+                temperature=req.temperature,
+            )
+            proxied_data = post_openai_chat_completions(base_url=base, payload=payload, auth=auth, timeout=60)
+            content = extract_openai_chat_content(proxied_data) or f"Xin lỗi, tôi đang gặp sự cố kỹ thuật."
             last_user = None
             for m in reversed(base_messages):
                 if m["role"] == "user":
