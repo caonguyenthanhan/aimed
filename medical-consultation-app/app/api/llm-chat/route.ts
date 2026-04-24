@@ -29,7 +29,7 @@ function determineContext(userMessage: string, conversationHistory?: any[]): str
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, context, question, message, conversationHistory, model, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider, access_pass, delivery_mode } = await request.json()
+    const { prompt, context, question, message, conversationHistory, model, max_tokens, temperature, conversation_id, user_id, persona, systemPrompt: systemPromptOverride, role, provider, access_pass, delivery_mode } = await request.json()
     const auth = request.headers.get('authorization') || ''
     const referer = request.headers.get('referer') || ''
     const deliveryMode = delivery_mode === 'live' ? 'live' : 'chunked'
@@ -191,11 +191,14 @@ NGUYÊN TẮC QUAN TRỌNG:
           return `${BASE_SYSTEM_PROMPT}\n${specificInstruction}`
         })()
     const systemPrompt = personaText
-    const selectedModel = (typeof model === 'string' ? model.toLowerCase() : 'flash')
-    const modeHeader = selectedModel === 'pro' ? 'pro' : 'flash'
+    const rawModel = (typeof model === 'string' ? model.trim() : '')
+    const uiModel = (rawModel && ['flash', 'pro', 'gemini'].includes(rawModel.toLowerCase())) ? rawModel.toLowerCase() : 'flash'
+    const modeHeader = uiModel === 'pro' ? 'pro' : 'flash'
+    const defaultGpuModel = (process.env.GPU_OPENAI_MODEL || process.env.GPU_LLM_MODEL || process.env.DEFAULT_GPU_MODEL || '').trim()
+    const gpuModel = (rawModel && !['flash', 'pro', 'gemini'].includes(rawModel.toLowerCase())) ? rawModel : (defaultGpuModel || rawModel || 'gpt-4o-mini')
 
     const configuredProvider = (typeof provider === 'string' ? provider.trim().toLowerCase() : '') || (process.env.LLM_PROVIDER || '').trim().toLowerCase()
-    const useGemini = configuredProvider === 'gemini' || selectedModel === 'gemini'
+    const useGemini = configuredProvider === 'gemini' || uiModel === 'gemini'
     if (useGemini) {
       const parseRetryAfterSec = (s: string) => {
         const raw = String(s || '')
@@ -298,28 +301,38 @@ NGUYÊN TẮC QUAN TRỌNG:
       })
     }
 
-    const body = {
-      model: selectedModel,
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...(Array.isArray(conversationHistory) ? conversationHistory : []).map((m: any) => ({
+        role: m.role || 'user',
+        content: m.content || ''
+      })),
+      { role: 'user', content: userMessage }
+    ]
+    const resolvedMaxTokens = (typeof max_tokens === 'number' && Number.isFinite(max_tokens) && max_tokens > 0) ? Math.floor(max_tokens) : 400
+    const resolvedTemp = (typeof temperature === 'number' && Number.isFinite(temperature)) ? temperature : 0.3
+    const gpuBody = {
+      model: gpuModel,
+      messages,
+      max_tokens: resolvedMaxTokens,
+      temperature: resolvedTemp
+    }
+    const cpuBody = {
+      model: uiModel,
       mode: modeHeader,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...(Array.isArray(conversationHistory) ? conversationHistory : []).map((m: any) => ({
-          role: m.role || 'user',
-          content: m.content || ''
-        })),
-        { role: 'user', content: userMessage }
-      ],
-      max_tokens: 1024,
-      temperature: 0.3,
+      messages,
+      max_tokens: resolvedMaxTokens,
+      temperature: resolvedTemp,
       conversation_id: typeof conversation_id === 'string' ? conversation_id : null,
       user_id: typeof user_id === 'string' ? user_id : null
     }
 
     const start = Date.now()
+    const targetIsCpu = originalTarget === 'cpu' || fastApiUrl.includes('127.0.0.1') || fastApiUrl.includes('localhost')
     let resp = await fetch(fastApiUrl, {
       method: 'POST',
       headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': 'true', 'X-Mode': modeHeader } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', 'X-Mode': modeHeader },
-      body: JSON.stringify(body)
+      body: JSON.stringify(targetIsCpu ? cpuBody : gpuBody)
     })
     let modeUsed = fastApiUrl.includes('127.0.0.1') || fastApiUrl.includes('localhost') ? 'cpu' : 'gpu'
     if (!resp.ok) {
@@ -369,7 +382,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           const retry = await fetch(fallbackUrl, {
             method: 'POST',
             headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': 'true' } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(cpuBody)
           })
           if (retry.ok) {
             resp = retry
