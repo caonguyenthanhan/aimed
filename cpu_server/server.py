@@ -229,6 +229,15 @@ def _get_proxy_base():
     default_gpu = os.environ.get("DEFAULT_GPU_URL", "https://elissa-villous-scourgingly.ngrok-free.dev")
     return default_gpu or LLAMA_SERVER_URL
 
+def _get_tools_proxy_base() -> str:
+    env_tools = os.environ.get("GPU_TOOLS_URL", "").strip()
+    if env_tools:
+        return env_tools
+    llm_only = str(os.environ.get("GPU_LLM_ONLY", "") or "").strip().lower() in ("1", "true", "yes", "on")
+    if llm_only:
+        return ""
+    return _get_proxy_base()
+
 _LB_INDEX = 0
 def _choose_gpu_url(round_robin: bool = False) -> str:
     if not round_robin:
@@ -1400,7 +1409,9 @@ async def friend_chat_completions(req: ChatRequest, request: Request):
 
 @app.post("/v1/vision-multi")
 async def vision_multi(req: VisionMultiRequest):
-    base = _choose_gpu_url(round_robin=True)
+    base = _get_tools_proxy_base() or _choose_gpu_url(round_robin=True)
+    if not base:
+        raise HTTPException(status_code=503, detail="GPU tools server is not configured (GPU_TOOLS_URL).")
     headers = {"Content-Type": "application/json", "ngrok-skip-browser-warning": "true"}
     auth = os.environ.get("LLAMA_SERVER_AUTH", "").strip()
     if auth:
@@ -1421,7 +1432,9 @@ async def vision_multi(req: VisionMultiRequest):
 
 @app.post("/v1/tts/stream")
 async def tts_stream(req: TextToSpeechStreamRequest):
-    base = _choose_gpu_url(round_robin=True)
+    base = _get_tools_proxy_base() or _choose_gpu_url(round_robin=True)
+    if not base:
+        raise HTTPException(status_code=503, detail="GPU tools server is not configured (GPU_TOOLS_URL).")
     headers = {"Content-Type": "application/json", "ngrok-skip-browser-warning": "true"}
     auth = os.environ.get("LLAMA_SERVER_AUTH", "").strip()
     if auth:
@@ -1435,7 +1448,9 @@ async def tts_stream(req: TextToSpeechStreamRequest):
 
 @app.post("/v1/stt/stream")
 async def stt_stream(file: UploadFile = File(...)):
-    base = _choose_gpu_url(round_robin=True)
+    base = _get_tools_proxy_base() or _choose_gpu_url(round_robin=True)
+    if not base:
+        raise HTTPException(status_code=503, detail="GPU tools server is not configured (GPU_TOOLS_URL).")
     headers = {"ngrok-skip-browser-warning": "true"}
     auth = os.environ.get("LLAMA_SERVER_AUTH", "").strip()
     if auth:
@@ -1451,7 +1466,7 @@ async def stt_stream(file: UploadFile = File(...)):
 
 @app.get("/gpu/metrics")
 async def gpu_metrics():
-    base = _get_proxy_base()
+    base = _get_tools_proxy_base() or _get_proxy_base()
     headers = {"ngrok-skip-browser-warning": "true"}
     auth = os.environ.get("LLAMA_SERVER_AUTH", "").strip()
     if auth:
@@ -2366,7 +2381,9 @@ async def vision_chat(req: VisionChatRequest):
     if not req.image_base64 or not req.text:
         raise HTTPException(status_code=400, detail="Both image_base64 and text are required")
     try:
-        base = _get_proxy_base()
+        base = _get_tools_proxy_base()
+        if not base:
+            raise Exception("GPU tools server not configured")
         headers = {"Content-Type": "application/json", "ngrok-skip-browser-warning": "true"}
         auth = os.environ.get("LLAMA_SERVER_AUTH", "").strip()
         if auth:
@@ -2450,7 +2467,7 @@ async def document_chat(req: DocumentChatRequest):
         raise HTTPException(status_code=400, detail="doc_base64 and text are required")
     
     # Check if GPU is available and proxy if needed
-    base_url = _get_proxy_base()
+    base_url = _get_tools_proxy_base()
     if base_url:
         try:
             gpu_url = f"{base_url}/v1/document-chat"
