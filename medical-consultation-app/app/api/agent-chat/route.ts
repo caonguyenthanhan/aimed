@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { GeminiService, geminiService } from "@/lib/gemini-service"
+import { vllmService, VLLMService } from "@/lib/vllm-service"
 import { shouldBlock, buildBlockResponse } from "@/lib/safety"
 import { assessSos, buildSosResponse } from "@/lib/sos-mode"
 import { geminiToolDeclarations, toolCallsToActions } from "@/lib/agent-tools"
-// Temporarily disabled to isolate runtime error
-// import { detectPatientScenario, getConsultationStylePrompt } from "@/lib/patient-scenarios"
+import { detectPatientScenario, getConsultationStylePrompt } from "@/lib/patient-scenarios"
 import { AgentResponseSchema, isAllowedPath, normalizeActions } from "@/lib/agent-actions"
 import { persistChatTurn } from "@/lib/chat-persistence"
 import { runLocalAgent } from "@/lib/agent-local-provider"
@@ -280,32 +280,68 @@ export async function POST(req: Request) {
 
     const toolDecl = geminiToolDeclarations()
     
-    // Temporarily disabled patient scenario detection to isolate runtime error
-    const patientScenario = null
-    const consultationStylePrompt = ''
+    // Detect patient scenario for context-aware responses
+    const patientScenario = detectPatientScenario(message)
+    const consultationStylePrompt = getConsultationStylePrompt(patientScenario)
+    
+    // Determine which AI provider to use
+    const useVLLM = process.env.GPU_SERVER_URL && process.env.USE_VLLM_AGENT === 'true'
     
     let geminiErr: string | null = null
+    let vllmErr: string | null = null
     let r: Awaited<ReturnType<typeof geminiService.generateAgent>> | null = null
-    try {
-      const svc = keyToUse === String(process.env.GEMINI_API_KEY || "").trim() ? geminiService : new GeminiService(keyToUse)
-      
-      // Wrap Gemini call with exponential backoff retry
-      r = await retryWithBackoff(
-        () => svc.generateAgent({ 
-          category, 
-          tier, 
-          question: message, 
-          messages, 
-          tools: toolDecl,
-          // Pass consultation style as persona hint
-          persona: consultationStylePrompt ? `CONSULTATION_STYLE:\n${consultationStylePrompt}` : undefined
-        }),
-        { maxRetries: 3, initialDelayMs: 500, maxDelayMs: 5000, backoffMultiplier: 2 }
-      )
-    } catch (e: any) {
-      geminiErr = String(e?.message || e || "").trim() || "unknown_error"
-      if (geminiErr.length > 280) geminiErr = geminiErr.slice(0, 280)
-      r = null
+    let vllmResult: Awaited<ReturnType<typeof vllmService.generateAgent>> | null = null
+    
+    // Try vLLM first if configured
+    if (useVLLM) {
+      try {
+        vllmResult = await retryWithBackoff(
+          () => vllmService.generateAgent({
+            category,
+            question: message,
+            messages,
+            persona: consultationStylePrompt || undefined
+          }),
+          { maxRetries: 2, initialDelayMs: 300, maxDelayMs: 3000, backoffMultiplier: 2 }
+        )
+      } catch (e: any) {
+        vllmErr = String(e?.message || e || "").trim() || "vllm_error"
+        if (vllmErr.length > 280) vllmErr = vllmErr.slice(0, 280)
+        vllmResult = null
+      }
+    }
+    
+    // If vLLM succeeded, use its result
+    if (vllmResult && vllmResult.text) {
+      // Convert vLLM result to Gemini-like format for downstream processing
+      r = {
+        text: vllmResult.text,
+        model: vllmResult.model,
+        toolCalls: vllmResult.actions.map(a => ({ name: a.type, args: a.args }))
+      }
+    } else {
+      // Fallback to Gemini
+      try {
+        const svc = keyToUse === String(process.env.GEMINI_API_KEY || "").trim() ? geminiService : new GeminiService(keyToUse)
+        
+        // Wrap Gemini call with exponential backoff retry
+        r = await retryWithBackoff(
+          () => svc.generateAgent({ 
+            category, 
+            tier, 
+            question: message, 
+            messages, 
+            tools: toolDecl,
+            // Pass consultation style as persona hint
+            persona: consultationStylePrompt ? `CONSULTATION_STYLE:\n${consultationStylePrompt}` : undefined
+          }),
+          { maxRetries: 3, initialDelayMs: 500, maxDelayMs: 5000, backoffMultiplier: 2 }
+        )
+      } catch (e: any) {
+        geminiErr = String(e?.message || e || "").trim() || "unknown_error"
+        if (geminiErr.length > 280) geminiErr = geminiErr.slice(0, 280)
+        r = null
+      }
     }
     if (!r) {
       const parseRetryAfterSec = (s: string) => {
