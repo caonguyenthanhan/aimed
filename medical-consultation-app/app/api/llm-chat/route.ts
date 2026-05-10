@@ -331,7 +331,7 @@ NGUYÊN TẮC QUAN TRỌNG:
     const targetIsCpu = originalTarget === 'cpu' || fastApiUrl.includes('127.0.0.1') || fastApiUrl.includes('localhost')
     let resp = await fetch(fastApiUrl, {
       method: 'POST',
-      headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': 'true', 'X-Mode': modeHeader } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', 'X-Mode': modeHeader },
+      headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': '1', 'X-Mode': modeHeader } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1', 'X-Mode': modeHeader },
       body: JSON.stringify(targetIsCpu ? cpuBody : gpuBody)
     })
     let modeUsed = fastApiUrl.includes('127.0.0.1') || fastApiUrl.includes('localhost') ? 'cpu' : 'gpu'
@@ -381,7 +381,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           const fallbackUrl = cpuFallback
           const retry = await fetch(fallbackUrl, {
             method: 'POST',
-            headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': 'true' } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': '1' } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
             body: JSON.stringify(cpuBody)
           })
           if (retry.ok) {
