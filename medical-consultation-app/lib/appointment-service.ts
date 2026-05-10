@@ -1,7 +1,8 @@
 // Medical Appointment Service
 // Quản lý đặt lịch hẹn với các chuyên gia y tế
 
-import { getNeonPool } from './neon-db'
+import type { Pool } from "pg"
+import { tryGetNeonPool } from './neon-db'
 
 export interface AppointmentRequest {
   id: string
@@ -38,7 +39,13 @@ export interface DoctorProfile {
  * Quản lý lịch hẹn với các chuyên gia y tế
  */
 export class AppointmentService {
-  private pool = getNeonPool()
+  private pool: Pool | null = null
+
+  private getPool() {
+    if (this.pool) return this.pool
+    this.pool = tryGetNeonPool()
+    return this.pool
+  }
 
   /**
    * Create appointment request
@@ -54,7 +61,9 @@ export class AppointmentService {
     reason: string,
     notes?: string
   ): Promise<AppointmentRequest> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `INSERT INTO medical_appointments 
@@ -75,7 +84,9 @@ export class AppointmentService {
    * Lấy chi tiết lịch hẹn theo ID
    */
   async getAppointment(appointmentId: string): Promise<AppointmentRequest | null> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         'SELECT * FROM medical_appointments WHERE id = $1',
@@ -92,7 +103,9 @@ export class AppointmentService {
    * Lấy các lịch hẹn của người dùng
    */
   async getUserAppointments(userId: string, status?: string): Promise<AppointmentRequest[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       let query = 'SELECT * FROM medical_appointments WHERE user_id = $1'
       const params: any[] = [userId]
@@ -116,7 +129,9 @@ export class AppointmentService {
    * Lấy các lịch hẹn của thiết bị
    */
   async getDeviceAppointments(deviceId: string): Promise<AppointmentRequest[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         'SELECT * FROM medical_appointments WHERE device_id = $1 ORDER BY appointment_date DESC',
@@ -136,7 +151,9 @@ export class AppointmentService {
     appointmentId: string,
     status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
   ): Promise<AppointmentRequest> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `UPDATE medical_appointments 
@@ -161,7 +178,9 @@ export class AppointmentService {
    * Hủy lịch hẹn
    */
   async cancelAppointment(appointmentId: string, reason?: string): Promise<void> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       await client.query(
         `UPDATE medical_appointments 
@@ -186,7 +205,9 @@ export class AppointmentService {
     newDate: Date,
     newTime: string
   ): Promise<AppointmentRequest> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `UPDATE medical_appointments 
@@ -250,7 +271,9 @@ export class AppointmentService {
     completed: number
     cancelled: number
   }> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT status, COUNT(*) as count
@@ -282,7 +305,9 @@ export class AppointmentService {
    * Lấy các lịch hẹn sắp tới
    */
   async getUpcomingAppointments(userId?: string, daysAhead: number = 30): Promise<AppointmentRequest[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       let query = `SELECT * FROM medical_appointments 
                    WHERE appointment_date >= NOW() 

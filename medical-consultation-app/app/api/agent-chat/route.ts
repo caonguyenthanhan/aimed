@@ -6,16 +6,59 @@ import { assessSos, buildSosResponse } from "@/lib/sos-mode"
 import { geminiToolDeclarations, toolCallsToActions } from "@/lib/agent-tools"
 // Temporarily disabled to isolate runtime error
 // import { detectPatientScenario, getConsultationStylePrompt } from "@/lib/patient-scenarios"
-import { AgentResponseSchema, isAllowedPath, normalizeActions } from "@/lib/agent-actions"
+import { AgentResponseSchema, ALLOWED_PATH_PREFIXES, isAllowedPath, normalizeActions } from "@/lib/agent-actions"
 import { persistChatTurn } from "@/lib/chat-persistence"
 import { runLocalAgent } from "@/lib/agent-local-provider"
 import { buildNavLinkMessage, planChunkedMessages } from "@/lib/chat-delivery"
 import { getRateLimit } from "@/lib/rate-limiter"
 import { retryWithBackoff } from "@/lib/retry-backoff"
+import { youtubeService } from "@/lib/youtube-service"
 
 export async function POST(req: Request) {
   const started = Date.now()
   try {
+    const firstJsonObject = (text: string) => {
+      const s = String(text || "").trim()
+      if (!s) return null
+      const start = s.indexOf("{")
+      if (start < 0) return null
+      let depth = 0
+      let inStr = false
+      let esc = false
+      for (let i = start; i < s.length; i++) {
+        const ch = s[i]
+        if (inStr) {
+          if (esc) {
+            esc = false
+          } else if (ch === "\\") {
+            esc = true
+          } else if (ch === "\"") {
+            inStr = false
+          }
+          continue
+        }
+        if (ch === "\"") {
+          inStr = true
+          continue
+        }
+        if (ch === "{") depth++
+        if (ch === "}") depth--
+        if (depth === 0) return s.slice(start, i + 1)
+      }
+      return null
+    }
+
+    const formatSeconds = (sec: number | undefined) => {
+      const s = Math.max(0, Math.floor(Number(sec || 0)))
+      const h = Math.floor(s / 3600)
+      const m = Math.floor((s % 3600) / 60)
+      const ss = s % 60
+      const mm = String(m).padStart(2, "0")
+      const sss = String(ss).padStart(2, "0")
+      if (h > 0) return `${h}:${mm}:${sss}`
+      return `${m}:${sss}`
+    }
+
     const body: any = await req.json().catch(() => null)
     const message = String(body?.message || body?.question || "").trim()
     const conversation_id = String(body?.conversation_id || "").trim() || crypto.randomUUID()
@@ -170,17 +213,7 @@ export async function POST(req: Request) {
 
     const provider = String(process.env.AGENT_PROVIDER || "gemini").trim().toLowerCase()
     if (provider === "local") {
-      const allow = [
-        "/sang-loc",
-        "/tri-lieu",
-        "/nhac-nho",
-        "/tin-tuc-y-khoa",
-        "/tam-su",
-        "/tu-van",
-        "/bac-si",
-        "/doctor",
-        "/ke-hoach",
-      ]
+      const allow = [...ALLOWED_PATH_PREFIXES]
       const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "").trim().replace(/\/$/, "")
       const urlCandidate = (process.env.LOCAL_AGENT_URL || process.env.INTERNAL_LLM_URL || (cpuBase ? `${cpuBase}/v1/chat/completions` : "") || "http://127.0.0.1:8000/v1/chat/completions").trim()
       const model = (process.env.LOCAL_AGENT_MODEL || process.env.LOCAL_LLM_MODEL || "").trim() || "local-agent"
@@ -334,7 +367,7 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions: [],
           conversation_id,
-          metadata: { mode: "gpu", provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, duration_ms: Date.now() - started },
+          metadata: { mode: "cpu", provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, duration_ms: Date.now() - started },
         })
         return NextResponse.json(out)
       }
@@ -361,9 +394,9 @@ export async function POST(req: Request) {
     let extractedResponse: string = ""
     let suggestedInvestigation: string = ""
     try {
-      const jsonMatch = r.text.match(/\{[\s\S]*"actions"[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
+      const block = firstJsonObject(r.text)
+      if (block) {
+        const parsed = JSON.parse(block)
         if (Array.isArray(parsed.actions)) {
           textActions = parsed.actions
         }
@@ -464,13 +497,14 @@ export async function POST(req: Request) {
       return actions.filter(a => a?.type)
     }
     
-    const forcedActions = intelligentActionForcing()
+    const forceActionsEnabled = String(process.env.AGENT_FORCE_ACTIONS || "").trim() === "1"
+    const forcedActions = forceActionsEnabled ? intelligentActionForcing() : []
     const combinedActions = [...actionsRaw, ...textActions, ...forcedActions]
-    const actions = normalizeActions(combinedActions.filter(a => a?.type))
+    let actions = normalizeActions(combinedActions.filter(a => a?.type))
       .map((a) => {
-        if (a.type === "open_screening") return { type: "navigate", args: { path: "/sang-loc" } }
-        if (a.type === "open_therapy") return { type: "navigate", args: { path: "/tri-lieu" } }
-        if (a.type === "open_reminders") return { type: "navigate", args: { path: "/nhac-nho" } }
+        if (a.type === "open_screening") return { type: "ask_navigation", args: { feature: "sang-loc", reason: "Bạn muốn thử sàng lọc tâm lý để hiểu bản thân tốt hơn không?" } } as any
+        if (a.type === "open_therapy") return { type: "ask_navigation", args: { feature: "tri-lieu", reason: "Bạn muốn xem các bài tập trị liệu được gợi ý không?" } } as any
+        if (a.type === "open_reminders") return { type: "navigate", args: { path: "/nhac-nho" } } as any
         return a
       })
       .map((a) => {
@@ -485,9 +519,50 @@ export async function POST(req: Request) {
           const text = t.length > 800 ? t.slice(0, 800) : t
           return { type: "speak", args: { text } }
         }
+        if (a.type === "recommend_music") {
+          const recs = Array.isArray((a as any)?.args?.recommendations) ? (a as any).args.recommendations : []
+          const capped = recs.slice(0, 10)
+          return { ...a, args: { ...(a as any).args, recommendations: capped } } as any
+        }
         return null
       })
       .filter(Boolean) as any
+
+    const hydrateYouTubeEnabled = String(process.env.AGENT_HYDRATE_YOUTUBE || "").trim() !== "0"
+    if (hydrateYouTubeEnabled) {
+      const moodMap: Record<string, string> = {
+        calm: "calming",
+        uplifting: "motivation",
+        meditation: "meditation",
+        sleep: "sleep",
+        focus: "breathing",
+      }
+      const next: any[] = []
+      for (const a of actions) {
+        if (a?.type !== "recommend_music") {
+          next.push(a)
+          continue
+        }
+        const recs = Array.isArray(a?.args?.recommendations) ? a.args.recommendations : []
+        if (recs.length) {
+          next.push(a)
+          continue
+        }
+        const mood = String(a?.args?.mood || "calm").trim().toLowerCase()
+        const key = moodMap[mood] || "calming"
+        const videos = await youtubeService.searchWellnessVideos(key, 5).catch(() => [])
+        const recommendations = videos.map((v) => ({
+          videoId: v.videoId,
+          title: String(v.title || "").trim().slice(0, 120),
+          artist: String(v.channelTitle || "").trim().slice(0, 80) || undefined,
+          thumbnail: String(v.thumbnailUrl || "").trim() || undefined,
+          duration: v.duration ? formatSeconds(v.duration) : undefined,
+          mood,
+        }))
+        next.push({ ...a, args: { ...a.args, recommendations } })
+      }
+      actions = next
+    }
 
     const content = extractedResponse || r.text || (actions.length ? "Đã thực hiện yêu cầu." : "Mình chưa rõ bạn muốn mình thực hiện hành động nào.")
     
@@ -517,6 +592,7 @@ export async function POST(req: Request) {
     })
     return NextResponse.json(out)
   } catch (e: any) {
+    console.error("[agent-chat] internal_error", e)
     return NextResponse.json(
       AgentResponseSchema.parse({
         response: "Xin lỗi, agent đang gặp sự cố kỹ thuật. Bạn thử lại giúp mình.",

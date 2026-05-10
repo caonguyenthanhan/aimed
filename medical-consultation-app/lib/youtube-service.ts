@@ -20,6 +20,28 @@ export interface YouTubeVideoMetadata {
 export class YouTubeService {
   private apiKey?: string
   private baseUrl = 'https://www.googleapis.com/youtube/v3'
+  private static cache: Map<string, { expiresAt: number; value: any }> | null = null
+  private static getCache() {
+    const g = globalThis as any
+    if (!g.__MCS_YOUTUBE_CACHE__) {
+      g.__MCS_YOUTUBE_CACHE__ = new Map<string, { expiresAt: number; value: any }>()
+    }
+    return g.__MCS_YOUTUBE_CACHE__ as Map<string, { expiresAt: number; value: any }>
+  }
+  private static getCached<T>(key: string): T | null {
+    const cache = YouTubeService.getCache()
+    const hit = cache.get(key)
+    if (!hit) return null
+    if (Date.now() > hit.expiresAt) {
+      cache.delete(key)
+      return null
+    }
+    return hit.value as T
+  }
+  private static setCached<T>(key: string, value: T, ttlMs: number) {
+    const cache = YouTubeService.getCache()
+    cache.set(key, { expiresAt: Date.now() + Math.max(0, ttlMs), value })
+  }
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || process.env.YOUTUBE_API_KEY
@@ -34,17 +56,24 @@ export class YouTubeService {
     maxResults: number = 5,
     moodFilters?: string[]
   ): Promise<YouTubeVideoMetadata[]> {
+    const q = String(query || '').trim()
+    const n = Math.min(Math.max(1, maxResults || 5), 50)
+    const cacheKey = `search:${q.toLowerCase()}|n=${n}|lang=vi|region=VN`
+    const cached = YouTubeService.getCached<YouTubeVideoMetadata[]>(cacheKey)
+    if (cached) return cached
     if (!this.apiKey) {
       console.log('[YouTubeService] YouTube API not configured, returning stubs')
-      return this.generateStubResults(query, maxResults)
+      const out = this.generateStubResults(q, n)
+      YouTubeService.setCached(cacheKey, out, 60_000)
+      return out
     }
 
     try {
       const params = new URLSearchParams({
         key: this.apiKey,
         part: 'snippet,contentDetails',
-        q: query,
-        maxResults: Math.min(maxResults, 50).toString(),
+        q,
+        maxResults: n.toString(),
         type: 'video',
         order: 'relevance',
         videoCategoryId: '22', // People & Blogs
@@ -73,7 +102,7 @@ export class YouTubeService {
         detailsData.items.map((item: any) => [item.id, item])
       )
 
-      return data.items.map((item: any) => {
+      const out = data.items.map((item: any) => {
         const details = detailsMap.get(item.id.videoId)
         return {
           videoId: item.id.videoId,
@@ -86,9 +115,13 @@ export class YouTubeService {
           viewCount: parseInt(details?.statistics?.viewCount || '0', 10)
         }
       })
+      YouTubeService.setCached(cacheKey, out, 5 * 60_000)
+      return out
     } catch (error) {
       console.error('[YouTubeService] Search failed:', error)
-      return this.generateStubResults(query, maxResults)
+      const out = this.generateStubResults(q, n)
+      YouTubeService.setCached(cacheKey, out, 60_000)
+      return out
     }
   }
 
@@ -97,6 +130,10 @@ export class YouTubeService {
    * Lấy chi tiết video theo ID
    */
   async getVideoDetails(videoId: string): Promise<YouTubeVideoMetadata | null> {
+    const id = String(videoId || '').trim()
+    const cacheKey = `video:${id}`
+    const cached = YouTubeService.getCached<YouTubeVideoMetadata | null>(cacheKey)
+    if (cached) return cached
     if (!this.apiKey) {
       console.log('[YouTubeService] YouTube API not configured')
       return null
@@ -106,7 +143,7 @@ export class YouTubeService {
       const params = new URLSearchParams({
         key: this.apiKey,
         part: 'snippet,contentDetails,statistics',
-        id: videoId
+        id
       })
 
       const response = await fetch(`${this.baseUrl}/videos?${params}`, {
@@ -120,12 +157,13 @@ export class YouTubeService {
       const data = await response.json()
 
       if (data.items.length === 0) {
+        YouTubeService.setCached(cacheKey, null, 60_000)
         return null
       }
 
       const item = data.items[0]
 
-      return {
+      const out = {
         videoId: item.id,
         title: item.snippet.title,
         description: item.snippet.description,
@@ -135,6 +173,8 @@ export class YouTubeService {
         duration: this.parseDuration(item.contentDetails.duration),
         viewCount: parseInt(item.statistics.viewCount || '0', 10)
       }
+      YouTubeService.setCached(cacheKey, out, 30 * 60_000)
+      return out
     } catch (error) {
       console.error('[YouTubeService] Failed to get video details:', error)
       return null
@@ -149,6 +189,11 @@ export class YouTubeService {
     mood: string,
     maxResults: number = 5
   ): Promise<YouTubeVideoMetadata[]> {
+    const m = String(mood || '').trim().toLowerCase()
+    const n = Math.min(Math.max(1, maxResults || 5), 20)
+    const cacheKey = `wellness:${m}|n=${n}`
+    const cached = YouTubeService.getCached<YouTubeVideoMetadata[]>(cacheKey)
+    if (cached) return cached
     const wellnessQueries: Record<string, string[]> = {
       'relaxation': ['thiền định', 'meditation for relaxation', 'công phu thả lỏng'],
       'meditation': ['thiền định', 'guided meditation', 'sự tĩnh tâm'],
@@ -160,12 +205,12 @@ export class YouTubeService {
       'breathing': ['hơi thở', 'breathing exercises', 'kỹ thuật hơi thở']
     }
 
-    const queries = wellnessQueries[mood] || [mood]
+    const queries = wellnessQueries[m] || [m]
     const allResults: YouTubeVideoMetadata[] = []
 
     for (const query of queries) {
       try {
-        const results = await this.searchVideos(query, maxResults)
+        const results = await this.searchVideos(query, n)
         allResults.push(...results)
       } catch (error) {
         console.error(`[YouTubeService] Search failed for "${query}":`, error)
@@ -175,9 +220,11 @@ export class YouTubeService {
     // Remove duplicates and return top results
     const uniqueResults = Array.from(
       new Map(allResults.map(v => [v.videoId, v])).values()
-    ).slice(0, maxResults)
+    ).slice(0, n)
 
-    return uniqueResults.length > 0 ? uniqueResults : this.generateStubResults(mood, maxResults)
+    const out = uniqueResults.length > 0 ? uniqueResults : this.generateStubResults(m, n)
+    YouTubeService.setCached(cacheKey, out, 5 * 60_000)
+    return out
   }
 
   /**

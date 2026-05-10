@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { ALLOWED_PATH_PREFIXES } from "@/lib/agent-actions"
 
 const OpenAIChatResponseSchema = z.object({
   model: z.string().optional(),
@@ -52,16 +53,19 @@ export async function runLocalAgent(opts: {
   const url = String(opts.url || "").trim()
   if (!url) return { text: "", model: undefined, json: null }
 
+  const shouldSkipNgrokWarning = (() => {
+    const env = String(process.env.NGROK_SKIP_BROWSER_WARNING || "").trim()
+    if (env === "1" || env.toLowerCase() === "true") return true
+    try {
+      const host = new URL(url).hostname
+      return /(^|\.)ngrok-free\.(app|dev)$/i.test(host)
+    } catch {
+      return false
+    }
+  })()
+
   const allow = Array.isArray(opts.allowPaths) && opts.allowPaths.length ? opts.allowPaths : [
-    "/sang-loc",
-    "/tri-lieu",
-    "/nhac-nho",
-    "/tin-tuc-y-khoa",
-    "/tam-su",
-    "/tu-van",
-    "/bac-si",
-    "/doctor",
-    "/ke-hoach",
+    ...ALLOWED_PATH_PREFIXES,
   ]
 
   const system = [
@@ -98,7 +102,10 @@ export async function runLocalAgent(opts: {
 
   const resp = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(shouldSkipNgrokWarning ? { "ngrok-skip-browser-warning": "1" } : {}),
+    },
     body: JSON.stringify(body),
   })
 

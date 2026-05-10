@@ -15,7 +15,7 @@ cp .env.example .env.local
 1. Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 2. Add it to your `.env.local`:
    ```
-   NEXT_PUBLIC_GEMINI_API_KEY=your_actual_api_key_here
+   GEMINI_API_KEY=your_actual_api_key_here
    ```
 
 ### Database Configuration

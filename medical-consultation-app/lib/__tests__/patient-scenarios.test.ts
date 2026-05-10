@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { detectPatientScenario, getConsultationStylePrompt, PATIENT_SCENARIOS } from '@/lib/patient-scenarios'
+import { detectPatientScenario, getConsultationStylePrompt, PATIENT_SCENARIOS } from '../patient-scenarios'
 
 describe('Patient Scenarios - Smart AI Consultation System', () => {
   describe('Scenario Detection', () => {
@@ -129,7 +129,7 @@ describe('Patient Scenarios - Smart AI Consultation System', () => {
     })
 
     it('should generate PREVENTIVE consultation style for wellness', () => {
-      const scenario = PATIENT_SCENARIOS.weight_management
+      const scenario = PATIENT_SCENARIOS.preventive_checkup
       const prompt = getConsultationStylePrompt(scenario)
       
       expect(prompt).toContain('phòng ngừa')
