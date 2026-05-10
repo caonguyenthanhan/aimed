@@ -45,6 +45,7 @@ next-env.d.ts
 
 # external cloned repos (không push)
 /external/
+/_external_repos/
 
 # tài liệu & model
 /doc/

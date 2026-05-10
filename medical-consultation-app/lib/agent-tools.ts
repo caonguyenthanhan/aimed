@@ -113,7 +113,7 @@ export function geminiToolDeclarations() {
             },
           },
         },
-        required: ["recommendations"],
+        required: [],
       },
     },
     
@@ -215,23 +215,21 @@ export function toolCallsToActions(calls: AgentToolCall[]): AgentAction[] {
       const recommendations = Array.isArray(c?.args?.recommendations) 
         ? c.args.recommendations.filter((r: any) => r?.videoId && r?.title)
         : []
-      if (recommendations.length > 0) {
-        out.push({ 
-          type: "recommend_music", 
-          args: { 
-            recommendations: recommendations.map((r: any) => ({
-              videoId: String(r.videoId).trim(),
-              title: String(r.title).trim(),
-              artist: r.artist ? String(r.artist).trim() : undefined,
-              thumbnail: r.thumbnail ? String(r.thumbnail).trim() : undefined,
-              duration: r.duration ? String(r.duration).trim() : undefined,
-              mood: r.mood ? String(r.mood).trim() : undefined,
-            })),
-            mood: c?.args?.mood ? String(c.args.mood).trim() : undefined,
-            message: c?.args?.message ? String(c.args.message).trim() : undefined,
-          } 
-        } as any)
-      }
+      out.push({ 
+        type: "recommend_music", 
+        args: { 
+          recommendations: recommendations.map((r: any) => ({
+            videoId: String(r.videoId).trim(),
+            title: String(r.title).trim(),
+            artist: r.artist ? String(r.artist).trim() : undefined,
+            thumbnail: r.thumbnail ? String(r.thumbnail).trim() : undefined,
+            duration: r.duration ? String(r.duration).trim() : undefined,
+            mood: r.mood ? String(r.mood).trim() : undefined,
+          })),
+          mood: c?.args?.mood ? String(c.args.mood).trim() : undefined,
+          message: c?.args?.message ? String(c.args.message).trim() : undefined,
+        } 
+      } as any)
       continue
     }
     

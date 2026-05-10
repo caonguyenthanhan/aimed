@@ -33,3 +33,11 @@ export function getNeonPool() {
   })
   return pool
 }
+
+export function tryGetNeonPool() {
+  try {
+    return getNeonPool()
+  } catch {
+    return null
+  }
+}

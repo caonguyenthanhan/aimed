@@ -1,7 +1,8 @@
 // Agent Registry System
 // Quản lý danh sách các module agent và các cách để tương tác với chúng
 
-import { getNeonPool } from './neon-db'
+import type { Pool } from "pg"
+import { tryGetNeonPool } from './neon-db'
 
 export type AgentType = 
   | 'doctor_finder' 
@@ -46,11 +47,17 @@ export interface AgentSuggestion {
  * Theo dõi đề xuất agent và cách người dùng tương tác
  */
 export class AgentRegistry {
-  private pool = getNeonPool()
+  private pool: Pool | null = null
   private agents: Map<AgentType, Agent> = new Map()
 
   constructor() {
     this.initializeDefaultAgents()
+  }
+
+  private getPool() {
+    if (this.pool) return this.pool
+    this.pool = tryGetNeonPool()
+    return this.pool
   }
 
   private initializeDefaultAgents(): void {
@@ -244,7 +251,11 @@ export class AgentRegistry {
     agentId: AgentType,
     reason: string
   ): Promise<AgentSuggestion> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) {
+      throw new Error("Missing DATABASE_URL")
+    }
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `INSERT INTO agent_suggestions 

@@ -62,6 +62,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(suggestion, { status: 201 })
   } catch (error) {
     console.error('Error suggesting agent:', error)
+    const msg = String((error as any)?.message || '')
+    if (msg.includes('Missing DATABASE_URL')) {
+      return NextResponse.json(
+        { error: 'Database not configured' },
+        { status: 503 }
+      )
+    }
     return NextResponse.json(
       { error: 'Failed to suggest agent' },
       { status: 500 }

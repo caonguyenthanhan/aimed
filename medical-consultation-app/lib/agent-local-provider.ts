@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { ALLOWED_PATH_PREFIXES } from "@/lib/agent-actions"
 
 const OpenAIChatResponseSchema = z.object({
   model: z.string().optional(),
@@ -53,15 +54,7 @@ export async function runLocalAgent(opts: {
   if (!url) return { text: "", model: undefined, json: null }
 
   const allow = Array.isArray(opts.allowPaths) && opts.allowPaths.length ? opts.allowPaths : [
-    "/sang-loc",
-    "/tri-lieu",
-    "/nhac-nho",
-    "/tin-tuc-y-khoa",
-    "/tam-su",
-    "/tu-van",
-    "/bac-si",
-    "/doctor",
-    "/ke-hoach",
+    ...ALLOWED_PATH_PREFIXES,
   ]
 
   const system = [

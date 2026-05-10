@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { youtubeService } from '@/lib/youtube-service'
+import { YouTubeService, youtubeService } from '@/lib/youtube-service'
 
 /**
  * GET /api/youtube/video - Get video details
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Validate video ID format
-    if (!youtubeService.validateVideoId(videoId)) {
+    if (!YouTubeService.validateVideoId(videoId)) {
       return NextResponse.json(
         { error: 'Invalid video ID format' },
         { status: 400 }
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const videoId = youtubeService.extractVideoId(url)
+    const videoId = YouTubeService.extractVideoId(url)
 
     if (!videoId) {
       return NextResponse.json(

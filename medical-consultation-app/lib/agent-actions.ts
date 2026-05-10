@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { ChatDeliveryMessageSchema, ChatDeliverySchema } from "@/lib/chat-delivery-schema"
+import { ChatDeliveryMessageSchema, ChatDeliverySchema } from "./chat-delivery-schema"
 
 // Embeddable feature IDs - các tính năng có thể nhúng vào chat
 export const EmbeddableFeatureId = z.enum([
@@ -69,7 +69,7 @@ export const AgentActionSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("recommend_music"),
     args: z.object({
-      recommendations: z.array(MusicRecommendationSchema),
+      recommendations: z.array(MusicRecommendationSchema).optional().default([]),
       mood: z.string().optional(),
       message: z.string().optional(),
     }),
@@ -110,23 +110,24 @@ export function normalizeActions(raw: unknown): AgentAction[] {
   return parsed.success ? parsed.data : []
 }
 
+export const ALLOWED_PATH_PREFIXES = [
+  "/sang-loc",
+  "/tri-lieu",
+  "/nhac-nho",
+  "/tin-tuc-y-khoa",
+  "/tam-su",
+  "/tu-van",
+  "/bac-si",
+  "/doctor",
+  "/ke-hoach",
+  "/tra-cuu",
+  "/thong-ke",
+] as const
+
 export function isAllowedPath(path: string) {
   const p = String(path || "").trim()
   if (!p.startsWith("/")) return false
-  const allowPrefixes = [
-    "/sang-loc",
-    "/tri-lieu",
-    "/nhac-nho",
-    "/tin-tuc-y-khoa",
-    "/tam-su",
-    "/tu-van",
-    "/bac-si",
-    "/doctor",
-    "/ke-hoach",
-    "/tra-cuu",
-    "/thong-ke",
-  ]
-  return allowPrefixes.some((pre) => p === pre || p.startsWith(`${pre}/`))
+  return ALLOWED_PATH_PREFIXES.some((pre) => p === pre || p.startsWith(`${pre}/`))
 }
 
 // Feature metadata for embeddable components

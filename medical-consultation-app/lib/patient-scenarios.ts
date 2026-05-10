@@ -21,7 +21,7 @@ export const PATIENT_SCENARIOS: Record<string, PatientScenario> = {
     id: 'acute_chest_pain',
     name: 'Đau Ngực Cấp Tính',
     description: 'Bệnh nhân trình bày đau ngực đột ngột, có thể liên quan đến tim',
-    keywords: ['đau ngực', 'tim đập nhanh', 'khó thở', 'tức ngực', 'áp lực ngực'],
+    keywords: ['đau ngực', 'tức ngực', 'áp lực ngực', 'đau bên trái', 'tim đập nhanh'],
     consultationStyle: 'urgent',
     recommendedTools: ['tra-cuu', 'bac-si', 'sao-lui-do'],
     followUpQuestions: [
@@ -66,7 +66,7 @@ export const PATIENT_SCENARIOS: Record<string, PatientScenario> = {
     id: 'depression_severe',
     name: 'Trầm Cảm Nặng',
     description: 'Bệnh nhân trình bày triệu chứng trầm cảm nặng, có ý tưởng tự tử',
-    keywords: ['tuyệt vọng', 'không có hy vọng', 'muốn chết', 'vô nghĩa', 'tự tử', 'sống vô ích'],
+    keywords: ['tuyệt vọng', 'không có hy vọng', 'không thấy hy vọng', 'muốn chết', 'vô nghĩa', 'tự tử', 'sống vô ích'],
     consultationStyle: 'psychological',
     recommendedTools: ['sang-loc', 'bac-si', 'tam-su'],
     followUpQuestions: [
@@ -88,14 +88,14 @@ export const PATIENT_SCENARIOS: Record<string, PatientScenario> = {
     id: 'anxiety_panic',
     name: 'Lo Âu & Hoảng Sợ',
     description: 'Bệnh nhân trình bày triệu chứng lo âu, cơn hoảng sợ',
-    keywords: ['lo âu', 'hoảng sợ', 'sợ', 'bất an', 'tim đập mạnh', 'thở không ra hơi', 'shock'],
+    keywords: ['lo âu', 'hoảng sợ', 'sợ', 'bất an', 'tim đập mạnh', 'tim đập rất nhanh', 'đập rất nhanh', 'thở không ra hơi', 'shock'],
     consultationStyle: 'psychological',
     recommendedTools: ['sang-loc', 'tri-lieu', 'tam-su'],
     followUpQuestions: [
-      'Lo âu từ khi nào? Có sự kiện gì xảy ra không?',
+      'Lo âu từ bao giờ? Có sự kiện gì xảy ra không?',
       'Bạn cảm thấy sợ cái gì cụ thể?',
       'Bạn có bị cơn hoảng sợ không? Đó là cảm giác như thế nào?',
-      'Các triệu chứp gồm gì? (tim đập nhanh, khó thở, chóng mặt...)',
+      'Các triệu chứng gồm gì? (tim đập nhanh, khó thở, chóng mặt...)',
       'Bạn đã có cách nào để giảm lo âu không?'
     ],
     riskLevel: 'medium',
@@ -111,7 +111,7 @@ export const PATIENT_SCENARIOS: Record<string, PatientScenario> = {
     id: 'diabetes_management',
     name: 'Quản Lý Bệnh Tiểu Đường',
     description: 'Bệnh nhân bị tiểu đường, cần hỗ trợ quản lý',
-    keywords: ['tiểu đường', 'đường huyết', 'insulin', 'glucose', 'glucose cao'],
+    keywords: ['tiểu đường', 'đường huyết', 'insulin', 'glucose', 'glucose cao', 'tôi muốn quản lý tốt hơn', 'tôi muốn kiểm soát tốt hơn'],
     consultationStyle: 'chronic',
     recommendedTools: ['tra-cuu', 'ke-hoach', 'bac-si'],
     followUpQuestions: [
@@ -129,16 +129,16 @@ export const PATIENT_SCENARIOS: Record<string, PatientScenario> = {
     ]
   },
 
-  hypertension_management: {
-    id: 'hypertension_management',
-    name: 'Quản Lý Cao Huyết Áp',
+  hypertension: {
+    id: 'hypertension',
+    name: 'Cao Huyết Áp',
     description: 'Bệnh nhân bị cao huyết áp, cần hỗ trợ quản lý',
     keywords: ['cao huyết áp', 'huyết áp cao', 'huyết áp', 'tăng huyết áp'],
     consultationStyle: 'chronic',
     recommendedTools: ['tra-cuu', 'ke-hoach', 'bac-si'],
     followUpQuestions: [
       'Huyết áp của bạn thường bao nhiêu?',
-      'Bạn có triệu chứp gì? (đầu nặng, chóng mặt, mệt...)',
+      'Bạn có triệu chứng gì? (đầu nặng, chóng mặt, mệt...)',
       'Bạn đang dùng thuốc huyết áp nào?',
       'Bạn có tuân thủ chế độ ăn mặn không?',
       'Bạn có tập thể dục đều đặn không?'
@@ -175,10 +175,10 @@ export const PATIENT_SCENARIOS: Record<string, PatientScenario> = {
   },
 
   // === TÌNH HUỐNG CẢM LẠNH/CỬ ===
-  common_cold_flu: {
-    id: 'common_cold_flu',
+  cold_flu: {
+    id: 'cold_flu',
     name: 'Cảm Lạnh & Cúm',
-    description: 'Bệnh nhân trình bày triệu chứp cảm lạnh hoặc cúm',
+    description: 'Bệnh nhân trình bày triệu chứng cảm lạnh hoặc cúm',
     keywords: ['cảm', 'cúm', 'sốt', 'ho', 'hắt hơi', 'chảy nước mũi', 'sore throat', 'đau họng'],
     consultationStyle: 'general',
     recommendedTools: ['tra-cuu', 'bac-si'],
@@ -186,7 +186,7 @@ export const PATIENT_SCENARIOS: Record<string, PatientScenario> = {
       'Bạn có bị sốt không? Nhiệt độ bao nhiêu?',
       'Bạn ho, hắt hơi, hay chảy nước mũi?',
       'Bạn có đau họng, đau người, hoặc mệt không?',
-      'Triệu chứp từ bao lâu?',
+      'Triệu chứng từ bao lâu?',
       'Bạn đã tiêm vắc xin cúm năm nay chưa?'
     ],
     riskLevel: 'low',
@@ -292,64 +292,83 @@ export const PATIENT_SCENARIOS: Record<string, PatientScenario> = {
 
 // Hàm phát hiện tình huống dựa trên keywords
 export function detectPatientScenario(userMessage: string): PatientScenario | null {
-  const text = userMessage.toLowerCase()
-  
-  for (const scenario of Object.values(PATIENT_SCENARIOS)) {
-    const matchedKeywords = scenario.keywords.filter(keyword =>
-      text.includes(keyword.toLowerCase())
-    )
-    
-    if (matchedKeywords.length >= 1) {
-      return scenario
-    }
+  const raw = String(userMessage || '').trim()
+  if (!raw) return null
+
+  const text = raw.toLowerCase()
+
+  const riskWeight: Record<PatientScenario['riskLevel'], number> = {
+    critical: 100,
+    high: 50,
+    medium: 20,
+    low: 10,
   }
-  
-  return null
+
+  let best: { scenario: PatientScenario; score: number } | null = null
+  for (const scenario of Object.values(PATIENT_SCENARIOS)) {
+    const matchedKeywords = scenario.keywords.filter((keyword) => text.includes(keyword.toLowerCase()))
+    if (matchedKeywords.length < 1) continue
+
+    const score = matchedKeywords.length + (riskWeight[scenario.riskLevel] || 0)
+    if (!best || score > best.score) best = { scenario, score }
+  }
+
+  return best?.scenario || null
 }
 
 // Hàm lấy consultation style cơ bản
 export function getConsultationStylePrompt(scenario: PatientScenario | null): string {
   if (!scenario) return ''
-  
-  const stylePrompts: Record<string, string> = {
-    urgent: `
-      ⚠️ ĐÂY LÀ TÌNH HUỐNG CẤP TÍNH NGUY HIỂM:
-      - Ưu tiên đánh giá mức độ nguy hiểm ngay
-      - Nếu có dấu hiệu nguy hiểm, hướng người dùng gọi 115 NGAY
-      - Giải thích rõ các triệu chứp cảnh báo (warning signs)
-      - Khuyên không tự điều trị mà phải đi bệnh viện
-    `,
-    psychological: `
-      💬 ĐÂY LÀ VẤN ĐỀ TÂMTHẦN:
-      - Lắng nghe tôi không phán xét
-      - Đặt câu hỏi thêm về cảm xúc, tình trạng hiện tại
-      - Gợi ý các công cụ hỗ trợ tâm lý (screening, therapy)
-      - Khuyến khích tìm bác sĩ tâm lý nếu cần
-    `,
-    chronic: `
-      🏥 ĐÂY LÀ BỆNH MẠNHÍNH:
-      - Tập trung vào quản lý dài hạn
-      - Hỏi về tuân thủ điều trị, chế độ ăn, tập thể dục
-      - Gợi ý kế hoạch quản lý và theo dõi định kỳ
-      - Khuyến khích tương tác với bác sĩ chuyên khoa
-    `,
-    preventive: `
-      🛡️ ĐÂY LÀ PHÒNG NGỪA BỆNH:
-      - Tập trung vào các bài sàng lọc phù hợp theo tuổi/giới tính
-      - Khuyến khích thay đổi lối sống tích cực
-      - Gợi ý các xét nghiệm/khám cần thiết
-      - Cải thiện yếu tố nguy hiểm
-    `,
-    general: `
-      ℹ️ ĐÂY LÀ TÌNH HUỐNG CHUNG:
-      - Giải thích rõ nguyên nhân và cách xử lý
-      - Hỏi thêm về triệu chứp, thời gian, yếu tố gây ra
-      - Gợi ý cách chăm sóc tại nhà và khi nào đi bác sĩ
-      - Khuyến khích uống nước, nghỉ ngơi, tuân thủ hướng dẫn
-    `
+
+  const styleLabel: Record<PatientScenario['consultationStyle'], string> = {
+    urgent: 'URGENT',
+    psychological: 'PSYCHOLOGICAL',
+    chronic: 'CHRONIC',
+    preventive: 'PREVENTIVE',
+    general: 'GENERAL',
   }
-  
-  return stylePrompts[scenario.consultationStyle] || ''
+
+  const stylePrompts: Record<PatientScenario['consultationStyle'], string> = {
+    urgent: [
+      'Ưu tiên đánh giá dấu hiệu nguy hiểm và hướng dẫn gọi cấp cứu khi cần.',
+      'Nếu có dấu hiệu nguy hiểm: khuyến nghị GỌI 115 ngay.',
+      'Giải thích rõ các triệu chứng cảnh báo và khuyến nghị đi khám/bệnh viện.',
+    ].join('\n'),
+    psychological: [
+      'Giọng điệu đồng cảm, không phán xét; ưu tiên an toàn.',
+      'Đặt câu hỏi về cảm xúc/tình trạng hiện tại; sàng lọc nguy cơ tự tử khi phù hợp.',
+      'Gợi ý công cụ hỗ trợ tâm lý như screening và therapy; khuyến nghị gặp bác sĩ tâm lý khi cần.',
+    ].join('\n'),
+    chronic: [
+      'Tập trung quản lý dài hạn: tuân thủ điều trị, chế độ ăn, vận động, theo dõi định kỳ.',
+      'Gợi ý lập kế hoạch (ke-hoach) và theo dõi; khuyến nghị tái khám/bác sĩ khi cần.',
+    ].join('\n'),
+    preventive: [
+      'Tập trung phòng ngừa: sàng lọc phù hợp theo tuổi/giới tính, thói quen sức khỏe và lối sống.',
+      'Gợi ý xét nghiệm/khám cần thiết và cách giảm yếu tố nguy cơ.',
+    ].join('\n'),
+    general: [
+      'Tư vấn bình thường: giải thích nguyên nhân, hỏi thêm triệu chứng/thời gian và hướng dẫn chăm sóc tại nhà.',
+      'Nêu rõ khi nào cần đi bác sĩ.',
+    ].join('\n'),
+  }
+
+  const tools = Array.isArray(scenario.recommendedTools) ? scenario.recommendedTools : []
+  const followUps = Array.isArray(scenario.followUpQuestions) ? scenario.followUpQuestions : []
+
+  const lines = [
+    `CONSULTATION_STYLE: ${styleLabel[scenario.consultationStyle]}`,
+    `RISK_LEVEL: ${scenario.riskLevel.toUpperCase()}`,
+    `SCENARIO: ${scenario.name}`,
+    `DESCRIPTION: ${scenario.description}`,
+    '',
+    stylePrompts[scenario.consultationStyle],
+    '',
+    tools.length ? `RECOMMENDED_TOOLS: ${tools.join(', ')}` : '',
+    followUps.length ? `FOLLOW_UP_QUESTIONS:\n- ${followUps.join('\n- ')}` : '',
+  ].filter((x) => String(x || '').trim().length > 0)
+
+  return `\n${lines.join('\n')}\n`
 }
 
 /**

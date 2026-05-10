@@ -1,7 +1,8 @@
 // Device-based Sync Manager
 // Quản lý đồng bộ hóa dữ liệu theo thiết bị
 
-import { getNeonPool } from './neon-db'
+import type { Pool } from "pg"
+import { tryGetNeonPool } from './neon-db'
 import { v4 as uuidv4 } from 'uuid'
 
 export interface DeviceProfile {
@@ -34,7 +35,13 @@ export interface SyncRecord {
  * - Data merging when linking accounts
  */
 export class DeviceSyncManager {
-  private pool = getNeonPool()
+  private pool: Pool | null = null
+
+  private getPool() {
+    if (this.pool) return this.pool
+    this.pool = tryGetNeonPool()
+    return this.pool
+  }
 
   /**
    * Get or create device profile
@@ -45,7 +52,9 @@ export class DeviceSyncManager {
     deviceName: string = 'Unknown Device',
     deviceType: 'web' | 'mobile' | 'tablet' = 'web'
   ): Promise<DeviceProfile> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       // Check if device exists
       const existingDevice = await client.query(
@@ -85,7 +94,9 @@ export class DeviceSyncManager {
    * Liên kết thiết bị với tài khoản người dùng
    */
   async linkDeviceToUser(deviceId: string, userId: string): Promise<DeviceProfile> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `UPDATE device_profiles 
@@ -110,7 +121,9 @@ export class DeviceSyncManager {
    * Gỡ liên kết thiết bị khỏi tài khoản
    */
   async unlinkDeviceFromUser(deviceId: string): Promise<void> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       await client.query(
         `UPDATE device_profiles 
@@ -135,7 +148,9 @@ export class DeviceSyncManager {
     action: 'create' | 'update' | 'delete',
     deviceTimestamp: Date = new Date()
   ): Promise<SyncRecord> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `INSERT INTO sync_queue 
@@ -156,7 +171,9 @@ export class DeviceSyncManager {
    * Lấy các đồng bộ hóa đang chờ xử lý
    */
   async getPendingSyncs(deviceId: string, limit: number = 100): Promise<SyncRecord[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT * FROM sync_queue 
@@ -178,7 +195,9 @@ export class DeviceSyncManager {
   async markSyncsCompleted(syncIds: string[]): Promise<void> {
     if (syncIds.length === 0) return
 
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const placeholders = syncIds.map((_, i) => `$${i + 1}`).join(',')
       await client.query(
@@ -197,7 +216,9 @@ export class DeviceSyncManager {
    * Lấy lịch sử chat của thiết bị
    */
   async getDeviceChatHistory(deviceId: string, limit: number = 50): Promise<any[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT * FROM chat_messages 
@@ -217,7 +238,9 @@ export class DeviceSyncManager {
    * Hợp nhất lịch sử chat khi liên kết tài khoản
    */
   async mergeDeviceHistoryToUser(deviceId: string, userId: string): Promise<void> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       await client.query('BEGIN')
 
@@ -251,7 +274,9 @@ export class DeviceSyncManager {
    * Lấy tất cả các thiết bị liên kết với người dùng
    */
   async getUserDevices(userId: string): Promise<DeviceProfile[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT * FROM device_profiles 

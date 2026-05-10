@@ -1,7 +1,8 @@
 import { detectToolAgent, getToolAgentSystemPrompt, formatToolAgentResponse } from '@/lib/tool-agents'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const systemKey = String(process.env.GEMINI_API_KEY || '').trim()
+const genAI = systemKey ? new GoogleGenerativeAI(systemKey) : null
 
 export async function POST(request: Request) {
   try {
@@ -12,6 +13,13 @@ export async function POST(request: Request) {
         success: false,
         error: 'Message is required'
       }, { status: 400 })
+    }
+
+    if (!genAI) {
+      return Response.json({
+        success: false,
+        error: 'Missing GEMINI_API_KEY'
+      }, { status: 500 })
     }
 
     // Detect which tool agent should handle this
@@ -52,7 +60,7 @@ export async function POST(request: Request) {
           role: 'user',
           parts: [
             {
-              text: systemPrompt + '\n\n用户问题：' + message
+              text: systemPrompt + '\n\nCâu hỏi của người dùng: ' + message
             }
           ]
         }

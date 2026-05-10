@@ -4,6 +4,104 @@
 
 This document describes the comprehensive web application architecture for the medical consultation platform, centered around the `/tu-van` (consultation) and `/tam-su` (emotional support) sections.
 
+## Mermaid Diagrams
+
+### 1) System Context (High-level)
+
+```mermaid
+flowchart LR
+  U[User Browser] --> UI[Next.js UI<br/>medical-consultation-app]
+
+  UI -->|POST /api/llm-chat| GW[/Next.js API: llm-chat gateway/]
+  UI -->|POST /api/runtime/mode| RM[/Next.js API: runtime/mode/]
+  UI -->|/api/backend/v1/*| BP[/Next.js API: backend proxy/]
+
+  RM -->|write| SSOT[(data/runtime-mode.json)]
+  GW -->|read| SSOT
+  GW -->|read| REG[(data/server-registry.json)]
+
+  BP -->|forward| CPU[CPU FastAPI<br/>cpu_server/server.py<br/>http://127.0.0.1:8000]
+  GW -->|/v1/chat/completions (cpu target)| CPU
+
+  GW -->|/v1/chat/completions (gpu target)| GPU[GPU FastAPI<br/>Colab/Ngrok]
+  CPU -->|proxy (when target=gpu)| GPU
+
+  GW -->|optional provider| GEM[Gemini API]
+
+  GW --> MET[(data/runtime-metrics.jsonl)]
+  GW --> EVT[(data/runtime-events.jsonl)]
+  RM --> EVT
+```
+
+### 2) Chat Request Sequence (UI → Gateway → CPU/GPU → UI)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User
+  participant UI as ChatInterface (browser)
+  participant GW as Next API /api/llm-chat
+  participant SSOT as data/runtime-mode.json
+  participant REG as data/server-registry.json
+  participant GPU as GPU FastAPI (/v1/chat/completions)
+  participant CPU as CPU FastAPI (/v1/chat/completions)
+  participant GEM as Gemini (optional)
+
+  User->>UI: Send message
+  UI->>GW: POST /api/llm-chat {message, history, provider, model...}
+  GW->>SSOT: Read target + gpu_url
+  alt target == gpu
+    GW->>REG: Read latest active GPU URL (fallback)
+    GW->>GPU: POST /v1/chat/completions
+    alt GPU error/timeout
+      opt GEMINI_API_KEY available
+        GW->>GEM: Generate response
+      end
+      GW->>CPU: POST /v1/chat/completions (fallback)
+      GW-->>SSOT: Write target=cpu (auto-fallback)
+    end
+  else target == cpu
+    GW->>CPU: POST /v1/chat/completions
+  end
+  GW-->>UI: {response, messages[], metadata:{mode, fallback...}}
+  UI-->>User: Render answer (chunked/live)
+```
+
+### 3) Switching CPU ↔ GPU (SSOT sync)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor User
+  participant UI as ComputeToggle (browser)
+  participant L as Next API /api/servers/latest
+  participant C as Next API /api/servers/check
+  participant RM as Next API /api/runtime/mode
+  participant SSOT as data/runtime-mode.json
+  participant CPU as CPU FastAPI /v1/runtime/mode
+
+  User->>UI: Click CPU/GPU
+  UI->>L: GET latest GPU URL
+  L-->>UI: {url}
+  UI->>C: POST check {url}
+  C-->>UI: {ok}
+  UI->>RM: POST {target:'gpu', gpu_url:url}
+  RM-->>SSOT: Write runtime-mode.json + append runtime-events.jsonl
+  RM->>CPU: POST /v1/runtime/mode (sync backend)
+  RM-->>UI: {ok}
+  UI-->>User: Update label + metrics
+```
+
+### 4) Runtime Mode State (runtime-mode.json)
+
+```mermaid
+stateDiagram-v2
+  [*] --> CPU
+  CPU --> GPU: /api/runtime/mode POST (target=gpu, gpu_url)
+  GPU --> CPU: /api/runtime/mode POST (target=cpu)
+  GPU --> CPU: /api/llm-chat auto-fallback (GPU failure)
+```
+
 ## Core Architecture Components
 
 ### 1. Agent Registry & Module System (`lib/agent-registry.ts`)

@@ -1,7 +1,8 @@
 // Content Recommendation Service for Tam-Su (Emotional Support)
 // Gợi ý nội dung (video YouTube, nhạc, podcast) để hỗ trợ cảm xúc
 
-import { getNeonPool } from './neon-db'
+import type { Pool } from "pg"
+import { tryGetNeonPool } from './neon-db'
 
 export type ContentType = 'youtube_video' | 'music_track' | 'podcast' | 'audiobook' | 'meditation'
 
@@ -38,7 +39,13 @@ export interface ExternalContentMetadata {
  * Quản lý gợi ý nội dung cho sự hỗ trợ cảm xúc
  */
 export class ContentRecommendationService {
-  private pool = getNeonPool()
+  private pool: Pool | null = null
+
+  private getPool() {
+    if (this.pool) return this.pool
+    this.pool = tryGetNeonPool()
+    return this.pool
+  }
 
   /**
    * Recommend content for emotional support
@@ -52,7 +59,9 @@ export class ContentRecommendationService {
     reason: string,
     moodTags: string[] = []
   ): Promise<ContentRecommendation> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `INSERT INTO content_recommendations 
@@ -187,7 +196,9 @@ export class ContentRecommendationService {
     conversationId: string,
     contentType?: ContentType
   ): Promise<ContentRecommendation[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       let query = `SELECT * FROM content_recommendations WHERE conversation_id = $1`
       const params: any[] = [conversationId]
@@ -214,7 +225,9 @@ export class ContentRecommendationService {
     recommendationId: string,
     feedback: 'helpful' | 'not_helpful' | 'saved'
   ): Promise<void> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       await client.query(
         `UPDATE content_recommendations 
@@ -232,7 +245,9 @@ export class ContentRecommendationService {
    * Lấy nội dung phổ biến theo tâm trạng
    */
   async getPopularContentByMood(mood: string, contentType?: ContentType): Promise<ContentRecommendation[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       let query = `SELECT * FROM content_recommendations 
                    WHERE mood_tags @> $1::jsonb`
@@ -259,7 +274,9 @@ export class ContentRecommendationService {
    * Lấy nội dung đã lưu của người dùng
    */
   async getUserSavedContent(userId: string): Promise<ContentRecommendation[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT cr.* FROM content_recommendations cr
@@ -279,7 +296,9 @@ export class ContentRecommendationService {
    * Lấy thống kê sử dụng nội dung
    */
   async getContentUsageStats(): Promise<Record<string, number>> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT content_type, COUNT(*) as usage_count
