@@ -9,6 +9,11 @@ function tokenToUUID(token: string): string {
   return `${hash.toString('hex', 0, 4)}-${hash.toString('hex', 4, 6)}-${hash.toString('hex', 6, 8)}-${hash.toString('hex', 8, 10)}-${hash.toString('hex', 10, 16)}`
 }
 
+function isUUID(v: string) {
+  const s = String(v || '').trim()
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s)
+}
+
 interface Message {
   id: string
   content: string
@@ -32,6 +37,13 @@ export async function POST(request: NextRequest) {
     if (!conversationId || !messages || !userId) {
       return NextResponse.json(
         { error: 'conversationId, messages, and userId are required' },
+        { status: 400 }
+      )
+    }
+
+    if (!isUUID(String(conversationId))) {
+      return NextResponse.json(
+        { error: 'conversationId must be a UUID' },
         { status: 400 }
       )
     }

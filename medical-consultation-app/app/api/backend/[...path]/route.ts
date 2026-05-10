@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import crypto from 'crypto'
 
 function getBackendBase(): string {
   const base = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || '').trim().replace(/\/$/, '')
@@ -58,7 +59,7 @@ function isRuntimeStatePath(parts: string[]) {
 }
 
 function newConvId() {
-  return `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
+  return crypto.randomUUID()
 }
 
 function touchConversation(c: StubConversation) {

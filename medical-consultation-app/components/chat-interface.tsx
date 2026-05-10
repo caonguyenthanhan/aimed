@@ -564,11 +564,44 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   })
 
+  const newConversationId = () => {
+    try {
+      const c: any = (globalThis as any).crypto
+      if (c?.randomUUID) return String(c.randomUUID())
+    } catch {}
+    try {
+      const buf = new Uint8Array(16)
+      const c: any = (globalThis as any).crypto
+      if (c?.getRandomValues) c.getRandomValues(buf)
+      buf[6] = (buf[6] & 0x0f) | 0x40
+      buf[8] = (buf[8] & 0x3f) | 0x80
+      const hex = Array.from(buf).map((b) => b.toString(16).padStart(2, "0")).join("")
+      return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+    } catch {}
+    const s = `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`
+    const hex = (s + "0".repeat(32)).slice(0, 32)
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+  }
+
+  const clearLegacyLocalConversations = () => {
+    if (typeof window === "undefined") return
+    try {
+      const toRemove: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || ""
+        if (k.startsWith("conv_messages_conv-") || k.startsWith("conv_title_conv-")) {
+          toRemove.push(k)
+        }
+      }
+      toRemove.forEach((k) => localStorage.removeItem(k))
+    } catch {}
+  }
+
   const startConversationIfNeeded = async (): Promise<string | null> => {
     if (conversationId) return conversationId
     if (!authToken) {
       try {
-        const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
+        const newId = newConversationId()
         setConversationId(newId)
         if (typeof window !== 'undefined') {
           const serial = messages.map(m => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: m.timestamp.toISOString() }))
@@ -1085,7 +1118,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       } catch (e) {
       }
     } else {
-      const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
+      const newId = newConversationId()
       setConversationId(newId)
       const defaultMsg: Message = {
         id: Date.now().toString(),
@@ -1344,11 +1377,12 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   // Load conversations on mount and auto-create if none exists
   useEffect(() => {
+    clearLegacyLocalConversations()
     fetchConversations()
     
     // Auto-create a conversation if user is not logged in and no conversation exists
     if (!authToken && !conversationId) {
-      const newId = `conv-${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
+      const newId = newConversationId()
       setConversationId(newId)
       const defaultMsg: Message = {
         id: Date.now().toString(),
