@@ -122,6 +122,7 @@ export class GeminiService {
     persona?: string
     messages?: Array<{ role?: string; content?: string }>
     generationConfig?: { temperature?: number; maxOutputTokens?: number }
+    timeoutMs?: number
   }): Promise<{ text: string; model: string }> {
     const cfg = this.loadPromptConfig()
     const tier = opts?.tier === 'pro' ? 'pro' : 'flash'
@@ -154,13 +155,22 @@ export class GeminiService {
     }
 
     const url = `${this.baseUrl}/${modelToUse}:generateContent`
+    const timeoutMs = (() => {
+      const n = Number.parseInt(String((opts as any)?.timeoutMs ?? '').trim(), 10)
+      return Number.isFinite(n) && n > 0 ? n : 0
+    })()
+    const controller = timeoutMs ? new AbortController() : null
+    const t = controller ? setTimeout(() => controller.abort(), timeoutMs) : null
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': this.apiKey
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      ...(controller ? { signal: controller.signal } : {})
+    }).finally(() => {
+      if (t) clearTimeout(t)
     })
 
     if (!response.ok) {
@@ -180,6 +190,7 @@ export class GeminiService {
     persona?: string
     messages?: Array<{ role?: string; content?: string }>
     tools: Array<{ name: string; description?: string; parameters?: any }>
+    timeoutMs?: number
   }): Promise<{ text: string; model: string; toolCalls: Array<{ name: string; args: any }> }> {
     const cfg = this.loadPromptConfig()
     const tier = opts?.tier === 'pro' ? 'pro' : 'flash'
@@ -252,13 +263,22 @@ export class GeminiService {
     }
 
     const url = `${this.baseUrl}/${modelToUse}:generateContent`
+    const timeoutMs = (() => {
+      const n = Number.parseInt(String((opts as any)?.timeoutMs ?? '').trim(), 10)
+      return Number.isFinite(n) && n > 0 ? n : 0
+    })()
+    const controller = timeoutMs ? new AbortController() : null
+    const t = controller ? setTimeout(() => controller.abort(), timeoutMs) : null
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': this.apiKey
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      ...(controller ? { signal: controller.signal } : {})
+    }).finally(() => {
+      if (t) clearTimeout(t)
     })
 
     if (!response.ok) {

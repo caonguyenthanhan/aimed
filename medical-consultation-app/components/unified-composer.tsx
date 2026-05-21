@@ -2,6 +2,7 @@
 
 import { RefObject } from "react"
 import { Send, X, Mic, AudioLines, KeyRound, Sparkles } from "lucide-react"
+import { getAllAgentProfiles, type AgentProfileId } from "@/lib/agent-profiles"
 
 export type UnifiedComposerModel = "flash" | "pro"
 
@@ -54,6 +55,8 @@ export type UnifiedComposerProps = {
 
   agentMode?: boolean
   onToggleAgentMode?: () => void
+  agentProfileId?: AgentProfileId
+  onAgentProfileIdChange?: (id: AgentProfileId) => void
 }
 
 export function UnifiedComposer(props: UnifiedComposerProps) {
@@ -200,6 +203,20 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
               >
                 agent
               </button>
+            ) : null}
+            {props.agentMode && typeof props.onAgentProfileIdChange === "function" ? (
+              <select
+                value={props.agentProfileId || "default"}
+                onChange={(e) => props.onAgentProfileIdChange?.(e.target.value as AgentProfileId)}
+                className="px-2 py-1.5 border border-border rounded-lg text-xs bg-card text-foreground cursor-pointer max-w-[9.5rem]"
+                title="Chọn agent"
+              >
+                {getAllAgentProfiles().map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
             ) : null}
             <select
               value={props.selectedModel}

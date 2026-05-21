@@ -22,6 +22,7 @@ import type { LlmMessage } from "@/types/llm"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { AgentResponseSchema, isAllowedPath, normalizeActions, type AgentAction } from "@/lib/agent-actions"
+import type { AgentProfileId } from "@/lib/agent-profiles"
 import { GoogleGenAI, Modality } from "@google/genai"
 import { ChatSpecialMessage, parseSpecialMessages, type SpecialMessageData } from "@/components/chat-special-message"
 import { VirtualChatList } from "@/components/virtual-chat-list"
@@ -42,6 +43,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
   const [headerPad, setHeaderPad] = useState<string>('6rem')
   const [agentMode, setAgentMode] = useState(false)
+  const [agentProfileId, setAgentProfileId] = useState<AgentProfileId>("default")
   const [specialMessages, setSpecialMessages] = useState<SpecialMessageData[]>([])
   const handleCloseSpecialMessage = (id: string) => {
     setSpecialMessages((prev) => prev.filter((m) => m.id !== id))
@@ -83,6 +85,19 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setAgentMode(v === "1")
     } catch {}
   }, [])
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("mcs_agent_profile_v1")
+      if (v) setAgentProfileId(v as AgentProfileId)
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mcs_agent_profile_v1", String(agentProfileId || "default"))
+    } catch {}
+  }, [agentProfileId])
 
   useEffect(() => {
     try {
@@ -685,7 +700,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       let provider: string = "server"
       try {
         const p = typeof window !== "undefined" ? localStorage.getItem("llm_provider") : null
-        if (p === "gemini" || p === "server") provider = p
+        if (p === "gemini" || p === "server" || p === "foza") provider = p
       } catch {}
       const needsGeminiGate = agentMode || provider === "gemini"
       if (needsGeminiGate && !ensureGeminiQuota()) return
@@ -718,7 +733,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const response = await fetch(agentMode ? "/api/agent-chat" : "/api/llm-chat", {
         method: "POST",
         headers: authToken ? { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` } : { "Content-Type": "application/json" },
-        body: JSON.stringify(agentMode ? { message: text, messages: historySnapshot, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", access_pass, delivery_mode } : payload),
+        body: JSON.stringify(agentMode ? { message: text, messages: historySnapshot, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", access_pass, delivery_mode, agent_id: agentProfileId } : payload),
       })
       if (!response.ok) {
         const errorText = await response.text()
@@ -2192,6 +2207,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onDrop={handleDrop}
         agentMode={agentMode}
         onToggleAgentMode={toggleAgentMode}
+        agentProfileId={agentProfileId}
+        onAgentProfileIdChange={setAgentProfileId}
         isLiveMode={liveMode}
         onToggleLiveMode={toggleLiveMode}
         isTextLiveMode={textLiveMode}

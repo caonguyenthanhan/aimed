@@ -49,6 +49,8 @@ export async function runLocalAgent(opts: {
   message: string
   history?: Array<{ role?: string; content?: string }>
   allowPaths?: string[]
+  persona?: string
+  timeoutMs?: number
 }): Promise<{ text: string; model?: string; json: any | null }> {
   const url = String(opts.url || "").trim()
   if (!url) return { text: "", model: undefined, json: null }
@@ -68,10 +70,14 @@ export async function runLocalAgent(opts: {
     ...ALLOWED_PATH_PREFIXES,
   ]
 
+  const persona = String(opts.persona || "").trim()
+  const personaBlock = persona ? `VAI TRÒ: ${persona}` : ""
+
   const system = [
     "Bạn là AI agent cho ứng dụng tư vấn y tế & tâm lý.",
     "Nhiệm vụ: xuất ra một JSON object DUY NHẤT để UI có thể thực thi hành động.",
     "Không bọc markdown, không giải thích ngoài JSON.",
+    personaBlock,
     "Schema JSON:",
     "{",
     "  \"response\": \"string\",",
@@ -100,6 +106,12 @@ export async function runLocalAgent(opts: {
     temperature: 0.2,
   }
 
+  const timeoutMs = (() => {
+    const n = Number.parseInt(String((opts as any)?.timeoutMs ?? "").trim(), 10)
+    return Number.isFinite(n) && n > 0 ? n : 0
+  })()
+  const controller = timeoutMs ? new AbortController() : null
+  const t = controller ? setTimeout(() => controller.abort(), timeoutMs) : null
   const resp = await fetch(url, {
     method: "POST",
     headers: {
@@ -107,6 +119,9 @@ export async function runLocalAgent(opts: {
       ...(shouldSkipNgrokWarning ? { "ngrok-skip-browser-warning": "1" } : {}),
     },
     body: JSON.stringify(body),
+    ...(controller ? { signal: controller.signal } : {}),
+  }).finally(() => {
+    if (t) clearTimeout(t)
   })
 
   if (!resp.ok) {

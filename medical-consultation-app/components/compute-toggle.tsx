@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 
 export default function ComputeToggle() {
   const [mode, setMode] = useState<'cpu'|'gpu'>('cpu')
-  const [provider, setProvider] = useState<'server'|'gemini'>('server')
+  const [provider, setProvider] = useState<'server'|'gemini'|'foza'>('server')
   const [gpuUrl, setGpuUrl] = useState<string>('')
   const [summary, setSummary] = useState<{cpu?: number, gpu?: number}>({})
   const [busy, setBusy] = useState(false)
@@ -17,6 +17,8 @@ export default function ComputeToggle() {
         if (p === 'gemini') {
           setProvider('gemini')
           setMode('gpu')
+        } else if (p === 'foza') {
+          setProvider('foza')
         } else if (p === 'server') {
           setProvider('server')
         }
@@ -46,6 +48,11 @@ export default function ComputeToggle() {
           setProvider('gemini')
           setMode('gpu')
           try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'gemini') } catch {}
+          return
+        }
+        if (detail?.provider === 'foza') {
+          setProvider('foza')
+          try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'foza') } catch {}
           return
         }
         if (detail?.provider === 'server') {
@@ -123,6 +130,14 @@ export default function ComputeToggle() {
             window.dispatchEvent(new CustomEvent('runtime_mode_changed', { detail: { target: 'gpu', provider: 'gemini' } }))
           }
         } catch {}
+      } else if (provider === 'gemini') {
+        setProvider('foza')
+        try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'foza') } catch {}
+        try {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('runtime_mode_changed', { detail: { target: mode, provider: 'foza' } }))
+          }
+        } catch {}
       } else {
         setProvider('server')
         try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'server') } catch {}
@@ -140,10 +155,12 @@ export default function ComputeToggle() {
     }
   }
 
-  const label = provider === 'gemini' ? 'API' : (mode === 'cpu' ? 'CPU' : 'GPU')
+  const label = provider === 'gemini' ? 'API' : (provider === 'foza' ? 'FOZA' : (mode === 'cpu' ? 'CPU' : 'GPU'))
   const tooltip = provider === 'gemini'
     ? 'API: dùng Gemini (cần GEMINI_API_KEY), phù hợp test nhanh trên Vercel'
-    : (mode === 'cpu' ? 'CPU: chạy mô hình GGUF nội bộ, ổn định hơn nhưng chậm hơn' : 'GPU: chạy trên Colab/Ngrok, nhanh hơn nhưng phụ thuộc kết nối')
+    : (provider === 'foza'
+      ? 'FOZA: OpenAI-compatible API (cần FOZA_TOKEN), phù hợp làm provider cloud'
+      : (mode === 'cpu' ? 'CPU: chạy mô hình GGUF nội bộ, ổn định hơn nhưng chậm hơn' : 'GPU: chạy trên Colab/Ngrok, nhanh hơn nhưng phụ thuộc kết nối'))
   const perf = `${summary.cpu ? `CPU~${summary.cpu}ms` : ''}${summary.gpu ? ` • GPU~${summary.gpu}ms` : ''}`
 
   return (
@@ -152,7 +169,7 @@ export default function ComputeToggle() {
         {busy ? 'Đang chuyển...' : label}
       </button>
       <button title="Chuyển nhà cung cấp (Server/Gemini)" onClick={switchProvider} disabled={busy} className="px-2 py-1.5 rounded-md text-sm bg-slate-100 text-slate-700 hover:bg-slate-200">
-        {provider === 'gemini' ? 'Gemini' : 'Server'}
+        {provider === 'gemini' ? 'Gemini' : (provider === 'foza' ? 'Foza' : 'Server')}
       </button>
       {error && <div className="text-xs text-red-600">{error}</div>}
     </div>

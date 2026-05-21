@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
+import fs from "fs"
+import path from "path"
 import { GeminiService, geminiService } from "@/lib/gemini-service"
 import { shouldBlock, buildBlockResponse } from "@/lib/safety"
 import { assessSos, buildSosResponse } from "@/lib/sos-mode"
@@ -13,10 +15,70 @@ import { buildNavLinkMessage, planChunkedMessages } from "@/lib/chat-delivery"
 import { getRateLimit } from "@/lib/rate-limiter"
 import { retryWithBackoff } from "@/lib/retry-backoff"
 import { youtubeService } from "@/lib/youtube-service"
+import { getAgentProfile } from "@/lib/agent-profiles"
 
 export async function POST(req: Request) {
   const started = Date.now()
   try {
+    const dataDir = path.join(process.cwd(), "data")
+    const runtimeModePath = path.join(dataDir, "runtime-mode.json")
+    const serverRegistryPath = path.join(dataDir, "server-registry.json")
+    const runtimeEventsPath = path.join(dataDir, "runtime-events.jsonl")
+    const runtimeMetricsPath = path.join(dataDir, "runtime-metrics.jsonl")
+
+    const ensureDataDir = () => {
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
+      if (!fs.existsSync(runtimeEventsPath)) fs.writeFileSync(runtimeEventsPath, "")
+      if (!fs.existsSync(runtimeMetricsPath)) fs.writeFileSync(runtimeMetricsPath, "")
+    }
+
+    const appendEvent = (evt: any) => {
+      try {
+        ensureDataDir()
+        fs.appendFileSync(runtimeEventsPath, JSON.stringify(evt) + "\n")
+      } catch {}
+    }
+
+    const appendMetric = (metric: any) => {
+      try {
+        ensureDataDir()
+        fs.appendFileSync(runtimeMetricsPath, JSON.stringify(metric) + "\n")
+      } catch {}
+    }
+
+    const readRuntimeRouting = (): { target: "cpu" | "gpu"; gpuBaseUrl: string } => {
+      const envGpuBase = (process.env.GPU_SERVER_URL || process.env.DEFAULT_GPU_URL || "").trim().replace(/\/$/, "")
+      const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "").trim().replace(/\/$/, "")
+      const localGpuFallback = envGpuBase || "http://127.0.0.1:8001"
+      const localCpuFallback = cpuBase ? cpuBase : "http://127.0.0.1:8000"
+
+      let target: "cpu" | "gpu" = "gpu"
+      let gpuBaseUrl = localGpuFallback
+      try {
+        const raw = fs.readFileSync(runtimeModePath, "utf-8")
+        const mode = JSON.parse(raw)
+        if (mode?.target === "cpu" || mode?.target === "gpu") target = mode.target
+        if (mode?.gpu_url) gpuBaseUrl = String(mode.gpu_url).replace(/\/$/, "")
+      } catch {}
+
+      if (target === "cpu") {
+        return { target: "cpu", gpuBaseUrl: localCpuFallback }
+      }
+
+      try {
+        const raw = fs.readFileSync(serverRegistryPath, "utf-8")
+        const reg = JSON.parse(raw)
+        const servers = Array.isArray(reg?.servers) ? reg.servers : []
+        const active = servers.filter((s: any) => s?.status === "active")
+        const latest = (active.length ? active : servers).sort(
+          (a: any, b: any) => new Date(b?.updated_at || 0).getTime() - new Date(a?.updated_at || 0).getTime()
+        )[0]
+        if (latest?.url) gpuBaseUrl = String(latest.url).replace(/\/$/, "")
+      } catch {}
+
+      return { target, gpuBaseUrl }
+    }
+
     const firstJsonObject = (text: string) => {
       const s = String(text || "").trim()
       if (!s) return null
@@ -48,6 +110,18 @@ export async function POST(req: Request) {
       return null
     }
 
+    const toInt = (v: any, def: number) => {
+      const n = Number.parseInt(String(v ?? "").trim(), 10)
+      return Number.isFinite(n) && n > 0 ? n : def
+    }
+    const agentOverallTimeoutMs = toInt(process.env.AGENT_CHAT_TIMEOUT_MS, 45000)
+    const agentLocalTimeoutMs = toInt(process.env.AGENT_CHAT_LOCAL_TIMEOUT_MS, 20000)
+    const agentGeminiTimeoutMs = toInt(process.env.AGENT_CHAT_GEMINI_TIMEOUT_MS, 20000)
+    const agentMcpTimeoutMs = toInt(process.env.AGENT_CHAT_MCP_TOOL_TIMEOUT_MS, 8000)
+    const agentMcpMaxCalls = toInt(process.env.AGENT_CHAT_MCP_MAX_CALLS, 3)
+    const deadline = started + agentOverallTimeoutMs
+    const remainingMs = () => Math.max(0, deadline - Date.now())
+
     const formatSeconds = (sec: number | undefined) => {
       const s = Math.max(0, Math.floor(Number(sec || 0)))
       const h = Math.floor(s / 3600)
@@ -68,6 +142,12 @@ export async function POST(req: Request) {
     const accessPass = String(body?.access_pass || "").trim()
     const deliveryMode = body?.delivery_mode === "live" ? "live" : "chunked"
     const userId = String(body?.user_id || conversation_id || "unknown").trim()
+    const configuredAgentProvider =
+      (typeof body?.provider === "string" && String(body.provider).trim() ? String(body.provider).trim() : "") ||
+      String(process.env.AGENT_PROVIDER || "").trim()
+    const agentProvider = String(configuredAgentProvider || "").trim().toLowerCase()
+    const agentProfile = getAgentProfile(body?.agent_id || body?.agent_profile || body?.agent || "default")
+    const persona = `AGENT_PROFILE:${agentProfile.id}\n${agentProfile.persona}`
 
     if (!message) return NextResponse.json({ error: "Message is required" }, { status: 400 })
 
@@ -173,9 +253,17 @@ export async function POST(req: Request) {
 
     const ruleBasedActionsGuess = () => {
       const lower = message.toLowerCase()
+      if (agentProfile.id === "medication") return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Mở tra cứu để xem thông tin thuốc/tương tác chính xác hơn." } }]
+      if (agentProfile.id === "care_plan") return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
+      if (agentProfile.id === "triage") return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Mở bác sĩ/đặt lịch để được đánh giá trực tiếp nếu bạn có dấu hiệu cần khám sớm." } }]
+      if (agentProfile.id === "therapy") return [{ type: "ask_navigation", args: { feature: "tri-lieu", reason: "Mở trị liệu để xem bài tập thở/grounding và kỹ thuật giảm căng thẳng." } }]
       if (lower.includes("sàng lọc") || lower.includes("sang loc")) return [{ type: "navigate", args: { path: "/sang-loc" } }]
       if (lower.includes("trị liệu") || lower.includes("tri lieu")) return [{ type: "navigate", args: { path: "/tri-lieu" } }]
       if (lower.includes("nhắc nhở") || lower.includes("nhac nho")) return [{ type: "navigate", args: { path: "/nhac-nho" } }]
+      if (lower.match(/(thuốc|tương tác|liều|uống.*thuốc|tác dụng phụ)/)) return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Mở tra cứu để xem thông tin thuốc/tương tác chính xác hơn." } }]
+      if (lower.match(/(kế hoạch|lộ trình|theo dõi|mục tiêu|nhật ký|routine)/)) return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
+      if (lower.match(/(đau ngực|khó thở|yếu liệt|nói khó|ngất|chảy máu|co giật|lú lẫn|đau bụng dữ dội)/)) return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Có dấu hiệu nguy hiểm. Bạn muốn mình hướng dẫn bước an toàn tiếp theo và mở bác sĩ/đặt lịch không?" } }]
+      if (lower.match(/(lo âu|hoảng loạn|trầm cảm|mất ngủ|căng thẳng|stress|tự hại|tự sát)/)) return [{ type: "ask_navigation", args: { feature: "sang-loc", reason: "Mở sàng lọc để đánh giá mức độ và chọn hướng hỗ trợ phù hợp." } }]
       return []
     }
 
@@ -185,13 +273,14 @@ export async function POST(req: Request) {
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
+      appendMetric({ ts: new Date().toISOString(), mode: "cpu", provider: "sos", duration_ms: Date.now() - started })
       return NextResponse.json({
         response: content,
         messages: planResponseMessages(content, []),
         delivery: { mode: deliveryMode },
         actions: [],
         conversation_id,
-        metadata: { mode: "cpu", sos: true, hotlines: sos.hotlines, reasons: sos.reasons, situation: "sos", duration_ms: Date.now() - started },
+        metadata: { mode: "cpu", sos: true, hotlines: sos.hotlines, reasons: sos.reasons, situation: "sos", agent_profile: agentProfile.id, duration_ms: Date.now() - started },
       })
     }
 
@@ -201,42 +290,50 @@ export async function POST(req: Request) {
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
+      appendMetric({ ts: new Date().toISOString(), mode: "cpu", provider: "safety", duration_ms: Date.now() - started })
       return NextResponse.json({
         response: content,
         messages: planResponseMessages(content, []),
         delivery: { mode: deliveryMode },
         actions: [],
         conversation_id,
-        metadata: { mode: "cpu", blocked: true, hits: safetyHits, situation: "safety", duration_ms: Date.now() - started },
+        metadata: { mode: "cpu", blocked: true, hits: safetyHits, situation: "safety", agent_profile: agentProfile.id, duration_ms: Date.now() - started },
       })
     }
 
-    const provider = String(process.env.AGENT_PROVIDER || "gemini").trim().toLowerCase()
-    if (provider === "local") {
-      const allow = [...ALLOWED_PATH_PREFIXES]
-      const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "").trim().replace(/\/$/, "")
-      const urlCandidate = (process.env.LOCAL_AGENT_URL || process.env.INTERNAL_LLM_URL || (cpuBase ? `${cpuBase}/v1/chat/completions` : "") || "http://127.0.0.1:8000/v1/chat/completions").trim()
-      const model = (process.env.LOCAL_AGENT_MODEL || process.env.LOCAL_LLM_MODEL || "").trim() || "local-agent"
-      const local = await runLocalAgent({ url: urlCandidate, model, message, history: messages, allowPaths: allow }).catch(() => null)
-      if (!local) {
-        const actions = normalizeActions(ruleBasedActionsGuess())
-        const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent local. Bạn thử lại giúp mình."
-        try {
-          await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
-        } catch {}
-        return NextResponse.json(
-          AgentResponseSchema.parse({
-            response: content,
-            messages: planResponseMessages(content, actions),
-            delivery: { mode: deliveryMode },
-            actions,
-            conversation_id,
-            metadata: { mode: "cpu", provider: "local", fallback: "rule_based", duration_ms: Date.now() - started },
-          })
-        )
-      }
+    const { target: originalTarget, gpuBaseUrl } = readRuntimeRouting()
+    const allow = [...ALLOWED_PATH_PREFIXES]
+    const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "").trim().replace(/\/$/, "")
+    const cpuUrl = (process.env.LOCAL_AGENT_URL || process.env.INTERNAL_LLM_URL || (cpuBase ? `${cpuBase}/v1/chat/completions` : "") || "http://127.0.0.1:8000/v1/chat/completions").trim()
+    const gpuUrl = `${String(gpuBaseUrl || "").replace(/\/$/, "")}/v1/chat/completions`
+    const gpuModel = (process.env.GPU_OPENAI_MODEL || process.env.GPU_LLM_MODEL || process.env.DEFAULT_GPU_MODEL || "").trim() || "default"
+    const localModel = (process.env.LOCAL_AGENT_MODEL || process.env.LOCAL_LLM_MODEL || "").trim() || "local-agent"
 
-      const json = local.json
+    const normalizeOpenAiSchema = (schema: any): any => {
+      if (!schema || typeof schema !== "object") return schema
+      if (Array.isArray(schema)) return schema.map(normalizeOpenAiSchema)
+      const t = String((schema as any)?.type || "")
+      const mapped =
+        t === "OBJECT" ? "object"
+        : t === "STRING" ? "string"
+        : t === "NUMBER" ? "number"
+        : t === "ARRAY" ? "array"
+        : t === "BOOLEAN" ? "boolean"
+        : t
+      const out: any = { ...schema }
+      if (mapped) out.type = mapped
+      if (out.properties) out.properties = Object.fromEntries(Object.entries(out.properties).map(([k, v]) => [k, normalizeOpenAiSchema(v)]))
+      if (out.items) out.items = normalizeOpenAiSchema(out.items)
+      return out
+    }
+
+    const runOpenAiJsonAgent = async (url: string, model: string) => {
+      const left = remainingMs()
+      if (left <= 0) return null
+      const timeoutMs = Math.max(800, Math.min(agentLocalTimeoutMs, left))
+      const out = await runLocalAgent({ url, model, message, history: messages, allowPaths: allow, persona, timeoutMs }).catch(() => null)
+      if (!out) return null
+      const json = out.json
       const actions = normalizeActions(json?.actions)
         .map((a) => {
           if (a.type === "navigate") {
@@ -253,40 +350,9 @@ export async function POST(req: Request) {
           return null
         })
         .filter(Boolean) as any
-
       const fromJson = typeof json?.response === "string" ? String(json.response).trim() : ""
-      const content = fromJson || local.text || (actions.length ? "Đã thực hiện yêu cầu." : "Mình chưa rõ bạn muốn mình thực hiện hành động nào.")
-      try {
-        await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
-      } catch {}
-      return NextResponse.json(
-        AgentResponseSchema.parse({
-          response: content,
-          messages: planResponseMessages(content, actions),
-          delivery: { mode: deliveryMode },
-          actions,
-          conversation_id,
-          metadata: { mode: "cpu", provider: "local", model: local.model, parsed_json: !!json, duration_ms: Date.now() - started },
-        })
-      )
-    }
-    if (provider !== "gemini") {
-      const actions = normalizeActions(ruleBasedActionsGuess())
-      const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Chế độ agent local đang ở dạng demo (rule-based)."
-      try {
-        await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
-      } catch {}
-      return NextResponse.json(
-        AgentResponseSchema.parse({
-          response: content,
-          messages: planResponseMessages(content, actions),
-          delivery: { mode: deliveryMode },
-          actions,
-          conversation_id,
-          metadata: { mode: "cpu", provider, duration_ms: Date.now() - started },
-        }),
-        { status: 200 }
-      )
+      const content = fromJson || out.text || (actions.length ? "Đã thực hiện yêu cầu." : "Mình chưa rõ bạn muốn mình thực hiện hành động nào.")
+      return { content, actions, model: out.model, parsedJson: !!json }
     }
 
     const expectedPass = String(process.env.AGENT_KEY_PASS || "").trim()
@@ -294,47 +360,529 @@ export async function POST(req: Request) {
     const systemKey = String(process.env.GEMINI_API_KEY || "").trim()
     const access = passOk ? "pass" : (accessPass ? "user_key" : "system_key")
     const keyToUse = passOk ? systemKey : (accessPass || systemKey)
-    if (!keyToUse) {
-      const actions = normalizeActions(ruleBasedActionsGuess())
-      const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Thiếu cấu hình Gemini nên agent đang chạy local demo (rule-based)."
+    let providerUsed: "openai_like" | "gemini" | "foza" = "openai_like"
+    let modeUsed: "cpu" | "gpu" | "cloud" = originalTarget
+    let fallback: string | undefined
+
+    if (agentProvider === "foza") {
+      const baseUrl = String(process.env.FOZA_BASE_URL || "").trim().replace(/\/$/, "") || "https://api.foza.ai/v1"
+      const token = String(process.env.FOZA_TOKEN || "").trim()
+      const modelName = String(process.env.LLM_MODEL_NAME || "").trim()
+      if (token && modelName) {
+        const toInt = (v: any, def: number) => {
+          const n = Number.parseInt(String(v ?? "").trim(), 10)
+          return Number.isFinite(n) && n > 0 ? n : def
+        }
+        const maxToolRounds = toInt(process.env.FOZA_TOOL_MAX_ROUNDS, 3)
+        const maxToolCallsPerRound = toInt(process.env.FOZA_TOOL_MAX_CALLS, 3)
+        const fozaRequestTimeoutMs = toInt(process.env.FOZA_REQUEST_TIMEOUT_MS, 20000)
+        const mcpToolTimeoutMs = toInt(process.env.FOZA_MCP_TOOL_TIMEOUT_MS, 8000)
+        const overallTimeoutMs = toInt(process.env.FOZA_AGENT_TIMEOUT_MS, 35000)
+        const deadline = Date.now() + overallTimeoutMs
+        const remainingMs = () => Math.max(0, deadline - Date.now())
+
+        const allowPaths = allow.join(", ")
+        const featureList = ["sang-loc", "tri-lieu", "tra-cuu", "bac-si", "ke-hoach", "thong-ke"].join(", ")
+        const jsonAgentSystem = [
+          "Bạn là AI agent cho ứng dụng tư vấn y tế & tâm lý.",
+          persona,
+          "Nhiệm vụ: xuất ra một JSON object DUY NHẤT để UI có thể thực thi hành động.",
+          "Không bọc markdown, không giải thích ngoài JSON.",
+          "Nếu cần dữ liệu ngoài (nguồn web, YouTube), hãy gọi tool phù hợp. Sau khi nhận kết quả tool, bắt buộc trả về JSON theo schema dưới đây.",
+          "Schema JSON:",
+          "{",
+          "  \"response\": \"string\",",
+          "  \"actions\": [",
+          "    { \"type\": \"navigate\", \"args\": { \"path\": \"/...\" } },",
+          "    { \"type\": \"speak\", \"args\": { \"text\": \"...\" } },",
+          "    { \"type\": \"embed\", \"args\": { \"feature\": \"...\", \"context\": {} } },",
+          "    { \"type\": \"ask_navigation\", \"args\": { \"feature\": \"...\", \"reason\": \"...\", \"context\": {} } },",
+          "    { \"type\": \"recommend_music\", \"args\": { \"recommendations\": [], \"mood\": \"...\", \"message\": \"...\" } },",
+          "    { \"type\": \"play_music\", \"args\": { \"videoId\": \"...\", \"title\": \"...\", \"artist\": \"...\", \"autoplay\": true } }",
+          "  ]",
+          "}",
+          "Quy tắc actions:",
+          "- Nếu cần điều hướng, dùng type=navigate và path bắt đầu bằng /.",
+          "- Chỉ dùng path nằm trong allowlist.",
+          `Allowlist: ${allowPaths}`,
+          `Embeddable features: ${featureList}`,
+          "- Nếu không cần hành động, actions = [].",
+        ].join("\n")
+
+        const mcpToolDecl = [
+          {
+            name: "web.search",
+            description: "Tìm kiếm web và trả về danh sách kết quả (title/url/snippet).",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                query: { type: "STRING" },
+                num: { type: "NUMBER" },
+              },
+              required: ["query"],
+            },
+          },
+          {
+            name: "youtube.search",
+            description: "Tìm video YouTube theo query hoặc mood (wellness).",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                query: { type: "STRING" },
+                mood: { type: "STRING" },
+                maxResults: { type: "NUMBER" },
+              },
+              required: [],
+            },
+          },
+          {
+            name: "youtube.video",
+            description: "Lấy metadata chi tiết của một video YouTube theo videoId.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                videoId: { type: "STRING" },
+              },
+              required: ["videoId"],
+            },
+          },
+          {
+            name: "youtube.recommend_music",
+            description: "Gợi ý danh sách nhạc/âm thanh YouTube theo mood để dùng cho trị liệu âm nhạc.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                mood: { type: "STRING" },
+                maxResults: { type: "NUMBER" },
+              },
+              required: [],
+            },
+          },
+        ]
+        const mcpToolNames = new Set(mcpToolDecl.map((t) => t.name))
+
+        const runMcpTool = async (name: string, args: any) => {
+          const left = remainingMs()
+          if (left <= 0) throw new Error("timeout:overall")
+          const timeoutMs = Math.max(500, Math.min(mcpToolTimeoutMs, left))
+          const url = new URL("/api/mcp/call", req.url).toString()
+          const controller = new AbortController()
+          const t = setTimeout(() => controller.abort(), timeoutMs)
+          const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, args: args || {} }), signal: controller.signal }).finally(() => clearTimeout(t))
+          const json = await resp.json().catch(() => null)
+          if (!resp.ok) throw new Error(String(json?.error || `tool_error:${resp.status}`))
+          return json
+        }
+
+        const toOpenAiTools = (decls: any[]) => {
+          return decls.map((d) => ({
+            type: "function",
+            function: {
+              name: String(d?.name || "").trim(),
+              description: d?.description ? String(d.description) : undefined,
+              parameters: normalizeOpenAiSchema(d?.parameters || { type: "object", properties: {} }),
+            },
+          }))
+        }
+
+        const fozaFetch = async (msgs: any[], includeTools: boolean, useResponseFormat: boolean) => {
+          const left = remainingMs()
+          if (left <= 0) throw new Error("timeout:overall")
+          const timeoutMs = Math.max(800, Math.min(fozaRequestTimeoutMs, left))
+          const url = `${baseUrl}/chat/completions`
+          const controller = new AbortController()
+          const t = setTimeout(() => controller.abort(), timeoutMs)
+          const resp = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              model: modelName,
+              messages: msgs,
+              ...(includeTools ? { tools: toOpenAiTools(mcpToolDecl) } : {}),
+              ...(useResponseFormat ? { response_format: { type: "json_object" } } : {}),
+              temperature: 0.2,
+            }),
+            signal: controller.signal,
+          }).finally(() => clearTimeout(t))
+          const raw = await resp.text().catch(() => "")
+          if (!resp.ok) throw new Error(`Foza API error: ${resp.status} ${resp.statusText} ${raw}`)
+          const json = JSON.parse(raw || "{}")
+          const msg = json?.choices?.[0]?.message || {}
+          const toolCalls = Array.isArray(msg?.tool_calls) ? msg.tool_calls : []
+          const outCalls = toolCalls
+            .map((c: any) => {
+              const nm = String(c?.function?.name || "").trim()
+              if (!nm) return null
+              const id = String(c?.id || "").trim()
+              const argRaw = c?.function?.arguments
+              const args = (() => {
+                if (argRaw && typeof argRaw === "object") return argRaw
+                const s = String(argRaw || "").trim()
+                if (!s) return {}
+                try { return JSON.parse(s) } catch { return {} }
+              })()
+              return { id, name: nm, args }
+            })
+            .filter(Boolean)
+          return { content: String(msg?.content || "").trim(), toolCalls: outCalls as any[], assistant: msg }
+        }
+
+        const baseHistory = (Array.isArray(messages) ? messages : []).map((m: any) => ({ role: String(m?.role || "user"), content: String(m?.content || "") }))
+        const toolModeMessages = [
+          { role: "system", content: jsonAgentSystem },
+          ...baseHistory,
+          { role: "user", content: message },
+        ]
+
+        const parseJsonContent = (text: string) => {
+          const s = String(text || "").trim()
+          if (!s) return null
+          try { return JSON.parse(s) } catch {}
+          const block = firstJsonObject(s)
+          if (!block) return null
+          try { return JSON.parse(block) } catch {}
+          return null
+        }
+
+        try {
+          const sanitizeActions = (raw: unknown) => {
+            const actions = normalizeActions(raw)
+            return actions.map((a: any) => {
+              if (a.type === "navigate") {
+                const p = String(a?.args?.path || "").trim()
+                if (!isAllowedPath(p)) return null
+                return { type: "navigate", args: { path: p } }
+              }
+              if (a.type === "speak") {
+                const t = String(a?.args?.text || "").trim()
+                if (!t) return null
+                const text = t.length > 800 ? t.slice(0, 800) : t
+                return { type: "speak", args: { text } }
+              }
+              if (a.type === "play_music") {
+                const videoId = String(a?.args?.videoId || "").trim()
+                const title = String(a?.args?.title || "").trim()
+                if (!videoId || !title) return null
+                const artist = typeof a?.args?.artist === "string" ? String(a.args.artist).trim() : undefined
+                const autoplay = typeof a?.args?.autoplay === "boolean" ? a.args.autoplay : undefined
+                return { type: "play_music", args: { videoId, title, ...(artist ? { artist } : {}), ...(typeof autoplay === "boolean" ? { autoplay } : {}) } }
+              }
+              if (a.type === "recommend_music") {
+                const mood = typeof a?.args?.mood === "string" ? String(a.args.mood).trim() : undefined
+                const msg = typeof a?.args?.message === "string" ? String(a.args.message).trim() : undefined
+                const recs = Array.isArray(a?.args?.recommendations) ? a.args.recommendations.slice(0, 10) : []
+                return { type: "recommend_music", args: { recommendations: recs, ...(mood ? { mood } : {}), ...(msg ? { message: msg } : {}) } }
+              }
+              return a
+            }).filter(Boolean) as any
+          }
+
+          const fozaTry = async (msgs: any[], includeTools: boolean) => {
+            try {
+              return await fozaFetch(msgs, includeTools, true)
+            } catch (e: any) {
+              const msg = String(e?.message || e || "")
+              if (/response_format/i.test(msg)) return fozaFetch(msgs, includeTools, false)
+              throw e
+            }
+          }
+
+          let msgs = toolModeMessages
+          let content = ""
+          let toolRounds = 0
+
+          for (let i = 0; i < maxToolRounds; i++) {
+            if (remainingMs() <= 0) break
+            const r1 = await fozaTry(msgs, true)
+            content = r1.content
+            const toolCallsAll = Array.isArray(r1.toolCalls) ? r1.toolCalls : []
+            const mcpCalls = toolCallsAll.filter((c) => mcpToolNames.has(String(c?.name || "").trim()))
+            if (mcpCalls.length) {
+              toolRounds++
+              const toolMsgs: any[] = []
+              for (const c of mcpCalls.slice(0, maxToolCallsPerRound)) {
+                try {
+                  const out = await runMcpTool(String(c.name).trim(), c.args || {})
+                  toolMsgs.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out?.result ?? out).slice(0, 9000) })
+                } catch (e: any) {
+                  toolMsgs.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify({ ok: false, error: String(e?.message || e || "") }).slice(0, 9000) })
+                }
+              }
+              msgs = [
+                ...msgs,
+                { role: "assistant", content: r1.content || "", tool_calls: (r1.assistant as any)?.tool_calls || [] },
+                ...toolMsgs,
+                { role: "user", content: "Trả về một JSON object DUY NHẤT theo schema. Không gọi tool nữa." },
+              ]
+              continue
+            }
+
+            const parsed = parseJsonContent(content)
+            if (parsed && (typeof parsed?.response === "string" || Array.isArray(parsed?.actions))) {
+              const actions = sanitizeActions(parsed?.actions)
+              const finalText = (typeof parsed?.response === "string" && String(parsed.response).trim()) ? String(parsed.response).trim() : (content || " ")
+              appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
+              const out = AgentResponseSchema.parse({
+                response: finalText,
+                messages: planResponseMessages(finalText, actions),
+                delivery: { mode: deliveryMode },
+                actions,
+                conversation_id,
+                metadata: {
+                  mode: "cloud",
+                  provider: "foza",
+                  model: modelName,
+                  agent_profile: agentProfile.id,
+                  duration_ms: Date.now() - started,
+                  json_mode: true,
+                  tool_rounds: toolRounds,
+                  tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
+                  timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
+                },
+              })
+              return NextResponse.json(out)
+            }
+
+            msgs = [
+              ...msgs,
+              ...(content ? [{ role: "assistant", content }] : []),
+              { role: "user", content: "Chỉ trả về JSON object theo schema {response, actions}. Không dùng markdown." },
+            ]
+          }
+
+          const finalText = content || "Mình chưa nhận được JSON hợp lệ từ FOZA."
+          appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
+          const out = AgentResponseSchema.parse({
+            response: finalText,
+            messages: planResponseMessages(finalText, []),
+            delivery: { mode: deliveryMode },
+            actions: [],
+            conversation_id,
+            metadata: {
+              mode: "cloud",
+              provider: "foza",
+              model: modelName,
+              agent_profile: agentProfile.id,
+              duration_ms: Date.now() - started,
+              json_mode: false,
+              tool_rounds: toolRounds,
+              tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
+              timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
+            },
+          })
+          return NextResponse.json(out)
+        } catch {
+          fallback = "foza_failed"
+        }
+      } else {
+        fallback = "foza_missing_env"
+      }
+    }
+
+    let openaiLikeOut: Awaited<ReturnType<typeof runOpenAiJsonAgent>> | null = null
+    if (originalTarget === "gpu") {
+      openaiLikeOut = await runOpenAiJsonAgent(gpuUrl, gpuModel)
+      if (!openaiLikeOut) {
+        if (keyToUse) {
+          providerUsed = "gemini"
+          modeUsed = "gpu"
+          fallback = "gpu_to_gemini"
+        } else {
+          openaiLikeOut = await runOpenAiJsonAgent(cpuUrl, localModel)
+          if (openaiLikeOut) {
+            providerUsed = "openai_like"
+            modeUsed = "cpu"
+            fallback = "gpu_to_cpu"
+            const now = new Date().toISOString()
+            appendEvent({ type: "fallback", from: "gpu", to: "cpu", ts: now, scope: "agent" })
+            try {
+              ensureDataDir()
+              fs.writeFileSync(runtimeModePath, JSON.stringify({ target: "cpu", updated_at: now }, null, 2))
+              appendEvent({ type: "mode_change", target: "cpu", ts: now, scope: "agent" })
+            } catch {}
+          }
+        }
+      } else {
+        providerUsed = "openai_like"
+        modeUsed = "gpu"
+      }
+    } else {
+      openaiLikeOut = await runOpenAiJsonAgent(cpuUrl, localModel)
+      if (!openaiLikeOut) {
+        if (keyToUse) {
+          providerUsed = "gemini"
+          modeUsed = "cpu"
+          fallback = "cpu_to_gemini"
+        }
+      } else {
+        providerUsed = "openai_like"
+        modeUsed = "cpu"
+      }
+    }
+
+    if (providerUsed === "openai_like") {
+      if (!openaiLikeOut) {
+        const actions = normalizeActions(ruleBasedActionsGuess())
+        const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent. Bạn thử lại giúp mình."
+        try {
+          await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
+        } catch {}
+        appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "openai_like", fallback: "rule_based", duration_ms: Date.now() - started })
+        return NextResponse.json(
+          AgentResponseSchema.parse({
+            response: content,
+            messages: planResponseMessages(content, actions),
+            delivery: { mode: deliveryMode },
+            actions,
+            conversation_id,
+            metadata: { mode: modeUsed, provider: "openai_like", fallback: "rule_based", agent_profile: agentProfile.id, duration_ms: Date.now() - started },
+          })
+        )
+      }
+
+      const content = openaiLikeOut.content
+      const actions = openaiLikeOut.actions
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
+      appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "openai_like", duration_ms: Date.now() - started })
+      return NextResponse.json(
+        AgentResponseSchema.parse({
+          response: content,
+          messages: planResponseMessages(content, actions),
+          delivery: { mode: deliveryMode },
+          actions,
+          conversation_id,
+          metadata: { mode: modeUsed, provider: "openai_like", model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, fallback, agent_profile: agentProfile.id, duration_ms: Date.now() - started },
+        })
+      )
+    }
+
+    if (!keyToUse) {
+      const actions = normalizeActions(ruleBasedActionsGuess())
+      const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Thiếu cấu hình Gemini nên agent không thể chạy."
+      try {
+        await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
+      } catch {}
+      appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "gemini", fallback: "missing_gemini_key", duration_ms: Date.now() - started })
       const out = AgentResponseSchema.parse({
         response: content,
         messages: planResponseMessages(content, actions),
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: "cpu", provider: "local", fallback: "missing_gemini_key", duration_ms: Date.now() - started },
+        metadata: { mode: modeUsed, provider: "gemini", fallback: "missing_gemini_key", agent_profile: agentProfile.id, duration_ms: Date.now() - started },
       })
       return NextResponse.json(out)
     }
 
-    const toolDecl = geminiToolDeclarations()
-    
-    // Temporarily disabled patient scenario detection to isolate runtime error
-    const patientScenario = null
-    const consultationStylePrompt = ''
-    
+    const mcpToolDecl = [
+      {
+        name: "web.search",
+        description: "Tìm kiếm web và trả về danh sách kết quả (title/url/snippet).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            query: { type: "STRING" },
+            num: { type: "NUMBER" },
+          },
+          required: ["query"],
+        },
+      },
+      {
+        name: "youtube.search",
+        description: "Tìm video YouTube theo query hoặc mood (wellness).",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            query: { type: "STRING" },
+            mood: { type: "STRING" },
+            maxResults: { type: "NUMBER" },
+          },
+          required: [],
+        },
+      },
+      {
+        name: "youtube.video",
+        description: "Lấy metadata chi tiết của một video YouTube theo videoId.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            videoId: { type: "STRING" },
+          },
+          required: ["videoId"],
+        },
+      },
+      {
+        name: "youtube.recommend_music",
+        description: "Gợi ý danh sách nhạc/âm thanh YouTube theo mood để dùng cho trị liệu âm nhạc.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            mood: { type: "STRING" },
+            maxResults: { type: "NUMBER" },
+          },
+          required: [],
+        },
+      },
+    ]
+
+    const toolDecl = [...geminiToolDeclarations(), ...mcpToolDecl]
+
+    const mcpToolNames = new Set(mcpToolDecl.map((t) => t.name))
+    const runMcpTool = async (name: string, args: any) => {
+      const left = remainingMs()
+      if (left <= 0) throw new Error("timeout:overall")
+      const timeoutMs = Math.max(500, Math.min(agentMcpTimeoutMs, left))
+      const url = new URL("/api/mcp/call", req.url).toString()
+      const controller = new AbortController()
+      const t = setTimeout(() => controller.abort(), timeoutMs)
+      const resp = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, args: args || {} }), signal: controller.signal }).finally(() => clearTimeout(t))
+      const json = await resp.json().catch(() => null)
+      if (!resp.ok) throw new Error(String(json?.error || `tool_error:${resp.status}`))
+      return json
+    }
+
+    const consultationStylePrompt = ""
+
+    const svc = keyToUse === String(process.env.GEMINI_API_KEY || "").trim() ? geminiService : new GeminiService(keyToUse)
+
+    const callGemini = async (extraMessages?: Array<{ role?: string; content?: string }>) => {
+      return retryWithBackoff(
+        () =>
+          svc.generateAgent({
+            category,
+            tier,
+            question: message,
+            messages: [...messages, ...(Array.isArray(extraMessages) ? extraMessages : [])],
+            tools: toolDecl,
+            persona: [persona, consultationStylePrompt ? `CONSULTATION_STYLE:\n${consultationStylePrompt}` : ""].filter(Boolean).join("\n\n"),
+            timeoutMs: Math.max(800, Math.min(agentGeminiTimeoutMs, remainingMs())),
+          }),
+        { maxRetries: 3, initialDelayMs: 500, maxDelayMs: 5000, backoffMultiplier: 2 }
+      )
+    }
+
     let geminiErr: string | null = null
     let r: Awaited<ReturnType<typeof geminiService.generateAgent>> | null = null
     try {
-      const svc = keyToUse === String(process.env.GEMINI_API_KEY || "").trim() ? geminiService : new GeminiService(keyToUse)
-      
-      // Wrap Gemini call with exponential backoff retry
-      r = await retryWithBackoff(
-        () => svc.generateAgent({ 
-          category, 
-          tier, 
-          question: message, 
-          messages, 
-          tools: toolDecl,
-          // Pass consultation style as persona hint
-          persona: consultationStylePrompt ? `CONSULTATION_STYLE:\n${consultationStylePrompt}` : undefined
-        }),
-        { maxRetries: 3, initialDelayMs: 500, maxDelayMs: 5000, backoffMultiplier: 2 }
-      )
+      r = await callGemini()
+      const toolCalls = Array.isArray(r?.toolCalls) ? r.toolCalls : []
+      const mcpCalls = toolCalls.filter((c) => mcpToolNames.has(String(c?.name || "").trim()))
+      if (mcpCalls.length) {
+        const results: Array<{ name: string; result: any; ok: boolean; error?: string }> = []
+        for (const c of mcpCalls.slice(0, agentMcpMaxCalls)) {
+          const nm = String(c?.name || "").trim()
+          try {
+            const out = await runMcpTool(nm, c?.args || {})
+            results.push({ name: nm, result: out?.result, ok: true })
+          } catch (e: any) {
+            results.push({ name: nm, result: null, ok: false, error: String(e?.message || e || "") })
+          }
+        }
+        const summary = JSON.stringify(results).slice(0, 9000)
+        r = await callGemini([{ role: "assistant", content: `KẾT QUẢ TOOL (tự động): ${summary}` }])
+      }
     } catch (e: any) {
       geminiErr = String(e?.message || e || "").trim() || "unknown_error"
       if (geminiErr.length > 280) geminiErr = geminiErr.slice(0, 280)
@@ -361,13 +909,14 @@ export async function POST(req: Request) {
         try {
           await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
         } catch {}
+        appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "gemini", rate_limited: true, duration_ms: Date.now() - started })
         const out = AgentResponseSchema.parse({
           response: content,
           messages: planResponseMessages(content, []),
           delivery: { mode: deliveryMode },
           actions: [],
           conversation_id,
-          metadata: { mode: "cpu", provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, duration_ms: Date.now() - started },
+          metadata: { mode: modeUsed, provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started },
         })
         return NextResponse.json(out)
       }
@@ -377,13 +926,14 @@ export async function POST(req: Request) {
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
+      appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "gemini", fallback: "rule_based", duration_ms: Date.now() - started })
       const out = AgentResponseSchema.parse({
         response: content,
         messages: planResponseMessages(content, actions),
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: "cpu", provider: "gemini", access, fallback: "local_rule_based", gemini_error: geminiErr, duration_ms: Date.now() - started },
+        metadata: { mode: modeUsed, provider: "gemini", access, fallback: "rule_based", gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started },
       })
       return NextResponse.json(out)
     }
@@ -582,14 +1132,16 @@ export async function POST(req: Request) {
       actions,
       conversation_id,
       metadata: { 
-        mode: "gpu", 
+        mode: modeUsed, 
         provider: "gemini", 
         access, 
         model: r.model, 
+        agent_profile: agentProfile.id,
         duration_ms: Date.now() - started, 
         hasInvestigation: !!suggestedInvestigation,
       },
     })
+    appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "gemini", duration_ms: Date.now() - started })
     return NextResponse.json(out)
   } catch (e: any) {
     console.error("[agent-chat] internal_error", e)
@@ -599,7 +1151,7 @@ export async function POST(req: Request) {
         messages: [{ content: "Xin lỗi, agent đang gặp sự cố kỹ thuật. Bạn thử lại giúp mình.", kind: "text", delay_ms: 0 }],
         delivery: { mode: "chunked" },
         actions: [],
-        metadata: { mode: "cpu", provider: "agent", error: "internal_error", duration_ms: Date.now() - started },
+        metadata: { mode: "cpu", provider: "agent", error: "internal_error", agent_profile: agentProfile.id, duration_ms: Date.now() - started },
       }),
       { status: 200 }
     )

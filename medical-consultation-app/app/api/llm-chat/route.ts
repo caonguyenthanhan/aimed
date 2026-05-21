@@ -199,6 +199,7 @@ NGUYÊN TẮC QUAN TRỌNG:
 
     const configuredProvider = (typeof provider === 'string' ? provider.trim().toLowerCase() : '') || (process.env.LLM_PROVIDER || '').trim().toLowerCase()
     const useGemini = configuredProvider === 'gemini' || uiModel === 'gemini'
+    const useFoza = configuredProvider === 'foza'
     if (useGemini) {
       const parseRetryAfterSec = (s: string) => {
         const raw = String(s || '')
@@ -299,6 +300,134 @@ NGUYÊN TẮC QUAN TRỌNG:
         },
         conversation_id: sid
       })
+    }
+
+    if (useFoza) {
+      const baseUrl = String(process.env.FOZA_BASE_URL || '').trim().replace(/\/$/, '') || 'https://api.foza.ai/v1'
+      const token = String(process.env.FOZA_TOKEN || '').trim()
+      const modelName = String(process.env.LLM_MODEL_NAME || '').trim() || (rawModel && !['flash', 'pro', 'gemini'].includes(rawModel.toLowerCase()) ? rawModel : '')
+      if (!token) {
+        return NextResponse.json({ error: 'Missing FOZA_TOKEN' }, { status: 500 })
+      }
+      if (!modelName) {
+        return NextResponse.json({ error: 'Missing LLM_MODEL_NAME for FOZA' }, { status: 500 })
+      }
+
+      const fozaMessages = [
+        { role: 'system', content: systemPrompt },
+        ...(Array.isArray(conversationHistory) ? conversationHistory : []).map((m: any) => ({
+          role: m.role || 'user',
+          content: m.content || ''
+        })),
+        { role: 'user', content: userMessage }
+      ]
+
+      const resolvedMaxTokens = (typeof max_tokens === 'number' && Number.isFinite(max_tokens) && max_tokens > 0) ? Math.floor(max_tokens) : 400
+      const resolvedTemp = (typeof temperature === 'number' && Number.isFinite(temperature)) ? temperature : 0.3
+
+      const startFoza = Date.now()
+      try {
+        const url = `${baseUrl}/chat/completions`
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: fozaMessages,
+            max_tokens: resolvedMaxTokens,
+            temperature: resolvedTemp
+          })
+        })
+        const text = await resp.text().catch(() => '')
+        if (!resp.ok) {
+          throw new Error(`Foza API error: ${resp.status} ${resp.statusText} ${text}`)
+        }
+        const data = JSON.parse(text || '{}')
+        const content = String(data?.choices?.[0]?.message?.content || '').trim()
+        if (!content) {
+          throw new Error('No content in FOZA response')
+        }
+        const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+        try {
+          await persistChatTurn({
+            sessionId: sid,
+            kind: String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation',
+            userText: String(userMessage),
+            assistantText: content
+          })
+        } catch {}
+        return NextResponse.json({
+          response: content,
+          messages: planResponseMessages(content),
+          delivery: { mode: deliveryMode },
+          context: determinedContext,
+          model_info: { model_name: modelName, provider: 'Foza' },
+          metadata: {
+            context: determinedContext,
+            prompt_length: String(userMessage).length,
+            response_length: content.length,
+            timestamp: new Date().toISOString(),
+            mode: 'cloud',
+            tier: modeHeader,
+            fallback: false,
+            provider: 'foza',
+            duration_ms: Date.now() - startFoza
+          },
+          conversation_id: sid
+        })
+      } catch (e: any) {
+        const msg = String(e?.message || e || '')
+        if (process.env.GEMINI_API_KEY) {
+          try {
+            const startGemini = Date.now()
+            const personaForGemini = (typeof persona === 'string' && persona.trim()) ? persona.trim() : (typeof role === 'string' && role.trim() ? role.trim() : '')
+            const category = String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation'
+            const out = await geminiService.generateFromConfig({
+              category: category as any,
+              tier: modeHeader,
+              question: String(userMessage),
+              persona: personaForGemini,
+              messages: Array.isArray(conversationHistory) ? conversationHistory : []
+            })
+            const durationGemini = Date.now() - startGemini
+            const content = String(out?.text || '').trim()
+            if (content) {
+              const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+              try {
+                await persistChatTurn({
+                  sessionId: sid,
+                  kind: category === 'speech_stream' ? 'speech_stream' : 'consultation',
+                  userText: String(userMessage),
+                  assistantText: content
+                })
+              } catch {}
+              return NextResponse.json({
+                response: content,
+                messages: planResponseMessages(content),
+                delivery: { mode: deliveryMode },
+                context: determinedContext,
+                model_info: { model_name: out?.model || process.env.GEMINI_MODEL || 'gemini', provider: 'Gemini' },
+                metadata: {
+                  context: determinedContext,
+                  prompt_length: String(userMessage).length,
+                  response_length: content.length,
+                  timestamp: new Date().toISOString(),
+                  mode: 'cloud',
+                  tier: modeHeader,
+                  fallback: true,
+                  provider: 'gemini',
+                  error: msg.slice(0, 280),
+                  duration_ms: durationGemini
+                },
+                conversation_id: sid
+              })
+            }
+          } catch {}
+        }
+      }
     }
 
     const messages = [

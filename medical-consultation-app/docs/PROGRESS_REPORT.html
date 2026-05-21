@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Báo cáo tiến độ — Medical Consulting System</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --card: rgba(255, 255, 255, 0.06);
+        --card2: rgba(255, 255, 255, 0.09);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.68);
+        --line: rgba(255, 255, 255, 0.14);
+        --accent: #6ee7ff;
+        --ok: #6ee7b7;
+        --warn: #fbbf24;
+        --bad: #fb7185;
+      }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        background: radial-gradient(1100px 650px at 10% 10%, rgba(110, 231, 255, 0.16), transparent 50%),
+                    radial-gradient(900px 600px at 85% 25%, rgba(110, 231, 183, 0.12), transparent 55%),
+                    radial-gradient(700px 500px at 50% 90%, rgba(251, 191, 36, 0.10), transparent 55%),
+                    var(--bg);
+        color: var(--text);
+      }
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 18px 60px; }
+      header {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: 18px 18px 16px;
+        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+      }
+      h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: 0.2px; }
+      .sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+      .meta {
+        display: grid;
+        gap: 8px;
+        min-width: 260px;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+        justify-content: space-between;
+      }
+      .pill b { color: var(--text); font-weight: 600; }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        margin-top: 14px;
+      }
+      @media (min-width: 920px) {
+        .grid { grid-template-columns: 1fr 1fr; }
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px 16px 14px;
+      }
+      .card h2 {
+        font-size: 15px;
+        margin: 0 0 10px;
+        letter-spacing: 0.2px;
+      }
+      .card p { margin: 0 0 10px; color: var(--muted); line-height: 1.55; }
+      ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
+      li { margin: 6px 0; }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 12px;
+        color: rgba(255,255,255,0.86);
+        background: rgba(0,0,0,0.25);
+        border: 1px solid rgba(255,255,255,0.10);
+        padding: 2px 6px;
+        border-radius: 8px;
+      }
+      .full { grid-column: 1 / -1; }
+      .timeline {
+        display: grid;
+        gap: 10px;
+      }
+      .titem {
+        background: var(--card2);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 12px 10px;
+      }
+      .titem .top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+      .titem .date {
+        font-weight: 650;
+        color: rgba(255,255,255,0.92);
+        font-size: 13px;
+        letter-spacing: 0.3px;
+      }
+      .titem .tag {
+        font-size: 11px;
+        color: rgba(255,255,255,0.72);
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.14);
+        background: rgba(0,0,0,0.18);
+        white-space: nowrap;
+      }
+      .tag.ok { border-color: rgba(110,231,183,0.45); color: rgba(110,231,183,0.90); }
+      .tag.warn { border-color: rgba(251,191,36,0.45); color: rgba(251,191,36,0.92); }
+      .tag.bad { border-color: rgba(251,113,133,0.45); color: rgba(251,113,133,0.92); }
+      .checklist {
+        display: grid;
+        gap: 10px;
+      }
+      .cgroup {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px;
+        background: rgba(255,255,255,0.04);
+      }
+      .cgroup h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.2px; }
+      .kv { display: grid; gap: 6px; }
+      .kv div {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.10);
+        background: rgba(0,0,0,0.14);
+      }
+      .kv b { color: rgba(255,255,255,0.90); font-weight: 600; }
+      footer {
+        margin-top: 16px;
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255,255,255,0.04);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>Báo cáo tiến độ — Hệ thống tư vấn y tế AI</h1>
+          <div class="sub">
+            Trạng thái triển khai hiện tại (frontend + backend + routing hybrid) và các mốc cập nhật theo docs/Memory Bank.<br />
+            Phạm vi: Agent mode, provider routing (Gemini/Server/Foza), tool calling, SSOT runtime mode.
+          </div>
+        </div>
+        <div class="meta">
+          <div class="pill"><span>Ngày</span><b>2026-05-18</b></div>
+          <div class="pill"><span>Agent Contract</span><b>{ response, actions, metadata }</b></div>
+          <div class="pill"><span>Routing</span><b>SSOT runtime-mode.json</b></div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <section class="card full">
+          <h2>Tóm tắt kiến trúc (hiện tại)</h2>
+          <ul>
+            <li><code>/api/agent-chat</code> là gateway Agent mode: UI bật Agent toggle ở <code>/tu-van</code>, gửi <code>agent_id</code> để chọn persona/profile.</li>
+            <li>Routing hybrid đọc SSOT <code>data/runtime-mode.json</code> để ưu tiên GPU/CPU; có fallback và ghi <code>runtime-events.jsonl</code>, <code>runtime-metrics.jsonl</code>.</li>
+            <li>Provider Agent: Gemini function calling, OpenAI-compatible JSON-agent (GPU/CPU), và FOZA (OpenAI-compatible tool_calls → actions + fallback an toàn).</li>
+            <li>Tool server-side theo pattern “mcp-lite”: agent gọi tool (web/youtube) → <code>/api/mcp/call</code> thực thi → trả kết quả cho agent tổng hợp.</li>
+            <li>Allowlist điều hướng chuẩn hoá bởi <code>ALLOWED_PATH_PREFIXES</code>; frontend chỉ thực thi action hợp lệ.</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Trạng thái hiện tại</h2>
+          <ul>
+            <li>UI có Agent mode + chọn Agent Profile (tổng quát/triage/thuốc/kế hoạch/trị liệu).</li>
+            <li><code>conversationId</code> chuẩn hoá UUID; chặn legacy để tránh lỗi DB.</li>
+            <li>Gemini STT/TTS server-side cho demo Live mode.</li>
+            <li>Provider chat thường: <code>/api/llm-chat</code> hỗ trợ <code>server|gemini|foza</code>.</li>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Next steps (đề xuất demo/kiểm thử)</h2>
+          <ul>
+            <li>Demo triage: chọn profile “Triage + Red flags” → mô tả triệu chứng nguy hiểm → agent ưu tiên hướng dẫn an toàn + gợi ý mở <code>bac-si</code>.</li>
+            <li>Demo trị liệu: chọn “Tâm lý trị liệu” → yêu cầu bài tập giảm lo âu → agent gợi ý mở <code>tri-lieu</code> / <code>sang-loc</code>.</li>
+            <li>Demo tool calling: “tìm nguồn về …” (web.search) hoặc “gợi ý nhạc thư giãn” (youtube.recommend_music).</li>
+            <li>Nếu FOZA tool_calls không ổn định: chuyển sang chuẩn JSON-in-content <code>{response, actions}</code> cho Agent mode.</li>
+          </ul>
+        </section>
+
+        <section class="card full">
+          <h2>Timeline (mốc chính)</h2>
+          <div class="timeline">
+            <div class="titem">
+              <div class="top"><div class="date">2026-03-19</div><div class="tag ok">Agent calling demo</div></div>
+              <ul>
+                <li>Demo agent function calling: <code>/api/agent-chat</code> trả actions allowlist; frontend tự điều hướng (vd: <code>/sang-loc</code>).</li>
+                <li>Ổn định metadata mode/provider + fallback rule-based khi Gemini lỗi/thiếu key.</li>
+              </ul>
+            </div>
+            <div class="titem">
+              <div class="top"><div class="date">2026-03-20</div><div class="tag ok">Local agent</div></div>
+              <ul>
+                <li>Thêm agent provider local (OpenAI-compatible) ép output JSON <code>{response, actions}</code>.</li>
+                <li>Thêm action <code>speak</code> và Gemini STT/TTS server-side; Live mode demo.</li>
+              </ul>
+            </div>
+            <div class="titem">
+              <div class="top"><div class="date">2026-05-08</div><div class="tag ok">SSOT + ổn định build</div></div>
+              <ul>
+                <li>Chuẩn hoá allowlist điều hướng SSOT (<code>ALLOWED_PATH_PREFIXES</code>).</li>
+                <li>Sửa DB modules để không throw khi thiếu <code>DATABASE_URL</code>; <code>next build</code> chạy được.</li>
+              </ul>
+            </div>
+            <div class="titem">
+              <div class="top"><div class="date">2026-05-13</div><div class="tag ok">Hybrid routing</div></div>
+              <ul>
+                <li><code>/api/agent-chat</code> đọc <code>runtime-mode.json</code> (hybrid auto), fallback và ghi events/metrics.</li>
+                <li>Tool calling “mcp-lite” qua <code>/api/mcp/call</code> (web/youtube).</li>
+              </ul>
+            </div>
+            <div class="titem">
+              <div class="top"><div class="date">2026-05-18</div><div class="tag warn">Multi-profile + FOZA</div></div>
+              <ul>
+                <li>Thêm Agent Profiles: default/thuốc/kế hoạch/triage/trị liệu; UI gửi <code>agent_id</code>.</li>
+                <li>Thêm provider <code>foza</code> cho <code>/api/llm-chat</code> + UI toggle server/gemini/foza.</li>
+                <li>Thêm <code>provider=foza</code> cho <code>/api/agent-chat</code>: tool_calls → actions + fallback an toàn.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Checklist vận hành</h2>
+          <div class="checklist">
+            <div class="cgroup">
+              <h3>Hybrid & quan sát</h3>
+              <div class="kv">
+                <div><span>SSOT mode</span><b>data/runtime-mode.json</b></div>
+                <div><span>Events log</span><b>runtime-events.jsonl</b></div>
+                <div><span>Metrics log</span><b>runtime-metrics.jsonl</b></div>
+              </div>
+            </div>
+            <div class="cgroup">
+              <h3>Providers</h3>
+              <div class="kv">
+                <div><span>Chat</span><b>server | gemini | foza</b></div>
+                <div><span>Agent</span><b>openai_like | gemini | foza</b></div>
+              </div>
+            </div>
+            <div class="cgroup">
+              <h3>Bảo mật</h3>
+              <div class="kv">
+                <div><span>Rotate keys</span><b>Gemini / FOZA</b></div>
+                <div><span>Không commit</span><b>.env.local</b></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Liên kết docs nguồn</h2>
+          <ul>
+            <li><a href="./progress.md">docs/progress.md</a></li>
+            <li><a href="./activeContext.md">docs/activeContext.md</a></li>
+            <li><a href="./systemPatterns.md">docs/systemPatterns.md</a></li>
+            <li><a href="./techContext.md">docs/techContext.md</a></li>
+          </ul>
+        </section>
+      </div>
+
+      <footer>
+        File này là snapshot tiến độ phục vụ báo cáo. Nếu cần “báo cáo theo sprint” hoặc xuất PDF, mình sẽ chuẩn hoá thêm mục: mục tiêu, rủi ro, quyết định kiến trúc, và checklist nghiệm thu.
+      </footer>
+    </div>
+  </body>
+</html>

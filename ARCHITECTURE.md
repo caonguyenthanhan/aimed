@@ -13,27 +13,36 @@ flowchart LR
   U[User Browser] --> UI[Next.js UI<br/>medical-consultation-app]
 
   UI -->|POST /api/llm-chat| GW[/Next.js API: llm-chat gateway/]
+  UI -->|POST /api/agent-chat (agentMode)| AG[/Next.js API: agent-chat gateway/]
   UI -->|POST /api/runtime/mode| RM[/Next.js API: runtime/mode/]
   UI -->|/api/backend/v1/*| BP[/Next.js API: backend proxy/]
+  AG -->|tool calls| MCP[/Next.js API: /api/mcp/call/]
 
   RM -->|write| SSOT[(data/runtime-mode.json)]
   GW -->|read| SSOT
+  AG -->|read| SSOT
   GW -->|read| REG[(data/server-registry.json)]
+  AG -->|read| REG
 
   BP -->|forward| CPU[CPU FastAPI<br/>cpu_server/server.py<br/>http://127.0.0.1:8000]
   GW -->|/v1/chat/completions (cpu target)| CPU
+  AG -->|/v1/chat/completions (cpu target)| CPU
 
-  GW -->|/v1/chat/completions (gpu target)| GPU[GPU FastAPI<br/>Colab/Ngrok]
+  GW -->|/v1/chat/completions (gpu target)| GPU[GPU OpenAI-compatible<br/>Colab/Ngrok hoặc vLLM self-host]
   CPU -->|proxy (when target=gpu)| GPU
+  AG -->|/v1/chat/completions (gpu target)| GPU
 
   GW -->|optional provider| GEM[Gemini API]
+  AG -->|optional provider| GEM
 
   GW --> MET[(data/runtime-metrics.jsonl)]
   GW --> EVT[(data/runtime-events.jsonl)]
+  AG --> MET
+  AG --> EVT
   RM --> EVT
 ```
 
-### 2) Chat Request Sequence (UI → Gateway → CPU/GPU → UI)
+### 2) Chat Request Sequence (UI → Gateway → CPU/GPU/Gemini → UI)
 
 ```mermaid
 sequenceDiagram
@@ -41,29 +50,55 @@ sequenceDiagram
   actor User
   participant UI as ChatInterface (browser)
   participant GW as Next API /api/llm-chat
+  participant AG as Next API /api/agent-chat
   participant SSOT as data/runtime-mode.json
   participant REG as data/server-registry.json
   participant GPU as GPU FastAPI (/v1/chat/completions)
   participant CPU as CPU FastAPI (/v1/chat/completions)
   participant GEM as Gemini (optional)
+  participant MCP as Next API /api/mcp/call (optional)
 
   User->>UI: Send message
-  UI->>GW: POST /api/llm-chat {message, history, provider, model...}
-  GW->>SSOT: Read target + gpu_url
-  alt target == gpu
-    GW->>REG: Read latest active GPU URL (fallback)
-    GW->>GPU: POST /v1/chat/completions
-    alt GPU error/timeout
-      opt GEMINI_API_KEY available
-        GW->>GEM: Generate response
+  alt agentMode == true
+    UI->>AG: POST /api/agent-chat {message, messages[], tier, agent_id, access_pass...}
+    AG->>SSOT: Read target + gpu_url
+    alt target == gpu
+      AG->>REG: Read latest active GPU URL (fallback)
+      AG->>GPU: POST /v1/chat/completions (expects JSON actions)
+      alt GPU error/timeout
+        opt GEMINI_API_KEY / access_pass available
+          AG->>GEM: Generate response (tool-calling)
+          opt toolCalls present
+            AG->>MCP: POST /api/mcp/call {name,args}
+            MCP-->>AG: {result}
+            AG->>GEM: Generate final response with tool results
+          end
+        end
+        AG->>CPU: POST /v1/chat/completions (fallback)
+        AG-->>SSOT: Write target=cpu (auto-fallback)
       end
-      GW->>CPU: POST /v1/chat/completions (fallback)
-      GW-->>SSOT: Write target=cpu (auto-fallback)
+    else target == cpu
+      AG->>CPU: POST /v1/chat/completions
     end
-  else target == cpu
-    GW->>CPU: POST /v1/chat/completions
+    AG-->>UI: {response, messages[], actions[], metadata:{mode, provider, fallback...}}
+  else agentMode == false
+    UI->>GW: POST /api/llm-chat {message, history, provider, model...}
+    GW->>SSOT: Read target + gpu_url
+    alt target == gpu
+      GW->>REG: Read latest active GPU URL (fallback)
+      GW->>GPU: POST /v1/chat/completions
+      alt GPU error/timeout
+        opt GEMINI_API_KEY available
+          GW->>GEM: Generate response
+        end
+        GW->>CPU: POST /v1/chat/completions (fallback)
+        GW-->>SSOT: Write target=cpu (auto-fallback)
+      end
+    else target == cpu
+      GW->>CPU: POST /v1/chat/completions
+    end
+    GW-->>UI: {response, messages[], metadata:{mode, fallback...}}
   end
-  GW-->>UI: {response, messages[], metadata:{mode, fallback...}}
   UI-->>User: Render answer (chunked/live)
 ```
 
@@ -100,9 +135,18 @@ stateDiagram-v2
   CPU --> GPU: /api/runtime/mode POST (target=gpu, gpu_url)
   GPU --> CPU: /api/runtime/mode POST (target=cpu)
   GPU --> CPU: /api/llm-chat auto-fallback (GPU failure)
+  GPU --> CPU: /api/agent-chat auto-fallback (GPU failure)
 ```
 
 ## Core Architecture Components
+
+### 0. LLM Gateways & Orchestration (`/api/llm-chat` vs `/api/agent-chat`)
+
+**/api/llm-chat**: Gateway trả lời dạng text thuần (có chunked/live), routing GPU/CPU dựa trên `data/runtime-mode.json` và `data/server-registry.json`, fallback GPU → (Gemini nếu có key) → CPU.
+
+**/api/agent-chat**: Gateway “agent-orchestrator” (single orchestrator) trả về thêm `actions[]` để UI thực thi (ví dụ speak, embed/ask_navigation, gợi ý music). Khi dùng Gemini có thể gọi tool thông qua `/api/mcp/call` (web.search, youtube.*), sau đó tổng hợp lại câu trả lời cuối.
+
+**Agent profiles**: UI gửi `agent_id` để chọn persona (tư vấn tổng quát / thuốc / kế hoạch). Gateway inject persona cho cả Gemini và OpenAI-compatible provider, đồng thời trả `metadata.agent_profile` để trace.
 
 ### 1. Agent Registry & Module System (`lib/agent-registry.ts`)
 
@@ -385,6 +429,10 @@ Chat Flow:
 - `GET /api/youtube/search` - Search videos
 - `GET /api/youtube/video` - Get video details
 - `POST /api/youtube/video` - Extract ID from URL
+
+### Agent & MCP Tools
+- `POST /api/agent-chat` - Agent gateway (response + actions + metadata)
+- `POST /api/mcp/call` - Tool execution for agent (web.search, youtube.*)
 
 ---
 
