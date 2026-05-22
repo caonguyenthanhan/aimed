@@ -25,11 +25,12 @@ interface Message {
 }
 
 async function getDbClient() {
-  if (!process.env.DATABASE_URL) {
+  const dbUrl = String(process.env.DATABASE_URL || '').trim()
+  if (!dbUrl) {
     throw new Error('DATABASE_URL is not set')
   }
   const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: dbUrl,
   })
   await client.connect()
   return client
@@ -38,11 +39,16 @@ async function getDbClient() {
 export async function POST(request: NextRequest) {
   let client
   try {
+    const dbUrl = String(process.env.DATABASE_URL || '').trim()
+    if (!dbUrl) {
+      return NextResponse.json({ success: false, skipped: true, reason: 'database_not_configured' }, { status: 200 })
+    }
+
     let body: any
     try {
       body = await request.json()
     } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+      return NextResponse.json({ success: false, skipped: true, reason: 'invalid_json' }, { status: 200 })
     }
 
     const conversationId =
@@ -53,14 +59,7 @@ export async function POST(request: NextRequest) {
 
     if (!conversationId || !userId || !messages) {
       return NextResponse.json(
-        { error: 'conversationId, messages, and userId are required' },
-        { status: 400 }
-      )
-    }
-
-    if (!process.env.DATABASE_URL) {
-      return NextResponse.json(
-        { success: false, skipped: true, reason: 'database_not_configured', conversationId },
+        { success: false, skipped: true, reason: 'missing_fields', conversationId: conversationId || undefined },
         { status: 200 }
       )
     }

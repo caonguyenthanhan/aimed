@@ -23,17 +23,21 @@ export async function syncMessagesToDatabase(
   userId: string
 ) {
   try {
+    const cid = String(conversationId || '').trim()
+    const uid = String(userId || '').trim()
+    if (!cid || !uid) return null
+
     const response = await fetch('/api/conversations/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        conversationId,
+        conversationId: cid,
         messages: messages.map(m => ({
           ...m,
           timestamp: m.timestamp.toISOString(),
         })),
         title,
-        userId,
+        userId: uid,
       }),
     })
 
@@ -61,10 +65,13 @@ export async function loadConversationFromDatabase(
   userId?: string
 ): Promise<{ conversation: Conversation; messages: Message[] } | null> {
   try {
+    const cid = String(conversationId || '').trim()
+    if (!cid) return null
+
     const response = await fetch('/api/conversations/load', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ conversationId, userId }),
+      body: JSON.stringify({ conversationId: cid, userId }),
     })
 
     if (!response.ok) {
@@ -72,6 +79,7 @@ export async function loadConversationFromDatabase(
     }
 
     const data = await response.json()
+    if (data?.skipped) return null
     return {
       conversation: data.conversation,
       messages: data.messages.map((m: any) => ({
@@ -92,10 +100,13 @@ export async function listConversationsFromDatabase(
   userId: string
 ): Promise<Conversation[] | null> {
   try {
+    const uid = String(userId || '').trim()
+    if (!uid) return null
+
     const response = await fetch('/api/conversations/list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ userId: uid }),
     })
 
     if (!response.ok) {
@@ -103,6 +114,7 @@ export async function listConversationsFromDatabase(
     }
 
     const data = await response.json()
+    if (data?.skipped) return null
     return data.conversations
   } catch (error) {
     console.error('[v0] Failed to list conversations:', error)

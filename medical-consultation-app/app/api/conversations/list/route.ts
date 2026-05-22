@@ -18,11 +18,12 @@ function normalizeUserUUID(userId: string): string {
 }
 
 async function getDbClient() {
-  if (!process.env.DATABASE_URL) {
+  const dbUrl = String(process.env.DATABASE_URL || '').trim()
+  if (!dbUrl) {
     throw new Error('DATABASE_URL is not set')
   }
   const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: dbUrl,
   })
   await client.connect()
   return client
@@ -31,10 +32,15 @@ async function getDbClient() {
 async function listConversations(userId: string, limit: number, offset: number) {
   let client
   try {
+    const dbUrl = String(process.env.DATABASE_URL || '').trim()
+    if (!dbUrl) {
+      return NextResponse.json({ conversations: [], success: false, skipped: true, reason: 'database_not_configured' }, { status: 200 })
+    }
+
     if (!userId) {
       return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
+        { conversations: [], success: false, skipped: true, reason: 'missing_user_id' },
+        { status: 200 }
       )
     }
 
@@ -53,13 +59,10 @@ async function listConversations(userId: string, limit: number, offset: number) 
 
     return NextResponse.json({ conversations: rows })
   } catch (error) {
-    if (String((error as any)?.message || '') === 'DATABASE_URL is not set') {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
-    }
     console.error('[v0] Error fetching conversations:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch conversations' },
-      { status: 500 }
+      { conversations: [], success: false, skipped: true, reason: 'internal_error' },
+      { status: 200 }
     )
   } finally {
     if (client) await client.end()

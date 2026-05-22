@@ -3,11 +3,12 @@ import { Client } from 'pg'
 import { getConversationTitle, getConversationMessages } from '@/lib/db-queries'
 
 async function getDbClient() {
-  if (!process.env.DATABASE_URL) {
+  const dbUrl = String(process.env.DATABASE_URL || '').trim()
+  if (!dbUrl) {
     throw new Error('DATABASE_URL is not set')
   }
   const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: dbUrl,
   })
   await client.connect()
   return client
@@ -16,11 +17,13 @@ async function getDbClient() {
 async function loadConversation(conversationId: string, limit: number, offset: number) {
   let client
   try {
+    const dbUrl = String(process.env.DATABASE_URL || '').trim()
+    if (!dbUrl) {
+      return NextResponse.json({ success: false, skipped: true, reason: 'database_not_configured' }, { status: 200 })
+    }
+
     if (!conversationId) {
-      return NextResponse.json(
-        { error: 'conversationId is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ success: false, skipped: true, reason: 'missing_conversation_id' }, { status: 200 })
     }
 
     client = await getDbClient()
@@ -29,8 +32,8 @@ async function loadConversation(conversationId: string, limit: number, offset: n
     const { row: conv, error: convError } = await getConversationTitle(client, conversationId)
     if (convError || !conv) {
       return NextResponse.json(
-        { error: 'Conversation not found' },
-        { status: 404 }
+        { success: false, skipped: true, reason: 'conversation_not_found' },
+        { status: 200 }
       )
     }
 
@@ -56,13 +59,10 @@ async function loadConversation(conversationId: string, limit: number, offset: n
       messages: mappedMessages,
     })
   } catch (error) {
-    if (String((error as any)?.message || '') === 'DATABASE_URL is not set') {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
-    }
     console.error('[v0] Error loading conversation:', error)
     return NextResponse.json(
-      { error: 'Failed to load conversation' },
-      { status: 500 }
+      { success: false, skipped: true, reason: 'internal_error' },
+      { status: 200 }
     )
   } finally {
     if (client) await client.end()
