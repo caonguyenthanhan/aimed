@@ -1131,7 +1131,30 @@ export async function POST(req: Request) {
     
     const forceActionsEnabled = String(process.env.AGENT_FORCE_ACTIONS || "").trim() === "1"
     const forcedActions = forceActionsEnabled ? intelligentActionForcing() : []
-    const combinedActions = [...actionsRaw, ...textActions, ...forcedActions]
+    const profileForcing = () => {
+      const combined = [...actionsRaw, ...textActions, ...forcedActions].filter((a: any) => a?.type)
+      const hasPrimary = combined.some((a: any) =>
+        a?.type === "ask_navigation" || a?.type === "embed" || a?.type === "navigate" || a?.type === "recommend_music" || a?.type === "play_music"
+      )
+      if (hasPrimary) return []
+      if (!agentProfile?.id) return []
+      if (agentProfile.id === "therapy") {
+        return [{ type: "ask_navigation", args: { feature: "tri-lieu", reason: "Đang bật chế độ Tâm lý trị liệu. Bạn muốn mở module Trị liệu để xem bài tập gợi ý không?" } }]
+      }
+      if (agentProfile.id === "triage") {
+        return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Đang bật chế độ Triage + Red flags. Bạn muốn mở module Bác sĩ để được hướng dẫn đúng tuyến không?" } }]
+      }
+      if (agentProfile.id === "medication") {
+        return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Đang bật chế độ Thuốc & Tương tác. Bạn muốn mở module Tra cứu để xem thông tin thuốc/bệnh không?" } }]
+      }
+      if (agentProfile.id === "care_plan") {
+        return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Đang bật chế độ Kế hoạch chăm sóc. Bạn muốn mở module Kế hoạch để tạo plan theo mục tiêu không?" } }]
+      }
+      return []
+    }
+
+    const profileActions = forceActionsEnabled ? profileForcing() : []
+    const combinedActions = [...actionsRaw, ...textActions, ...forcedActions, ...profileActions]
     let actions = normalizeActions(combinedActions.filter(a => a?.type))
       .map((a) => {
         if (a.type === "open_screening") return { type: "ask_navigation", args: { feature: "sang-loc", reason: "Bạn muốn thử sàng lọc tâm lý để hiểu bản thân tốt hơn không?" } } as any
