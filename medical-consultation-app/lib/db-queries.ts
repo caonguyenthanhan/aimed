@@ -1,4 +1,4 @@
-import { Client } from 'pg'
+type AnyPgClient = { query: (text: string, params?: any[]) => Promise<any> }
 
 /**
  * Optimized database queries with proper indexing support
@@ -9,7 +9,7 @@ import { Client } from 'pg'
 const stmtCache = new Map<string, string>()
 
 export async function getConversationsList(
-  client: Client,
+  client: AnyPgClient,
   userUUID: string,
   limit: number = 100,
   offset: number = 0
@@ -36,7 +36,7 @@ export async function getConversationsList(
 }
 
 export async function getConversationMessages(
-  client: Client,
+  client: AnyPgClient,
   conversationId: string,
   limit: number = 1000,
   offset: number = 0
@@ -63,7 +63,7 @@ export async function getConversationMessages(
 }
 
 export async function getConversationTitle(
-  client: Client,
+  client: AnyPgClient,
   conversationId: string
 ) {
   const query = `
@@ -81,7 +81,7 @@ export async function getConversationTitle(
 }
 
 export async function upsertConversation(
-  client: Client,
+  client: AnyPgClient,
   conversationId: string,
   userUUID: string,
   title: string
@@ -104,7 +104,7 @@ export async function upsertConversation(
 }
 
 export async function insertMessage(
-  client: Client,
+  client: AnyPgClient,
   conversationId: string,
   role: 'user' | 'assistant',
   content: string
@@ -124,7 +124,7 @@ export async function insertMessage(
 }
 
 export async function deleteOldMessages(
-  client: Client,
+  client: AnyPgClient,
   conversationId: string
 ) {
   const query = `
@@ -142,7 +142,7 @@ export async function deleteOldMessages(
 }
 
 export async function getConversationStats(
-  client: Client,
+  client: AnyPgClient,
   userUUID: string
 ) {
   // Efficient stats query

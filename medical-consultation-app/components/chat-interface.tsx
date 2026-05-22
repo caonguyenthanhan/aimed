@@ -664,6 +664,26 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     try {
       const ensuredId = await startConversationIfNeeded()
       const historySnapshot = (messagesRef.current || []).map((m) => ({ role: m.isUser ? "user" : "assistant", content: m.content })) as LlmMessage[]
+      const ensureAutoTitle = async (convId: string, userText: string) => {
+        try {
+          if (typeof window === "undefined") return
+          const id = String(convId || "").trim()
+          if (!id) return
+          const key = `conv_title_${id}`
+          const existing = String(localStorage.getItem(key) || "").trim()
+          if (existing && existing !== "Hội thoại" && existing !== "Hội thoại mới") return
+          const resp = await fetch("/api/auto-name-conversation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: [{ isUser: true, content: userText }], conversationId: id }),
+          })
+          const data = await resp.json().catch(() => null)
+          const title = String(data?.name || "").trim()
+          if (!title) return
+          localStorage.setItem(key, title)
+          loadLocalConversations()
+        } catch {}
+      }
       let provider: string = "server"
       try {
         const p = typeof window !== "undefined" ? localStorage.getItem("llm_provider") : null
@@ -764,6 +784,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         } catch {
           router.replace(`/tu-van?id=${newId}`)
         }
+      }
+
+      if (newId && text) {
+        void ensureAutoTitle(String(newId), String(text))
       }
 
       await fetchConversations()
@@ -1038,25 +1062,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           setAiSuggestions([]) // Reset AI suggestions for new conversation
           
       await fetchConversations()
-
-      // Auto-name conversation if it's the first message
-      if (messages.length === 1 && newId) {
-        try {
-          const nameResponse = await fetch('/api/auto-name-conversation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: [{ isUser: true, content: text }], conversationId: newId })
-          })
-          
-          if (nameResponse.ok) {
-            const { name } = await nameResponse.json()
-            // Optionally update conversation title in UI/backend
-            console.log('[v0] Auto-named conversation:', name)
-          }
-        } catch (err) {
-          console.debug('[v0] Auto-naming failed:', err)
-        }
-      }
           if (typeof window !== 'undefined') {
             try {
               const url = new URL(window.location.href)

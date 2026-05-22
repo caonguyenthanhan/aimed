@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Client } from 'pg'
 import crypto from 'crypto'
 import { getConversationsList } from '@/lib/db-queries'
+import { resolveDatabaseUrl, withPgClient } from '@/lib/pg'
 
 // Convert token string to consistent UUID
 function tokenToUUID(token: string): string {
@@ -17,22 +17,9 @@ function normalizeUserUUID(userId: string): string {
   return UUID_LIKE_RE.test(v) ? v : tokenToUUID(v)
 }
 
-async function getDbClient() {
-  const dbUrl = String(process.env.DATABASE_URL || '').trim()
-  if (!dbUrl) {
-    throw new Error('DATABASE_URL is not set')
-  }
-  const client = new Client({
-    connectionString: dbUrl,
-  })
-  await client.connect()
-  return client
-}
-
 async function listConversations(userId: string, limit: number, offset: number) {
-  let client
   try {
-    const dbUrl = String(process.env.DATABASE_URL || '').trim()
+    const dbUrl = resolveDatabaseUrl()
     if (!dbUrl) {
       return NextResponse.json({ conversations: [], success: false, skipped: true, reason: 'database_not_configured' }, { status: 200 })
     }
@@ -44,28 +31,25 @@ async function listConversations(userId: string, limit: number, offset: number) 
       )
     }
 
-    client = await getDbClient()
     const userUUID = normalizeUserUUID(userId)
+    return await withPgClient(async (client) => {
+      const { rows, error } = await getConversationsList(
+        client,
+        userUUID,
+        Math.min(limit, 100),
+        offset
+      )
 
-    // Use optimized query with indexes
-    const { rows, error } = await getConversationsList(
-      client,
-      userUUID,
-      Math.min(limit, 100),
-      offset
-    )
+      if (error) throw error
 
-    if (error) throw error
-
-    return NextResponse.json({ conversations: rows })
+      return NextResponse.json({ conversations: rows })
+    })
   } catch (error) {
     console.error('[v0] Error fetching conversations:', error)
     return NextResponse.json(
       { conversations: [], success: false, skipped: true, reason: 'internal_error' },
       { status: 200 }
     )
-  } finally {
-    if (client) await client.end()
   }
 }
 

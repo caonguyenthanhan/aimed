@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Client } from 'pg'
 import crypto from 'crypto'
 import { upsertConversation, insertMessage } from '@/lib/db-queries'
+import { resolveDatabaseUrl, withPgClient } from '@/lib/pg'
 
 // Convert token string to consistent UUID
 function tokenToUUID(token: string): string {
@@ -17,29 +17,9 @@ function normalizeUserUUID(userId: string): string {
   return UUID_LIKE_RE.test(v) ? v : tokenToUUID(v)
 }
 
-interface Message {
-  id: string
-  content: string
-  isUser: boolean
-  timestamp: string
-}
-
-async function getDbClient() {
-  const dbUrl = String(process.env.DATABASE_URL || '').trim()
-  if (!dbUrl) {
-    throw new Error('DATABASE_URL is not set')
-  }
-  const client = new Client({
-    connectionString: dbUrl,
-  })
-  await client.connect()
-  return client
-}
-
 export async function POST(request: NextRequest) {
-  let client
   try {
-    const dbUrl = String(process.env.DATABASE_URL || '').trim()
+    const dbUrl = resolveDatabaseUrl()
     if (!dbUrl) {
       return NextResponse.json({ success: false, skipped: true, reason: 'database_not_configured' }, { status: 200 })
     }
@@ -64,43 +44,39 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    client = await getDbClient()
     const userUUID = normalizeUserUUID(userId)
+    await withPgClient(async (client) => {
+      await client.query('BEGIN')
 
-    await client.query('BEGIN')
-
-    const { error: convError } = await upsertConversation(
-      client,
-      conversationId,
-      userUUID,
-      title || 'Hội thoại mới'
-    )
-    if (convError) throw convError
-
-    await client.query('DELETE FROM conversation_messages WHERE conv_id = $1', [conversationId])
-
-    for (const msg of messages) {
-      if (!msg || typeof msg.content !== 'string') continue
-      const { error: msgError } = await insertMessage(
+      const { error: convError } = await upsertConversation(
         client,
         conversationId,
-        msg.isUser ? 'user' : 'assistant',
-        msg.content
+        userUUID,
+        title || 'Hội thoại mới'
       )
-      if (msgError) throw msgError
-    }
+      if (convError) throw convError
 
-    await client.query('COMMIT')
+      await client.query('DELETE FROM conversation_messages WHERE conv_id = $1', [conversationId])
+
+      for (const msg of messages) {
+        if (!msg || typeof msg.content !== 'string') continue
+        const { error: msgError } = await insertMessage(
+          client,
+          conversationId,
+          msg.isUser ? 'user' : 'assistant',
+          msg.content
+        )
+        if (msgError) throw msgError
+      }
+
+      await client.query('COMMIT')
+    })
 
     return NextResponse.json({ 
       success: true, 
       conversationId 
     })
   } catch (error) {
-    try {
-      await client?.query('ROLLBACK')
-    } catch {}
-
     const code =
       error && typeof error === 'object' && 'code' in error
         ? (error as any).code
@@ -116,7 +92,5 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to save conversation' },
       { status: 500 }
     )
-  } finally {
-    if (client) await client.end()
   }
 }
