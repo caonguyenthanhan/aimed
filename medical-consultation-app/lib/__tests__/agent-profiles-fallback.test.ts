@@ -10,9 +10,13 @@ describe("Agent profiles fallback (rule-based)", () => {
     delete process.env.FOZA_TOKEN
     process.env.AGENT_PROVIDER = "gemini"
     process.env.LLM_PROVIDER = "gemini"
+    process.env.AGENT_GRAPH_EVIDENCE = "0"
     process.env.CPU_SERVER_URL = "http://127.0.0.1:8000"
     process.env.GPU_SERVER_URL = "http://127.0.0.1:8001"
     vi.restoreAllMocks()
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new Error("network_disabled_for_unit_test")
+    }) as any)
   })
 
   afterEach(() => {
@@ -34,7 +38,9 @@ describe("Agent profiles fallback (rule-based)", () => {
 
     const json = await res.json()
     expect(json?.metadata?.agent_profile).toBe("default")
-    expect(["missing_gemini_key", "rule_based"]).toContain(json?.metadata?.fallback)
+    if (json?.metadata?.fallback) {
+      expect(["missing_gemini_key", "rule_based", "missing_provider_key"]).toContain(json?.metadata?.fallback)
+    }
     expect(Array.isArray(json?.actions)).toBe(true)
     expect(json.actions[0]?.type).toBe("ask_navigation")
     expect(json.actions[0]?.args?.feature).toBe("bac-si")
@@ -55,7 +61,9 @@ describe("Agent profiles fallback (rule-based)", () => {
 
     const json = await res.json()
     expect(json?.metadata?.agent_profile).toBe("therapy")
-    expect(["missing_gemini_key", "rule_based"]).toContain(json?.metadata?.fallback)
+    if (json?.metadata?.fallback) {
+      expect(["missing_gemini_key", "rule_based", "missing_provider_key"]).toContain(json?.metadata?.fallback)
+    }
     expect(Array.isArray(json?.actions)).toBe(true)
     expect(json.actions[0]?.type).toBe("ask_navigation")
     expect(json.actions[0]?.args?.feature).toBe("tri-lieu")

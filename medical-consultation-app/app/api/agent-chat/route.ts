@@ -159,11 +159,27 @@ export async function POST(req: Request) {
       (typeof body?.provider === "string" && String(body.provider).trim() ? String(body.provider).trim() : "") ||
       String(process.env.AGENT_PROVIDER || "").trim()
     const agentProvider = String(configuredAgentProvider || "").trim().toLowerCase()
-    const agentProfile = getAgentProfile(body?.agent_id || body?.agent_profile || body?.agent || "default")
+    const inferAgentProfileId = (text: string) => {
+      const lower = String(text || "").toLowerCase()
+      const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      if (lower.match(/(đau ngực|khó thở|yếu liệt|nói khó|ngất|chảy máu|co giật|lú lẫn|đau bụng dữ dội|cấp cứu)/) || ascii.match(/(dau nguc|kho tho|yeu liet|noi kho|ngat|chay mau|co giat|lu lan|dau bung du doi|cap cuu)/)) return "triage"
+      if (lower.match(/(thuốc|uống|liều|tương tác|tác dụng phụ|chống chỉ định|ibuprofen|paracetamol|kháng sinh|statin)/) || ascii.match(/(thuoc|uong|lieu|tuong tac|tac dung phu|chong chi dinh|ibuprofen|paracetamol|khang sinh|statin)/)) return "medication"
+      if (lower.match(/(kế hoạch|lộ trình|theo dõi|mục tiêu|nhật ký|routine|giảm cân|tăng cân|tập luyện)/) || ascii.match(/(ke hoach|lo trinh|theo doi|muc tieu|nhat ky|routine|giam can|tang can|tap luyen)/)) return "care_plan"
+      if (lower.match(/(lo âu|hoảng loạn|trầm cảm|mất ngủ|căng thẳng|stress|tự hại|tự sát|trị liệu|bài thở|thiền|cbt)/) || ascii.match(/(lo au|hoang loan|tram cam|mat ngu|cang thang|stress|tu hai|tu sat|tri lieu|bai tho|thien|cbt)/)) return "therapy"
+      return "default"
+    }
+
+    const requestedAgentId = String(body?.agent_id || body?.agent_profile || body?.agent || "").trim()
+    const agentProfileSource = !requestedAgentId || requestedAgentId.toLowerCase() === "auto" ? "auto" : "explicit"
+    const agentProfileId = !requestedAgentId || requestedAgentId.toLowerCase() === "auto"
+      ? inferAgentProfileId(message)
+      : requestedAgentId
+    const agentProfile = getAgentProfile(agentProfileId)
     const persona = `AGENT_PROFILE:${agentProfile.id}\n${agentProfile.persona}`
     let personaForLLM = persona
     let graphEvidence: any = null
     let graphInjected = false
+    let graphToolCalled = false
 
     if (!message) return NextResponse.json({ error: "Message is required" }, { status: 400 })
 
@@ -269,17 +285,26 @@ export async function POST(req: Request) {
 
     const ruleBasedActionsGuess = () => {
       const lower = message.toLowerCase()
+      const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       if (agentProfile.id === "medication") return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Mở tra cứu để xem thông tin thuốc/tương tác chính xác hơn." } }]
       if (agentProfile.id === "care_plan") return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
       if (agentProfile.id === "triage") return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Mở bác sĩ/đặt lịch để được đánh giá trực tiếp nếu bạn có dấu hiệu cần khám sớm." } }]
       if (agentProfile.id === "therapy") return [{ type: "ask_navigation", args: { feature: "tri-lieu", reason: "Mở trị liệu để xem bài tập thở/grounding và kỹ thuật giảm căng thẳng." } }]
-      if (lower.includes("sàng lọc") || lower.includes("sang loc")) return [{ type: "navigate", args: { path: "/sang-loc" } }]
-      if (lower.includes("trị liệu") || lower.includes("tri lieu")) return [{ type: "navigate", args: { path: "/tri-lieu" } }]
-      if (lower.includes("nhắc nhở") || lower.includes("nhac nho")) return [{ type: "navigate", args: { path: "/nhac-nho" } }]
-      if (lower.match(/(thuốc|tương tác|liều|uống.*thuốc|tác dụng phụ)/)) return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Mở tra cứu để xem thông tin thuốc/tương tác chính xác hơn." } }]
-      if (lower.match(/(kế hoạch|lộ trình|theo dõi|mục tiêu|nhật ký|routine)/)) return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
-      if (lower.match(/(đau ngực|khó thở|yếu liệt|nói khó|ngất|chảy máu|co giật|lú lẫn|đau bụng dữ dội)/)) return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Có dấu hiệu nguy hiểm. Bạn muốn mình hướng dẫn bước an toàn tiếp theo và mở bác sĩ/đặt lịch không?" } }]
-      if (lower.match(/(lo âu|hoảng loạn|trầm cảm|mất ngủ|căng thẳng|stress|tự hại|tự sát)/)) return [{ type: "ask_navigation", args: { feature: "sang-loc", reason: "Mở sàng lọc để đánh giá mức độ và chọn hướng hỗ trợ phù hợp." } }]
+      if (lower.includes("sàng lọc") || ascii.includes("sang loc")) return [{ type: "navigate", args: { path: "/sang-loc" } }]
+      if (lower.includes("trị liệu") || ascii.includes("tri lieu")) return [{ type: "navigate", args: { path: "/tri-lieu" } }]
+      if (lower.includes("nhắc nhở") || ascii.includes("nhac nho")) return [{ type: "navigate", args: { path: "/nhac-nho" } }]
+      if (lower.match(/(thuốc|tương tác|liều|uống.*thuốc|tác dụng phụ)/) || ascii.match(/(thuoc|tuong tac|lieu|uong.*thuoc|tac dung phu)/)) {
+        return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Mở tra cứu để xem thông tin thuốc/tương tác chính xác hơn." } }]
+      }
+      if (lower.match(/(kế hoạch|lộ trình|theo dõi|mục tiêu|nhật ký|routine)/) || ascii.match(/(ke hoach|lo trinh|theo doi|muc tieu|nhat ky|routine)/)) {
+        return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
+      }
+      if (lower.match(/(đau ngực|khó thở|yếu liệt|nói khó|ngất|chảy máu|co giật|lú lẫn|đau bụng dữ dội)/) || ascii.match(/(dau nguc|kho tho|yeu liet|noi kho|ngat|chay mau|co giat|lu lan|dau bung du doi)/)) {
+        return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Có dấu hiệu nguy hiểm. Bạn muốn mình hướng dẫn bước an toàn tiếp theo và mở bác sĩ/đặt lịch không?" } }]
+      }
+      if (lower.match(/(lo âu|hoảng loạn|trầm cảm|mất ngủ|căng thẳng|stress|tự hại|tự sát)/) || ascii.match(/(lo au|hoang loan|tram cam|mat ngu|cang thang|stress|tu hai|tu sat)/)) {
+        return [{ type: "ask_navigation", args: { feature: "sang-loc", reason: "Mở sàng lọc để đánh giá mức độ và chọn hướng hỗ trợ phù hợp." } }]
+      }
       return []
     }
 
@@ -324,6 +349,7 @@ export async function POST(req: Request) {
 
     if (graphEnabled) {
       try {
+        graphToolCalled = true
         const out = await callMcp("graph.evidence", { query: message, limit: 80, entity_limit: 6 })
         graphEvidence = out?.result || null
         const ent = Array.isArray(graphEvidence?.entities) ? graphEvidence.entities : []
@@ -340,6 +366,7 @@ export async function POST(req: Request) {
       } catch {
         graphEvidence = null
         graphInjected = false
+        graphToolCalled = false
       }
     }
 
@@ -651,13 +678,24 @@ export async function POST(req: Request) {
           let msgs = toolModeMessages
           let content = ""
           let toolRounds = 0
+          let toolCallsCount = 0
+          let mcpToolCallsCount = 0
+          const mcpToolNamesSeen: string[] = []
 
           for (let i = 0; i < maxToolRounds; i++) {
             if (remainingMs() <= 0) break
             const r1 = await fozaTry(msgs, true)
             content = r1.content
             const toolCallsAll = Array.isArray(r1.toolCalls) ? r1.toolCalls : []
+            toolCallsCount += toolCallsAll.length
             const mcpCalls = toolCallsAll.filter((c) => mcpToolNames.has(String(c?.name || "").trim()))
+            if (mcpCalls.length) {
+              mcpToolCallsCount += mcpCalls.length
+              for (const c of mcpCalls) {
+                const nm = String(c?.name || "").trim()
+                if (nm && mcpToolNamesSeen.length < 20) mcpToolNamesSeen.push(nm)
+              }
+            }
             if (mcpCalls.length) {
               toolRounds++
               const toolMsgs: any[] = []
@@ -694,10 +732,14 @@ export async function POST(req: Request) {
                   provider: "foza",
                   model: modelName,
                   agent_profile: agentProfile.id,
+                  agent_profile_source: agentProfileSource,
                   duration_ms: Date.now() - started,
-                  llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected },
+                  llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: toolCallsCount, mcp_tool_calls_count: mcpToolCallsCount, mcp_tool_names: mcpToolNamesSeen, graph_tool_called: graphToolCalled },
                   json_mode: true,
                   tool_rounds: toolRounds,
+                  tool_calls_count: toolCallsCount,
+                  mcp_tool_calls_count: mcpToolCallsCount,
+                  mcp_tool_names: mcpToolNamesSeen,
                   tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
                   timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
                 },
@@ -725,10 +767,14 @@ export async function POST(req: Request) {
               provider: "foza",
               model: modelName,
               agent_profile: agentProfile.id,
+              agent_profile_source: agentProfileSource,
               duration_ms: Date.now() - started,
-              llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected },
+              llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: toolCallsCount, mcp_tool_calls_count: mcpToolCallsCount, mcp_tool_names: mcpToolNamesSeen, graph_tool_called: graphToolCalled },
               json_mode: false,
               tool_rounds: toolRounds,
+              tool_calls_count: toolCallsCount,
+              mcp_tool_calls_count: mcpToolCallsCount,
+              mcp_tool_names: mcpToolNamesSeen,
               tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
               timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
             },
@@ -1242,9 +1288,12 @@ export async function POST(req: Request) {
         access, 
         model: r.model, 
         agent_profile: agentProfile.id,
+        agent_profile_source: agentProfileSource,
         duration_ms: Date.now() - started, 
         hasInvestigation: !!suggestedInvestigation,
-        llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected },
+        tool_calls_count: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.length : 0,
+        tool_call_names: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.map((c: any) => String(c?.name || "").trim()).filter(Boolean).slice(0, 20) : [],
+        llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_tool_called: graphToolCalled, tool_calls_count: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.length : 0 },
       },
     })
     appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "gemini", duration_ms: Date.now() - started })
