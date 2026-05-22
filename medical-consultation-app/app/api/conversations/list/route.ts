@@ -9,7 +9,18 @@ function tokenToUUID(token: string): string {
   return `${hash.toString('hex', 0, 4)}-${hash.toString('hex', 4, 6)}-${hash.toString('hex', 6, 8)}-${hash.toString('hex', 8, 10)}-${hash.toString('hex', 10, 16)}`
 }
 
+const UUID_LIKE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function normalizeUserUUID(userId: string): string {
+  const v = String(userId || '').trim()
+  if (!v) return ''
+  return UUID_LIKE_RE.test(v) ? v : tokenToUUID(v)
+}
+
 async function getDbClient() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not set')
+  }
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
   })
@@ -17,11 +28,9 @@ async function getDbClient() {
   return client
 }
 
-export async function POST(request: NextRequest) {
+async function listConversations(userId: string, limit: number, offset: number) {
   let client
   try {
-    const { userId, limit = 100, offset = 0 } = await request.json()
-    
     if (!userId) {
       return NextResponse.json(
         { error: 'userId is required' },
@@ -30,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     client = await getDbClient()
-    const userUUID = tokenToUUID(userId)
+    const userUUID = normalizeUserUUID(userId)
 
     // Use optimized query with indexes
     const { rows, error } = await getConversationsList(
@@ -44,6 +53,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ conversations: rows })
   } catch (error) {
+    if (String((error as any)?.message || '') === 'DATABASE_URL is not set') {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+    }
     console.error('[v0] Error fetching conversations:', error)
     return NextResponse.json(
       { error: 'Failed to fetch conversations' },
@@ -52,4 +64,24 @@ export async function POST(request: NextRequest) {
   } finally {
     if (client) await client.end()
   }
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => null)
+  const userId = typeof body?.userId === 'string' ? body.userId : ''
+  const limit = typeof body?.limit === 'number' ? body.limit : 100
+  const offset = typeof body?.offset === 'number' ? body.offset : 0
+  return listConversations(userId, limit, offset)
+}
+
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url)
+  const userId = url.searchParams.get('userId') || ''
+  const limit = Number(url.searchParams.get('limit') || '100')
+  const offset = Number(url.searchParams.get('offset') || '0')
+  return listConversations(
+    userId,
+    Number.isFinite(limit) ? limit : 100,
+    Number.isFinite(offset) ? offset : 0
+  )
 }

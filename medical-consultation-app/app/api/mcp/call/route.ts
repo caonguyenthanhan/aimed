@@ -184,6 +184,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ result: { query: q, items }, metadata: { tool: name, provider: "google_cse" } })
     }
 
+    if (name === "graph.status") {
+      const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "")
+      const url = `${cpuBase}/v1/graph/status`
+      const apiKey = (process.env.GRAPH_API_KEY || "").trim()
+      try {
+        const resp = await fetch(url, {
+          method: "GET",
+          headers: apiKey ? { "x-api-key": apiKey } : undefined,
+        })
+        const json = await resp.json().catch(() => null)
+        if (!resp.ok) {
+          return NextResponse.json({ result: { ok: false, connected: false, error: json || `HTTP ${resp.status}` }, metadata: { tool: name, upstream: url } })
+        }
+        return NextResponse.json({ result: json, metadata: { tool: name, upstream: url } })
+      } catch (e: any) {
+        return NextResponse.json({ result: { ok: false, connected: false, error: String(e?.message || e || "") }, metadata: { tool: name, upstream: url } })
+      }
+    }
+
+    if (name === "graph.evidence") {
+      const q = String(args.query || "").trim()
+      if (!q) return NextResponse.json({ result: { ok: true, query: q, entities: [], edges: [] }, metadata: { tool: name } })
+      const limitRaw = Number(args.limit ?? 60)
+      const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, limitRaw)) : 60
+      const entityLimitRaw = Number(args.entity_limit ?? args.entityLimit ?? 5)
+      const entity_limit = Number.isFinite(entityLimitRaw) ? Math.max(1, Math.min(20, entityLimitRaw)) : 5
+      const rel_types = Array.isArray(args.rel_types) ? args.rel_types.map((x: any) => String(x).trim()).filter(Boolean) : undefined
+
+      const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "")
+      const url = `${cpuBase}/v1/graph/evidence`
+      const apiKey = (process.env.GRAPH_API_KEY || "").trim()
+      try {
+        const resp = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(apiKey ? { "x-api-key": apiKey } : {}),
+          },
+          body: JSON.stringify({ query: q, limit, entity_limit, ...(rel_types?.length ? { rel_types } : {}) }),
+        })
+        const json = await resp.json().catch(() => null)
+        if (!resp.ok) {
+          return NextResponse.json({ result: { ok: false, query: q, entities: [], edges: [], error: json || `HTTP ${resp.status}` }, metadata: { tool: name, upstream: url } })
+        }
+        return NextResponse.json({ result: json, metadata: { tool: name, upstream: url } })
+      } catch (e: any) {
+        return NextResponse.json({ result: { ok: false, query: q, entities: [], edges: [], error: String(e?.message || e || "") }, metadata: { tool: name, upstream: url } })
+      }
+    }
+
     return NextResponse.json({ error: "Unknown tool" }, { status: 400 })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Internal error" }, { status: 500 })

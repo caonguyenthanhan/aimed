@@ -1,7 +1,7 @@
 "use client"
 
 import { RefObject } from "react"
-import { Send, X, Mic, AudioLines, KeyRound, Sparkles } from "lucide-react"
+import { Send, X, Mic, AudioLines, KeyRound, Sparkles, FileText } from "lucide-react"
 import { getAllAgentProfiles, type AgentProfileId } from "@/lib/agent-profiles"
 
 export type UnifiedComposerModel = "flash" | "pro"
@@ -57,6 +57,8 @@ export type UnifiedComposerProps = {
   onToggleAgentMode?: () => void
   agentProfileId?: AgentProfileId
   onAgentProfileIdChange?: (id: AgentProfileId) => void
+  hasContext?: boolean
+  onShowContext?: () => void
 }
 
 export function UnifiedComposer(props: UnifiedComposerProps) {
@@ -202,6 +204,20 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                 title="Agent mode"
               >
                 agent
+              </button>
+            ) : null}
+            {props.agentMode && typeof props.onShowContext === "function" ? (
+              <button
+                onClick={props.onShowContext}
+                disabled={!props.hasContext}
+                className={`h-8 w-8 rounded-lg transition-all active:scale-95 flex items-center justify-center ${
+                  props.hasContext
+                    ? "bg-secondary text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    : "bg-secondary text-muted-foreground opacity-50 cursor-not-allowed"
+                }`}
+                title="Xem context"
+              >
+                <FileText className="h-4 w-4" />
               </button>
             ) : null}
             {props.agentMode && typeof props.onAgentProfileIdChange === "function" ? (

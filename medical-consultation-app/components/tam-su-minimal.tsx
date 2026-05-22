@@ -617,7 +617,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50" style={{ paddingTop: headerPad }}>
+    <div className="flex h-[100dvh] overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50" style={{ paddingTop: headerPad }}>
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
@@ -640,7 +640,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         </DialogContent>
       </Dialog>
       <div className="w-full h-full px-2 sm:px-4 py-3 sm:py-4">
-        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden flex h-full">
+        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden flex h-full min-h-0">
           {!isMobile && showSidebar ? (
             <div className="w-72 border-r bg-white flex flex-col">
               <div className="p-3 border-b flex items-center justify-between gap-2">
@@ -711,7 +711,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
             </Drawer>
           ) : null}
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-h-0">
             <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto">
               <div className="min-w-0 flex-1">
                 {conversationId && renamingId === conversationId ? (

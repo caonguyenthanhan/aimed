@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from 'uuid'
-
 export interface Message {
   id: string
   content: string
@@ -43,8 +41,11 @@ export async function syncMessagesToDatabase(
       throw new Error(`API error: ${response.status}`)
     }
 
-    console.log('[v0] Messages synced to database')
-    return await response.json()
+    const data = await response.json().catch(() => null)
+    if (data?.success) {
+      console.log('[v0] Messages synced to database')
+    }
+    return data
   } catch (error) {
     console.error('[v0] Failed to sync messages:', error)
     // Don't throw - let app continue working offline
@@ -56,12 +57,15 @@ export async function syncMessagesToDatabase(
  * Load conversation from Neon database
  */
 export async function loadConversationFromDatabase(
-  conversationId: string
+  conversationId: string,
+  userId?: string
 ): Promise<{ conversation: Conversation; messages: Message[] } | null> {
   try {
-    const response = await fetch(
-      `/api/conversations/load?conversationId=${conversationId}`
-    )
+    const response = await fetch('/api/conversations/load', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversationId, userId }),
+    })
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`)
@@ -88,9 +92,11 @@ export async function listConversationsFromDatabase(
   userId: string
 ): Promise<Conversation[] | null> {
   try {
-    const response = await fetch(
-      `/api/conversations/list?userId=${userId}`
-    )
+    const response = await fetch('/api/conversations/list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    })
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`)

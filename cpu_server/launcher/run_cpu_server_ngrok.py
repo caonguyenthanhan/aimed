@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -61,6 +62,78 @@ def _set_env_kv(env_path: Path, key: str, value: str) -> None:
     env_path.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
+def _docker_ready() -> bool:
+    docker = _which("docker")
+    if not docker:
+        return False
+    try:
+        r = subprocess.run([docker, "info"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def _start_memgraph_stack(repo_root: Path, compose_path: Path) -> bool:
+    if not compose_path.exists():
+        return False
+    if not _docker_ready():
+        return False
+    docker = _which("docker")
+    if not docker:
+        return False
+    try:
+        r = subprocess.run(
+            [docker, "compose", "up", "-d"],
+            cwd=str(compose_path.parent),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=False,
+        )
+        if r.returncode != 0:
+            print(r.stdout[-2000:], file=sys.stderr, flush=True)
+            return False
+        return True
+    except Exception as e:
+        print(f"Failed to start memgraph stack: {e}", file=sys.stderr, flush=True)
+        return False
+
+
+def _import_memgraph_data(repo_root: Path, container: str, cypherl_path: Path, marker_path: Path, force: bool = False) -> bool:
+    if not cypherl_path.exists():
+        return False
+    if marker_path.exists() and not force:
+        return True
+    if not _docker_ready():
+        return False
+    docker = _which("docker")
+    if not docker:
+        return False
+    try:
+        marker_path.parent.mkdir(parents=True, exist_ok=True)
+        with cypherl_path.open("rb") as f:
+            r = subprocess.run(
+                [docker, "exec", "-i", container, "mgconsole"],
+                stdin=f,
+                cwd=str(repo_root),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+            )
+        if r.returncode != 0:
+            try:
+                tail = (r.stdout or b"")[-2000:]
+                print(tail.decode("utf-8", errors="replace"), file=sys.stderr, flush=True)
+            except Exception:
+                pass
+            return False
+        marker_path.write_text(str(time.time()), encoding="utf-8")
+        return True
+    except Exception as e:
+        print(f"Failed to import memgraph data: {e}", file=sys.stderr, flush=True)
+        return False
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--host", default=os.environ.get("CPU_HOST", "127.0.0.1"))
@@ -71,6 +144,12 @@ def main() -> int:
     p.add_argument("--ngrok-api", default=os.environ.get("NGROK_API", "http://127.0.0.1:4040"))
     p.add_argument("--ngrok-region", default=os.environ.get("NGROK_REGION", ""))
     p.add_argument("--ngrok-domain", default=os.environ.get("NGROK_DOMAIN", ""))
+    p.add_argument("--no-graph", action="store_true", default=os.environ.get("CPU_NO_GRAPH", "").strip() == "1")
+    p.add_argument("--graph-compose", default=os.environ.get("GRAPH_COMPOSE", "memgraph-platform/docker-compose.yml"))
+    p.add_argument("--graph-cypherl", default=os.environ.get("GRAPH_CYPHERL", "graph/memgraph-export.cypherl"))
+    p.add_argument("--graph-container", default=os.environ.get("GRAPH_CONTAINER", "memgraph-mage"))
+    p.add_argument("--graph-marker", default=os.environ.get("GRAPH_MARKER", "memgraph-platform/.graph_imported"))
+    p.add_argument("--graph-force-import", action="store_true", default=os.environ.get("GRAPH_FORCE_IMPORT", "").strip() == "1")
     p.add_argument("--write-frontend-env", action="store_true", default=True)
     p.add_argument("--frontend-env-path", default=os.environ.get("FRONTEND_ENV_PATH", "medical-consultation-app/.env.local"))
     args = p.parse_args()
@@ -93,7 +172,26 @@ def main() -> int:
 
     try:
         repo_root = Path(__file__).resolve().parents[2]
+        graph_started = False
+        if not args.no_graph:
+            compose_path = (repo_root / args.graph_compose).resolve()
+            graph_started = _start_memgraph_stack(repo_root, compose_path)
         uvicorn_proc = subprocess.Popen(uvicorn_cmd, cwd=str(repo_root))
+        if graph_started:
+            cypherl_path = (repo_root / args.graph_cypherl).resolve()
+            marker_path = (repo_root / args.graph_marker).resolve()
+            if cypherl_path.exists() and (args.graph_force_import or not marker_path.exists()):
+                container = str(args.graph_container or "memgraph-mage")
+                force = bool(args.graph_force_import)
+
+                def _bg_import():
+                    ok = _import_memgraph_data(repo_root, container=container, cypherl_path=cypherl_path, marker_path=marker_path, force=force)
+                    if ok:
+                        print("Graph import: OK", flush=True)
+                    else:
+                        print("Graph import: FAILED", flush=True)
+
+                threading.Thread(target=_bg_import, daemon=True).start()
 
         public_url: str | None = None
         if not args.no_ngrok:

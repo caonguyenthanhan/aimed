@@ -7,9 +7,9 @@ cls
 echo ===============================
 echo CPU Server Launcher
 echo ===============================
-echo 1^) Chay CPU server + ngrok (port 8000)
-echo 2^) Chay CPU server (khong ngrok) (port 8000)
-echo 3^) Chay CPU server + ngrok + reload (port 8000)
+echo 1^) Chay CPU server + graph + ngrok (port 8000)
+echo 2^) Chay CPU server + graph (khong ngrok) (port 8000)
+echo 3^) Chay CPU server + graph + ngrok + reload (port 8000)
 echo 4^) Doi port
 echo 0^) Thoat
 echo.

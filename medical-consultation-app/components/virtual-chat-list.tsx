@@ -70,7 +70,7 @@ export function VirtualChatList({
   const offsetY = visibleRange.start * itemHeight
 
   return (
-    <ScrollArea ref={scrollRef} className="flex-1 overflow-y-auto" onScroll={handleScroll}>
+    <ScrollArea ref={scrollRef} className="flex-1 min-h-0" viewportClassName="overflow-y-auto" onScroll={handleScroll}>
       <div ref={containerRef} className="relative" style={{ height: totalHeight }}>
         <div
           className="space-y-2 px-4"

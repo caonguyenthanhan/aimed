@@ -51,6 +51,30 @@ export async function GET() {
           required: [],
         },
       },
+      {
+        name: "graph.status",
+        description: "Kiểm tra trạng thái kết nối Graph (Neo4j/Memgraph) ở CPU server.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+          required: [],
+        },
+      },
+      {
+        name: "graph.evidence",
+        description:
+          "Truy vấn evidence subgraph theo query (tìm entity theo tên và lấy edges lân cận kèm provenance).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: { type: "string" },
+            limit: { type: "number" },
+            entity_limit: { type: "number" },
+            rel_types: { type: "array", items: { type: "string" } },
+          },
+          required: ["query"],
+        },
+      },
     ],
     metadata: { protocol: "mcp-lite", ts: new Date().toISOString() },
   })

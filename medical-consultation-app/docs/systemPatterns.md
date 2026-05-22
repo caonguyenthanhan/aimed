@@ -13,3 +13,5 @@
 - Provider portability: local provider giữ chuẩn OpenAI-compatible `/v1/chat/completions` + output JSON schema để dễ thay GPU endpoint sang vLLM self-host (vllm-openai).
 - FOZA stability: giữ UI actions trong JSON-in-content `{response, actions}`; tool_calls chỉ dùng cho MCP tools (web/youtube) rồi luôn finalize bằng JSON để UI parse ổn định.
 - Timeout policy: `/api/agent-chat` có env budgets/timeouts chung cho Gemini/OpenAI-like/MCP để tránh request treo và giữ fallback mượt.
+- Graph Gateway (truth context): CPU server cung cấp `/v1/graph/evidence` để trả evidence subgraph dạng JSON; launcher tự bật Memgraph docker compose. Có thể khóa bằng `GRAPH_API_KEY` (header `x-api-key`/Bearer).
+- Graph evidence injection: `/api/agent-chat` tự gọi `graph.evidence` (qua `/api/mcp/call`) và inject evidence vào `persona` để grounding. API trả `metadata.llm_context` để UI hiển thị “context gửi cho LLM”.

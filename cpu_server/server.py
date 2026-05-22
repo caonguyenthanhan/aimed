@@ -65,6 +65,10 @@ except Exception:
         resolve_gpu_model,
     )
 try:
+    from neo4j import GraphDatabase
+except Exception:
+    GraphDatabase = None
+try:
     import jwt
 except Exception:
     jwt = None
@@ -490,6 +494,13 @@ class PhenotypingDailyRequest(BaseModel):
     steps: Optional[int] = 0
     sleep_minutes: Optional[int] = 0
 
+
+class GraphEvidenceRequest(BaseModel):
+    query: str
+    limit: Optional[int] = 60
+    entity_limit: Optional[int] = 5
+    rel_types: Optional[List[str]] = None
+
 # Load model once at startup
 llm_pro: Optional[Llama] = None
 llm_flash: Optional[Llama] = None
@@ -499,6 +510,29 @@ MOCK_CHAT_DB = {}
 MOCK_SOCIAL_DB = {}
 DATA_DIR = os.path.abspath(os.environ.get("CPU_DATA_DIR", "").strip() or os.path.join(REPO_ROOT, "data"))
 USER_FILE = os.path.join(DATA_DIR, "user.json")
+
+_GRAPH_DRIVER = None
+
+
+def _get_graph_driver():
+    global _GRAPH_DRIVER
+    if _GRAPH_DRIVER is not None:
+        return _GRAPH_DRIVER
+    if GraphDatabase is None:
+        _GRAPH_DRIVER = None
+        return _GRAPH_DRIVER
+    uri = (os.environ.get("GRAPH_BOLT_URL") or os.environ.get("NEO4J_URI") or "bolt://127.0.0.1:7687").strip()
+    user = (os.environ.get("GRAPH_USER") or os.environ.get("NEO4J_USER") or "").strip()
+    password = (os.environ.get("GRAPH_PASSWORD") or os.environ.get("NEO4J_PASSWORD") or "").strip()
+    try:
+        auth = (user, password) if (user and password) else None
+        _GRAPH_DRIVER = GraphDatabase.driver(uri, auth=auth)
+        with _GRAPH_DRIVER.session() as s:
+            s.run("RETURN 1").consume()
+        return _GRAPH_DRIVER
+    except Exception:
+        _GRAPH_DRIVER = None
+        return _GRAPH_DRIVER
 
 def _hash_password(password: str, salt: str) -> str:
     import hashlib
@@ -790,11 +824,11 @@ async def load_model():
     print(f"Checking FLASH model: {FLASH_MODEL_PATH}")
     print(f"FLASH exists: {os.path.exists(FLASH_MODEL_PATH)}")
     print(f"Llama available: {Llama is not None}")
-    print("ℹ️ CPU text models will be lazy-loaded on demand when GPU is unavailable or switched to CPU.")
+    print("INFO: CPU text models will be lazy-loaded on demand when GPU is unavailable or switched to CPU.")
     print(f"Checking VLM model path: {VLM_MODEL_PATH}")
     print(f"VLM model file exists: {os.path.exists(VLM_MODEL_PATH)}")
     print(f"VLM CLIP model file exists: {os.path.exists(VLM_CLIP_MODEL_PATH)}")
-    print("ℹ️ VLM model will be lazy-loaded on demand with GPU-first processing.")
+    print("INFO: VLM model will be lazy-loaded on demand with GPU-first processing.")
 
 def _append_runtime_event(event: dict):
     try:
@@ -2700,6 +2734,103 @@ async def knowledge_search(req: KnowledgeSearchRequest, request: Request):
         except Exception:
             interventions = []
     return {"entities": entities, "relations": relations, "interventions": interventions}
+
+
+@app.get("/v1/graph/status")
+async def graph_status():
+    driver = _get_graph_driver()
+    if driver is None:
+        return {"ok": False, "connected": False}
+    try:
+        with driver.session() as s:
+            c = s.run("MATCH (n) RETURN count(n) AS c").single()
+            nodes = int(c["c"]) if c and "c" in c else 0
+        return {"ok": True, "connected": True, "nodes": nodes}
+    except Exception:
+        return {"ok": False, "connected": False}
+
+
+@app.post("/v1/graph/evidence")
+async def graph_evidence(req: GraphEvidenceRequest, request: Request):
+    api_key = (os.environ.get("GRAPH_API_KEY") or "").strip()
+    if api_key:
+        hdr = (request.headers.get("x-api-key") or request.headers.get("authorization") or "").strip()
+        if hdr.lower().startswith("bearer "):
+            hdr = hdr[7:].strip()
+        if hdr != api_key:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+    q = (req.query or "").strip()
+    if not q:
+        return {"ok": True, "query": q, "entities": [], "edges": []}
+
+    driver = _get_graph_driver()
+    if driver is None:
+        raise HTTPException(status_code=503, detail="Graph not available")
+
+    lim = int(req.limit or 60)
+    if lim < 1:
+        lim = 1
+    if lim > 500:
+        lim = 500
+
+    ent_lim = int(req.entity_limit or 5)
+    if ent_lim < 1:
+        ent_lim = 1
+    if ent_lim > 20:
+        ent_lim = 20
+
+    rel_types = [str(x).strip() for x in (req.rel_types or []) if str(x).strip()]
+    rel_types_param = rel_types if rel_types else None
+
+    try:
+        with driver.session() as s:
+            entities = list(
+                s.run(
+                    """
+                    WITH toLower($q) AS q
+                    MATCH (e:Entity)
+                    WHERE toLower(e.name) CONTAINS q
+                    RETURN e.__mg_id__ AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
+                    LIMIT $ent_lim
+                    """,
+                    q=q,
+                    ent_lim=ent_lim,
+                )
+            )
+            ent_rows = [r.data() for r in entities]
+            ent_ids = [r.get("id") for r in ent_rows if r.get("id") is not None]
+            edges = []
+            if ent_ids:
+                edges = [
+                    r.data()
+                    for r in s.run(
+                        """
+                        UNWIND $ids AS mg_id
+                        MATCH (e:Entity {__mg_id__: mg_id})
+                        MATCH (e)-[r]-(n)
+                        WHERE $rel_types IS NULL OR type(r) IN $rel_types
+                        RETURN
+                          e.__mg_id__ AS entity_id,
+                          e.name AS entity_name,
+                          CASE WHEN startNode(r) = e THEN 'OUT' ELSE 'IN' END AS dir,
+                          type(r) AS rel,
+                          n.__mg_id__ AS other_id,
+                          n.name AS other_name,
+                          labels(n) AS other_labels,
+                          r.id_doc AS id_doc,
+                          r.id_chunk AS id_chunk,
+                          r.collection AS collection
+                        LIMIT $lim
+                        """,
+                        ids=ent_ids,
+                        rel_types=rel_types_param,
+                        lim=lim,
+                    )
+                ]
+        return {"ok": True, "query": q, "entities": ent_rows, "edges": edges}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e) or "Graph query error")
 
 
 @app.get("/v1/clinical/summary/{conv_id}")

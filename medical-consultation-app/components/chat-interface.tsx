@@ -41,9 +41,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const { toast } = useToast()
   const { getSuggestedQuestions } = useLanguage()
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
-  const [headerPad, setHeaderPad] = useState<string>('6rem')
   const [agentMode, setAgentMode] = useState(false)
   const [agentProfileId, setAgentProfileId] = useState<AgentProfileId>("default")
+  const [llmContextOpen, setLlmContextOpen] = useState(false)
+  const [llmContext, setLlmContext] = useState<any>(null)
   const [specialMessages, setSpecialMessages] = useState<SpecialMessageData[]>([])
   const handleCloseSpecialMessage = (id: string) => {
     setSpecialMessages((prev) => prev.filter((m) => m.id !== id))
@@ -57,27 +58,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const liveStreamRef = useRef<MediaStream | null>(null)
   const liveProcessorRef = useRef<ScriptProcessorNode | null>(null)
   const liveSourceRef = useRef<MediaStreamAudioSourceNode | null>(null)
-  useEffect(() => {
-    const updatePad = () => {
-      try {
-        const el = typeof window !== 'undefined' ? document.querySelector('[data-site-header]') as HTMLElement | null : null
-        const bottom = el ? el.getBoundingClientRect().bottom : 64
-        const extra = 16
-        setHeaderPad(`${Math.round(bottom + extra)}px`)
-      } catch {}
-    }
-    updatePad()
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', updatePad)
-      window.addEventListener('scroll', updatePad, { passive: true } as any)
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('resize', updatePad)
-        window.removeEventListener('scroll', updatePad)
-      }
-    }
-  }, [])
 
   useEffect(() => {
     try {
@@ -543,7 +523,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   useEffect(() => {
-    scrollToBottom()
+    if (messages.length <= 100) {
+      scrollToBottom()
+    }
     messagesRef.current = messages
   }, [messages])
 
@@ -747,6 +729,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
       const md = (data as any)?.metadata
       requireAuthIfNeeded(md)
+      if (agentMode) {
+        const ctx = (md as any)?.llm_context || (md as any)?.debug_context
+        if (ctx) setLlmContext(ctx)
+      }
       if (md && (md as any)?.sos) {
         try {
           const hs = Array.isArray((md as any)?.hotlines) ? (md as any).hotlines : []
@@ -1423,11 +1409,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     // Logged in: try to load from database first, fall back to localStorage
     setIsLoadingConversations(true)
     try {
+      const effectiveUserId = userId || authToken
+      if (!effectiveUserId) throw new Error('missing_user_id')
+
       // Try to load from our Neon API endpoints
       const resp = await fetch('/api/conversations/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({ userId: authToken }) // Use token as user identifier for now
+        body: JSON.stringify({ userId: effectiveUserId })
       })
       
       if (resp.ok) {
@@ -1478,10 +1467,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
     // Logged in: try to load from database
     try {
+      const effectiveUserId = userId || authToken
       const resp = await fetch('/api/conversations/load', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-        body: JSON.stringify({ conversationId: id, userId: authToken })
+        body: JSON.stringify({ conversationId: id, userId: effectiveUserId })
       })
       
       if (resp.ok) {
@@ -1718,13 +1708,16 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       }
       
       if (authToken) {
+        const effectiveUserId = userId || authToken
+        if (!effectiveUserId) return
+
         // Logged in: save to database
         fetch('/api/conversations/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
           body: JSON.stringify({
             conversationId,
-            userId: authToken,
+            userId: effectiveUserId,
             messages: serial,
             title: title || `Chat ${new Date().toLocaleDateString('vi-VN')}`
           })
@@ -1760,7 +1753,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [messages, conversationId])
   return (
-    <div className="flex h-screen overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning style={{ paddingTop: headerPad, boxSizing: 'border-box' }}>
+    <div className="flex h-[calc(100dvh-4rem-6rem)] sm:h-[calc(100dvh-4.5rem-5rem)] md:h-[calc(100dvh-5rem)] overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning>
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
@@ -1987,7 +1980,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
       {/* Messages Container */}
       <div 
-        className="flex-1 overflow-hidden px-4 sm:px-6 min-h-0 custom-scrollbar"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 min-h-0 custom-scrollbar"
         style={{ 
           scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
@@ -2209,12 +2202,30 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         onToggleAgentMode={toggleAgentMode}
         agentProfileId={agentProfileId}
         onAgentProfileIdChange={setAgentProfileId}
+        hasContext={!!llmContext}
+        onShowContext={() => setLlmContextOpen(true)}
         isLiveMode={liveMode}
         onToggleLiveMode={toggleLiveMode}
         isTextLiveMode={textLiveMode}
         onToggleTextLiveMode={toggleTextLiveMode}
         onManageKey={() => setAuthOpen(true)}
       />
+      <Dialog open={llmContextOpen} onOpenChange={setLlmContextOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Context gửi cho LLM</DialogTitle>
+            <DialogDescription>Dùng để demo: evidence + prompt input</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[70vh] overflow-auto rounded-md border border-border bg-muted/20 p-3 text-xs">
+            <pre className="whitespace-pre-wrap break-words">{JSON.stringify(llmContext || {}, null, 2)}</pre>
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setLlmContextOpen(false)}>
+              Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       </div>
     </div>
   )

@@ -63,6 +63,8 @@ Các biến này áp dụng cho Gemini + OpenAI-like + MCP trong `/api/agent-cha
 
 - `AGENT_FORCE_ACTIONS`: `1` bật heuristic forced-actions (dùng khi LLM hay ra text thuần).
 - `AGENT_HYDRATE_YOUTUBE`: `0` để tắt hydrate `recommend_music` từ YouTube service.
+- `AGENT_GRAPH_EVIDENCE`: `0` để tắt tự động gọi graph evidence và nhét vào prompt (mặc định bật).
+- `GRAPH_API_KEY`: (tuỳ chọn) API key gửi kèm khi gọi `/v1/graph/*` trên CPU server (header `x-api-key`).
 
 ## 8) Ngrok
 
@@ -94,4 +96,3 @@ Các biến này áp dụng cho Gemini + OpenAI-like + MCP trong `/api/agent-cha
 - `AGENT_PROVIDER=foza`
 - `FOZA_TOKEN=...`
 - `LLM_MODEL_NAME=cinb/gemini-3.1-flash-lite`
-

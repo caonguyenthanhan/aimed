@@ -3,6 +3,9 @@ import { Client } from 'pg'
 import { getConversationTitle, getConversationMessages } from '@/lib/db-queries'
 
 async function getDbClient() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is not set')
+  }
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
   })
@@ -10,11 +13,9 @@ async function getDbClient() {
   return client
 }
 
-export async function POST(request: NextRequest) {
+async function loadConversation(conversationId: string, limit: number, offset: number) {
   let client
   try {
-    const { conversationId, limit = 1000, offset = 0 } = await request.json()
-
     if (!conversationId) {
       return NextResponse.json(
         { error: 'conversationId is required' },
@@ -55,6 +56,9 @@ export async function POST(request: NextRequest) {
       messages: mappedMessages,
     })
   } catch (error) {
+    if (String((error as any)?.message || '') === 'DATABASE_URL is not set') {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
+    }
     console.error('[v0] Error loading conversation:', error)
     return NextResponse.json(
       { error: 'Failed to load conversation' },
@@ -63,4 +67,25 @@ export async function POST(request: NextRequest) {
   } finally {
     if (client) await client.end()
   }
+}
+
+export async function POST(request: NextRequest) {
+  const body = await request.json().catch(() => null)
+  const conversationId =
+    typeof body?.conversationId === 'string' ? body.conversationId : ''
+  const limit = typeof body?.limit === 'number' ? body.limit : 1000
+  const offset = typeof body?.offset === 'number' ? body.offset : 0
+  return loadConversation(conversationId, limit, offset)
+}
+
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url)
+  const conversationId = url.searchParams.get('conversationId') || ''
+  const limit = Number(url.searchParams.get('limit') || '1000')
+  const offset = Number(url.searchParams.get('offset') || '0')
+  return loadConversation(
+    conversationId,
+    Number.isFinite(limit) ? limit : 1000,
+    Number.isFinite(offset) ? offset : 0
+  )
 }
