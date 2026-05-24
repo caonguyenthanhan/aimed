@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useMemo, useState } from "react"
-import { Activity, Bell, BookOpenText, Home, Menu, MessageSquare, Mic, Newspaper, Search, Smile } from "lucide-react"
+import { Activity, Bell, BookOpenText, BrainCircuit, Home, Menu, MessageSquare, Mic, Newspaper, Search, Smile } from "lucide-react"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
 
 type Item = { href: string; label: string; Icon: any }
@@ -24,6 +24,7 @@ export function MobileBottomNav() {
   const more = useMemo<Item[]>(
     () => [
       { href: "/", label: "Trang chủ", Icon: Home },
+      { href: "/agent-hub", label: "Agent", Icon: BrainCircuit },
       { href: "/tra-cuu", label: "Tra cứu", Icon: Search },
       { href: "/sang-loc", label: "Sàng lọc", Icon: Activity },
       { href: "/tin-tuc-y-khoa", label: "Tin tức", Icon: Newspaper },

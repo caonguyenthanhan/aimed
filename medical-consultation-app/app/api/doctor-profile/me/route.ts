@@ -1,37 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getNeonPool } from "@/lib/neon-db"
+import { getPgPool, resolveDatabaseConfig } from "@/lib/pg"
 import { defaultPublicProfile, normalizePrivateProfile, normalizePublicProfile } from "@/lib/doctor-profile"
+import { getAuthedUser } from "@/lib/auth-server"
 
 function isDbEnabled() {
-  return !!String(process.env.DATABASE_URL || "").trim()
-}
-
-function backendBaseUrl() {
-  return (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "")
-}
-
-async function getAuthedUser(req: NextRequest): Promise<{ user_id: string; role: string; username?: string } | null> {
-  const auth = (req.headers.get("authorization") || "").trim()
-  if (!auth) return null
-  try {
-    const resp = await fetch(`${backendBaseUrl()}/v1/user`, { headers: { Authorization: auth } })
-    if (!resp.ok) return null
-    const j: any = await resp.json()
-    const user_id = String(j?.user_id || "").trim()
-    const role = String(j?.role || "").trim()
-    const username = String(j?.username || "").trim() || undefined
-    if (!user_id || !role) return null
-    return { user_id, role, username }
-  } catch {
-    return null
-  }
+  return !!String(resolveDatabaseConfig().url || "").trim()
 }
 
 let ensured = false
 
 async function ensureSchema() {
   if (ensured) return
-  const pool = getNeonPool()
+  const pool = getPgPool()
   await pool.query(`
     CREATE TABLE IF NOT EXISTS doctor_profiles (
       doctor_id TEXT PRIMARY KEY,
@@ -50,7 +30,7 @@ export async function GET(req: NextRequest) {
     if (String(u.role || "").toLowerCase() !== "doctor") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     if (!isDbEnabled()) return NextResponse.json({ error: "Database not configured" }, { status: 503 })
     await ensureSchema()
-    const pool = getNeonPool()
+    const pool = getPgPool()
     const r = await pool.query(
       `SELECT doctor_id, public_json, private_json, updated_at FROM doctor_profiles WHERE doctor_id = $1 LIMIT 1`,
       [u.user_id],
@@ -88,7 +68,7 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Missing displayName" }, { status: 400 })
     }
     await ensureSchema()
-    const pool = getNeonPool()
+    const pool = getPgPool()
     const r = await pool.query(
       `
       INSERT INTO doctor_profiles (doctor_id, public_json, private_json, updated_at)

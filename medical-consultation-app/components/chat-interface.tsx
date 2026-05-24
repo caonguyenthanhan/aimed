@@ -35,6 +35,36 @@ interface Message {
   timestamp: Date
 }
 
+type AgentStatus = {
+  provider?: string
+  mode?: string
+  agent_profile?: string
+  agent_profile_source?: string
+  tool_calls_count?: number
+  mcp_tool_calls_count?: number
+  mcp_tool_names?: string[]
+  graph_tool_called?: boolean
+  graph_injected?: boolean
+}
+
+type GraphStatusUI = {
+  ok?: boolean
+  connected?: boolean
+  nodes?: number
+  latency_ms?: number
+  checked_at?: string
+  error?: any
+}
+
+type DbStatusUI = {
+  ok?: boolean
+  dbEnabled?: boolean
+  latencyMs?: number
+  source?: string
+  attempts?: number
+  error?: any
+}
+
 export function ChatInterface({ initialConversationId }: { initialConversationId?: string }) {
   const router = useRouter()
   const { toast } = useToast()
@@ -43,6 +73,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [agentMode, setAgentMode] = useState(false)
   const [llmContextOpen, setLlmContextOpen] = useState(false)
   const [llmContext, setLlmContext] = useState<any>(null)
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null)
+  const [graphStatus, setGraphStatus] = useState<GraphStatusUI | null>(null)
+  const [dbStatus, setDbStatus] = useState<DbStatusUI | null>(null)
+  const agentIntroShownForConvRef = useRef<string | null>(null)
   const [specialMessages, setSpecialMessages] = useState<SpecialMessageData[]>([])
   const handleCloseSpecialMessage = (id: string) => {
     setSpecialMessages((prev) => prev.filter((m) => m.id !== id))
@@ -83,6 +117,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       try {
         localStorage.setItem("mcs_agent_mode_v1", next ? "1" : "0")
       } catch {}
+      agentIntroShownForConvRef.current = null
+      if (!next) {
+        setAgentStatus(null)
+        setGraphStatus(null)
+      }
       return next
     })
   }
@@ -114,6 +153,77 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   const secretKeyOf = (uid?: string | null) => `mcs_gemini_secret_v1:${String(uid || "anon")}`
+
+  const labelAgentProfile = (id?: string | null) => {
+    const v = String(id || "").trim().toLowerCase()
+    if (v === "triage") return "Triage"
+    if (v === "medication") return "Thuốc"
+    if (v === "care_plan") return "Kế hoạch"
+    if (v === "therapy") return "Trị liệu"
+    if (v === "doctor_referral") return "Bác sĩ"
+    if (v === "default") return "Tổng quát"
+    return v ? v : "Auto"
+  }
+
+  const buildAgentIntroText = (meta?: any, ctx?: any) => {
+    const provider = String(meta?.provider || meta?.agent_provider || "").trim()
+    const mode = String(meta?.mode || "").trim()
+    const profile = labelAgentProfile(meta?.agent_profile)
+    const graphInjected = !!(ctx?.graph_injected ?? meta?.graph_injected)
+    const graphToolCalled = !!(ctx?.graph_tool_called ?? meta?.graph_tool_called)
+    const toolNames = Array.isArray(meta?.mcp_tool_names) ? meta.mcp_tool_names : []
+    const toolsPreview = toolNames.length ? `tools: ${toolNames.slice(0, 3).join(", ")}${toolNames.length > 3 ? "…" : ""}` : ""
+    const graphPreview = graphInjected ? "graph: bật" : graphToolCalled ? "graph: gọi lỗi" : "graph: tắt"
+    const runtimePreview = [provider && `provider: ${provider}`, mode && `mode: ${mode}`, profile && `profile: ${profile}`, graphPreview, toolsPreview].filter(Boolean).join(" · ")
+    return [
+      "Mình là trợ lý y tế AI. Mình sẽ hỏi thêm thông tin cần thiết, nhắc dấu hiệu nguy hiểm và gợi ý bước tiếp theo (tra cứu, sàng lọc, bác sĩ, kế hoạch…).",
+      runtimePreview ? `Trạng thái: ${runtimePreview}` : "",
+      "Bạn cho mình biết: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?",
+    ].filter(Boolean).join("\n")
+  }
+
+  const fetchGraphStatus = async () => {
+    try {
+      const resp = await fetch("/api/mcp/call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "graph.status", args: {} }),
+      })
+      const data = await resp.json().catch(() => null)
+      const r = data?.result || null
+      if (!r) {
+        setGraphStatus({ ok: false, connected: false, error: data || null })
+        return
+      }
+      setGraphStatus({
+        ok: !!r.ok,
+        connected: !!r.connected,
+        nodes: typeof r.nodes === "number" ? r.nodes : undefined,
+        latency_ms: typeof r.latency_ms === "number" ? r.latency_ms : undefined,
+        checked_at: typeof r.checked_at === "string" ? r.checked_at : undefined,
+        error: r.error,
+      })
+    } catch (e: any) {
+      setGraphStatus({ ok: false, connected: false, error: String(e?.message || e || "") })
+    }
+  }
+
+  useEffect(() => {
+    if (!agentMode) return
+    let stopped = false
+    const tick = async () => {
+      if (stopped) return
+      await fetchGraphStatus()
+    }
+    void tick()
+    const id = setInterval(() => {
+      void tick()
+    }, 20000)
+    return () => {
+      stopped = true
+      clearInterval(id)
+    }
+  }, [agentMode])
 
   useEffect(() => {
     try {
@@ -352,6 +462,53 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [userId, setUserId] = useState<string | null>(null)
   const [authToken, setAuthToken] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (!authToken) {
+      setDbStatus(null)
+      return
+    }
+    let stopped = false
+    const tick = async () => {
+      if (stopped) return
+      try {
+        const resp = await fetch("/api/db/ping", { method: "GET" })
+        const data = await resp.json().catch(() => null)
+        setDbStatus({
+          ok: !!data?.ok,
+          dbEnabled: !!data?.dbEnabled,
+          latencyMs: typeof data?.latencyMs === "number" ? data.latencyMs : undefined,
+          source: typeof data?.source === "string" ? data.source : undefined,
+          attempts: typeof data?.attempts === "number" ? data.attempts : undefined,
+          error: data?.error,
+        })
+      } catch (e: any) {
+        setDbStatus({ ok: false, dbEnabled: true, error: String(e?.message || e || "") })
+      }
+    }
+    void tick()
+    const id = setInterval(() => {
+      void tick()
+    }, 30000)
+    return () => {
+      stopped = true
+      clearInterval(id)
+    }
+  }, [authToken])
+
+  useEffect(() => {
+    try {
+      if (typeof window === "undefined") return
+      const prompt = String(localStorage.getItem("mcs_demo_prompt_v1") || "").trim()
+      if (!prompt) return
+      localStorage.removeItem("mcs_demo_prompt_v1")
+      setInput((prev) => (String(prev || "").trim() ? prev : prompt))
+    } catch {}
+  }, [])
+
+  useEffect(() => {
+    agentIntroShownForConvRef.current = null
+  }, [conversationId])
+
   // Handle body scroll prevention and scrollbar shift when dialogs open
   useEffect(() => {
     const htmlEl = document.documentElement
@@ -383,9 +540,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null)
+  const composerWrapperRef = useRef<HTMLDivElement | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const sendingRef = useRef<boolean>(false)
   const messagesRef = useRef<Message[]>([])
+  const messagesCountRef = useRef<number>(0)
+  const isAtBottomRef = useRef<boolean>(true)
+  const composerHeightRef = useRef<number>(0)
   const userBufferRef = useRef<string[]>([])
   const userBufferTimerRef = useRef<any>(null)
   const inFlightRef = useRef<boolean>(false)
@@ -503,16 +665,46 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [messages])
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    const el = messagesContainerRef.current
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior })
+      return
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior })
   }
 
   useEffect(() => {
-    if (messages.length <= 100) {
+    messagesCountRef.current = messages.length
+    if (messages.length <= 250) {
       scrollToBottom()
     }
     messagesRef.current = messages
   }, [messages])
+
+  const refreshIsAtBottom = () => {
+    const el = messagesContainerRef.current
+    if (!el) return
+    const gap = el.scrollHeight - (el.scrollTop + el.clientHeight)
+    isAtBottomRef.current = gap < 48
+  }
+
+  useEffect(() => {
+    const el = composerWrapperRef.current
+    if (!el || typeof ResizeObserver === "undefined") return
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      const nextH = Math.round(entry?.contentRect?.height || 0)
+      const prevH = composerHeightRef.current
+      if (!nextH || nextH === prevH) return
+      composerHeightRef.current = nextH
+      if (messagesCountRef.current <= 250 && isAtBottomRef.current) {
+        requestAnimationFrame(() => scrollToBottom("auto"))
+      }
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   // Multi-device sync: poll for changes (after all state declarations)
   useMultiDeviceSync(userId || '', (syncEvent) => {
@@ -737,6 +929,17 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       if (agentMode) {
         const ctx = (md as any)?.llm_context || (md as any)?.debug_context
         if (ctx) setLlmContext(ctx)
+        setAgentStatus({
+          provider: String((md as any)?.provider || "").trim() || undefined,
+          mode: String((md as any)?.mode || "").trim() || undefined,
+          agent_profile: String((md as any)?.agent_profile || "").trim() || undefined,
+          agent_profile_source: String((md as any)?.agent_profile_source || "").trim() || undefined,
+          tool_calls_count: typeof (md as any)?.tool_calls_count === "number" ? (md as any).tool_calls_count : undefined,
+          mcp_tool_calls_count: typeof (md as any)?.mcp_tool_calls_count === "number" ? (md as any).mcp_tool_calls_count : undefined,
+          mcp_tool_names: Array.isArray((md as any)?.mcp_tool_names) ? (md as any).mcp_tool_names : undefined,
+          graph_tool_called: typeof (ctx as any)?.graph_tool_called === "boolean" ? (ctx as any).graph_tool_called : undefined,
+          graph_injected: typeof (ctx as any)?.graph_injected === "boolean" ? (ctx as any).graph_injected : undefined,
+        })
       }
       if (md && (md as any)?.sos) {
         try {
@@ -764,10 +967,24 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const deliverList = parsedTexts.length > 0
         ? parsedTexts.map((content, i) => ({ content, delay_ms: i === 0 ? 0 : 450 }))
         : [{ content: aiResponse || "Không nhận được phản hồi từ máy trả lời", delay_ms: 0 }]
+
+      let liveTextToDeliver = aiResponse || deliverList.map((x) => x.content).join("\n\n")
+      const convForIntro = String(ensuredId || conversationId || "").trim()
+      const shouldShowAgentIntro = agentMode && (agentIntroShownForConvRef.current !== (convForIntro || "__unknown__"))
+      if (shouldShowAgentIntro) {
+        const introText = buildAgentIntroText(md, (md as any)?.llm_context || (md as any)?.debug_context)
+        if (delivery_mode === "live") {
+          liveTextToDeliver = [introText, liveTextToDeliver].filter(Boolean).join("\n\n")
+          deliverList.splice(0, deliverList.length, { content: liveTextToDeliver, delay_ms: 0 })
+        } else {
+          deliverList.unshift({ content: introText, delay_ms: 0 })
+        }
+        agentIntroShownForConvRef.current = convForIntro || "__unknown__"
+      }
       
       let deliveredIds: string[] = []
       if (delivery_mode === "live") {
-        const lastId = await deliverLiveText(aiResponse || deliverList.map((x) => x.content).join("\n\n"))
+        const lastId = await deliverLiveText(liveTextToDeliver)
         if (lastId) deliveredIds = [lastId]
       } else {
         deliveredIds = enqueueAssistantDelivery(deliverList) || []
@@ -1743,7 +1960,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [messages, conversationId])
   return (
-    <div className="flex h-[calc(100dvh-4rem-6rem)] sm:h-[calc(100dvh-4.5rem-5rem)] md:h-[calc(100dvh-5rem)] overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning>
+    <div className="flex flex-1 min-h-0 overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning>
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
@@ -1804,7 +2021,16 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <div className="w-56 bg-card/95 backdrop-blur-sm p-0 flex-shrink-0 h-full flex flex-col border-r border-border">
           {/* Compact Header */}
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
-            <span className="text-xs font-semibold text-foreground">Lịch sử</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs font-semibold text-foreground">Lịch sử</span>
+              {authToken ? (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  dbStatus?.ok ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" : dbStatus ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-secondary text-muted-foreground"
+                }`}>
+                  db: {dbStatus?.ok ? `ok${typeof dbStatus.latencyMs === "number" ? ` (${dbStatus.latencyMs}ms)` : ""}` : dbStatus ? "down" : "…"}
+                </span>
+              ) : null}
+            </div>
             <div className="flex items-center gap-0.5">
               <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Tìm kiếm">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1941,7 +2167,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </DrawerContent>
         </Drawer>
       )}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
         {!showSidebar && !isMobile && (
           <div className="absolute top-20 left-3 z-20">
             <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">
@@ -1968,16 +2194,42 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         </div>
       )}
 
+      {agentMode && (
+        <div className="mx-3 sm:mx-4 mb-2">
+          <div className="rounded-xl border border-border bg-card/70 backdrop-blur-sm px-3 py-2">
+            <div className="text-xs font-semibold text-foreground">Trợ lý AI (Agent)</div>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
+                profile: {labelAgentProfile(agentStatus?.agent_profile)}
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
+                mode: {String(agentStatus?.mode || "auto")}
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
+                provider: {String(agentStatus?.provider || "auto")}
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
+                graph: {graphStatus?.connected ? `ok${typeof graphStatus.latency_ms === "number" ? ` (${graphStatus.latency_ms}ms)` : ""}` : graphStatus ? "down" : agentStatus?.graph_injected ? "bật" : agentStatus?.graph_tool_called ? "lỗi/tắt" : "tắt"}
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
+                tools: {String(agentStatus?.mcp_tool_calls_count ?? 0)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Messages Container */}
       <div 
+        ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-4 sm:px-6 min-h-0 custom-scrollbar"
         style={{ 
-          scrollBehavior: 'smooth',
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain'
         }}
+        onScroll={refreshIsAtBottom}
       >
-        {messages.length > 100 ? (
+        {messages.length > 250 ? (
           // Use virtual scroll for large message lists
           <VirtualChatList
             messages={messages}
@@ -2042,7 +2294,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               </div>
             )
             }}
-            itemHeight={100}
+            itemHeight={140}
             overscan={5}
           />
         ) : (
@@ -2159,45 +2411,47 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <div ref={messagesEndRef} />
       </div>
 
-      <UnifiedComposer
-        value={input}
-        onValueChange={setInput}
-        onSubmit={handleSubmit}
-        isLoading={isLoading}
-        suggestedQuestions={aiSuggestions.length > 0 ? aiSuggestions : suggestedQuestions}
-        onSuggestedQuestion={handleSuggestedQuestion}
-        showTools={showTools}
-        onToggleTools={() => setShowTools(!showTools)}
-        fileInputRef={fileInputRef}
-        docInputRef={docInputRef}
-        onImageChange={handleImageChange}
-        onDocChange={handleDocChange}
-        selectedImage={
-          selectedImageBase64
-            ? { base64: selectedImageBase64, name: selectedImageName, mime: selectedImageMime }
-            : null
-        }
-        onRemoveImage={handleRemoveImage}
-        selectedDocName={selectedDocName}
-        onRemoveDoc={handleRemoveDoc}
-        selectedModel={selectedModel}
-        onSelectedModelChange={setSelectedModel}
-        onStartNewConversation={startNewConversation}
-        isRecording={isRecording}
-        onToggleRecording={() => (isRecording ? stopRecording() : startRecording())}
-        onGotoSpeechChat={() => router.push("/speech-chat")}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        agentMode={agentMode}
-        onToggleAgentMode={toggleAgentMode}
-        hasContext={!!llmContext}
-        onShowContext={() => setLlmContextOpen(true)}
-        isLiveMode={liveMode}
-        onToggleLiveMode={toggleLiveMode}
-        isTextLiveMode={textLiveMode}
-        onToggleTextLiveMode={toggleTextLiveMode}
-        onManageKey={() => setAuthOpen(true)}
-      />
+      <div ref={composerWrapperRef} className="shrink-0">
+        <UnifiedComposer
+          value={input}
+          onValueChange={setInput}
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+          suggestedQuestions={aiSuggestions.length > 0 ? aiSuggestions : suggestedQuestions}
+          onSuggestedQuestion={handleSuggestedQuestion}
+          showTools={showTools}
+          onToggleTools={() => setShowTools(!showTools)}
+          fileInputRef={fileInputRef}
+          docInputRef={docInputRef}
+          onImageChange={handleImageChange}
+          onDocChange={handleDocChange}
+          selectedImage={
+            selectedImageBase64
+              ? { base64: selectedImageBase64, name: selectedImageName, mime: selectedImageMime }
+              : null
+          }
+          onRemoveImage={handleRemoveImage}
+          selectedDocName={selectedDocName}
+          onRemoveDoc={handleRemoveDoc}
+          selectedModel={selectedModel}
+          onSelectedModelChange={setSelectedModel}
+          onStartNewConversation={startNewConversation}
+          isRecording={isRecording}
+          onToggleRecording={() => (isRecording ? stopRecording() : startRecording())}
+          onGotoSpeechChat={() => router.push("/speech-chat")}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          agentMode={agentMode}
+          onToggleAgentMode={toggleAgentMode}
+          hasContext={!!llmContext}
+          onShowContext={() => setLlmContextOpen(true)}
+          isLiveMode={liveMode}
+          onToggleLiveMode={toggleLiveMode}
+          isTextLiveMode={textLiveMode}
+          onToggleTextLiveMode={toggleTextLiveMode}
+          onManageKey={() => setAuthOpen(true)}
+        />
+      </div>
       <Dialog open={llmContextOpen} onOpenChange={setLlmContextOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

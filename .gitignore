@@ -94,3 +94,5 @@ PLAN_LOCAL.md
 
 # misc local artifacts
 Neo4j-*.txt
+/_models/
+aimed-log-export-*.json

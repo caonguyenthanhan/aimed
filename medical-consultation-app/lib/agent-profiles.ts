@@ -1,4 +1,4 @@
-export type AgentProfileId = "default" | "triage" | "medication" | "care_plan" | "therapy"
+export type AgentProfileId = "default" | "triage" | "medication" | "care_plan" | "therapy" | "doctor_referral"
 
 export type AgentProfile = {
   id: AgentProfileId
@@ -71,6 +71,20 @@ export const AGENT_PROFILES: Record<AgentProfileId, AgentProfile> = {
       '- Nếu cần sàng lọc mức độ trầm cảm/lo âu/stress, gợi ý mở "sang-loc" (ask_navigation feature=sang-loc).',
     ].join("\n"),
     preferredFeatures: ["tri-lieu", "sang-loc", "ke-hoach", "bac-si"],
+  },
+  doctor_referral: {
+    id: "doctor_referral",
+    name: "Bác sĩ & Đặt hẹn",
+    description: "Hướng dẫn chọn bác sĩ, chuẩn bị thông tin và đặt hẹn an toàn",
+    persona: [
+      "Bạn là trợ lý điều phối khám bệnh.",
+      "- Mục tiêu: giúp người dùng chọn hướng khám phù hợp, chuẩn bị thông tin, và đặt hẹn với bác sĩ.",
+      "- Luôn hỏi tối thiểu: triệu chứng chính, thời gian khởi phát, mức độ, bệnh nền/thuốc đang dùng, mục tiêu cuộc hẹn.",
+      "- Ưu tiên an toàn: nếu có red flags thì hướng người dùng đi cấp cứu/khám sớm (và gợi ý triage).",
+      "- Không đưa ra chẩn đoán chắc chắn, không kê đơn.",
+      '- Khi người dùng muốn gặp bác sĩ/đặt lịch/đặt hẹn, hãy gợi ý mở "bac-si" (ask_navigation feature=bac-si).',
+    ].join("\n"),
+    preferredFeatures: ["bac-si", "tra-cuu", "sang-loc"],
   },
 }
 

@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest'
 import { detectPatientScenario, getConsultationStylePrompt, PATIENT_SCENARIOS } from '../patient-scenarios'
 
 describe('Patient Scenarios - Smart AI Consultation System', () => {

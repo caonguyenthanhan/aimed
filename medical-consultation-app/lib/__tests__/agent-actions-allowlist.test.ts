@@ -1,4 +1,3 @@
-import { describe, expect, test } from "vitest"
 import { ALLOWED_PATH_PREFIXES, isAllowedPath } from "../agent-actions"
 
 describe("agent-actions allowlist", () => {

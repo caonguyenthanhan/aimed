@@ -159,9 +159,22 @@ export async function POST(req: Request) {
       (typeof body?.provider === "string" && String(body.provider).trim() ? String(body.provider).trim() : "") ||
       String(process.env.AGENT_PROVIDER || "").trim()
     const agentProvider = String(configuredAgentProvider || "").trim().toLowerCase()
+    const detectIntentFlags = (text: string) => {
+      const lower = String(text || "").toLowerCase()
+      const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      const triage = !!(lower.match(/(đau ngực|khó thở|yếu liệt|nói khó|ngất|chảy máu|co giật|lú lẫn|đau bụng dữ dội|cấp cứu)/) || ascii.match(/(dau nguc|kho tho|yeu liet|noi kho|ngat|chay mau|co giat|lu lan|dau bung du doi|cap cuu)/))
+      const medication = !!(lower.match(/(thuốc|uống|liều|tương tác|tác dụng phụ|chống chỉ định|ibuprofen|paracetamol|kháng sinh|statin)/) || ascii.match(/(thuoc|uong|lieu|tuong tac|tac dung phu|chong chi dinh|ibuprofen|paracetamol|khang sinh|statin)/))
+      const plan = !!(lower.match(/(kế hoạch|lộ trình|theo dõi|mục tiêu|nhật ký|routine|giảm cân|tăng cân|tập luyện)/) || ascii.match(/(ke hoach|lo trinh|theo doi|muc tieu|nhat ky|routine|giam can|tang can|tap luyen)/))
+      const therapy = !!(lower.match(/(lo âu|hoảng loạn|trầm cảm|mất ngủ|căng thẳng|stress|tự hại|tự sát|trị liệu|bài thở|thiền|cbt)/) || ascii.match(/(lo au|hoang loan|tram cam|mat ngu|cang thang|stress|tu hai|tu sat|tri lieu|bai tho|thien|cbt)/))
+      const doctor = !!(lower.match(/(bác sĩ|đặt hẹn|đặt lịch|khám|tư vấn trực tiếp|hẹn khám)/) || ascii.match(/(bac si|dat hen|dat lich|kham|tu van truc tiep|hen kham)/))
+      const wantsGraph = lower.includes("graph") || ascii.includes("graph") || lower.includes("evidence")
+      return { triage, medication, plan, therapy, doctor, wantsGraph, source: "rules_v1" as const }
+    }
+
     const inferAgentProfileId = (text: string) => {
       const lower = String(text || "").toLowerCase()
       const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      if (lower.match(/(bác sĩ|đặt hẹn|đặt lịch|khám|tư vấn trực tiếp|hẹn khám)/) || ascii.match(/(bac si|dat hen|dat lich|kham|tu van truc tiep|hen kham)/)) return "doctor_referral"
       if (lower.match(/(đau ngực|khó thở|yếu liệt|nói khó|ngất|chảy máu|co giật|lú lẫn|đau bụng dữ dội|cấp cứu)/) || ascii.match(/(dau nguc|kho tho|yeu liet|noi kho|ngat|chay mau|co giat|lu lan|dau bung du doi|cap cuu)/)) return "triage"
       if (lower.match(/(thuốc|uống|liều|tương tác|tác dụng phụ|chống chỉ định|ibuprofen|paracetamol|kháng sinh|statin)/) || ascii.match(/(thuoc|uong|lieu|tuong tac|tac dung phu|chong chi dinh|ibuprofen|paracetamol|khang sinh|statin)/)) return "medication"
       if (lower.match(/(kế hoạch|lộ trình|theo dõi|mục tiêu|nhật ký|routine|giảm cân|tăng cân|tập luyện)/) || ascii.match(/(ke hoach|lo trinh|theo doi|muc tieu|nhat ky|routine|giam can|tang can|tap luyen)/)) return "care_plan"
@@ -171,6 +184,7 @@ export async function POST(req: Request) {
 
     const requestedAgentId = String(body?.agent_id || body?.agent_profile || body?.agent || "").trim()
     const agentProfileSource = !requestedAgentId || requestedAgentId.toLowerCase() === "auto" ? "auto" : "explicit"
+    const intentFlags = detectIntentFlags(message)
     const agentProfileId = !requestedAgentId || requestedAgentId.toLowerCase() === "auto"
       ? inferAgentProfileId(message)
       : requestedAgentId
@@ -283,6 +297,25 @@ export async function POST(req: Request) {
       return msgs.length ? msgs : [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }]
     }
 
+    const ensureAssistantText = (raw: string, actions: any[]) => {
+      const t = String(raw || "").trim()
+      if (t && t !== " " && t.length >= 20) return t
+      const wantDoctor = intentFlags.doctor || agentProfile.id === "doctor_referral"
+      const wantLookup = intentFlags.medication
+      const wantPlan = intentFlags.plan
+      const wantTherapy = intentFlags.therapy
+      const wantTriage = intentFlags.triage
+      const hints: string[] = []
+      if (wantTriage) hints.push("Mức ưu tiên: an toàn trước (triage).")
+      if (wantDoctor) hints.push("Nếu bạn muốn gặp bác sĩ, mình có thể gợi ý mở mục Bác sĩ/Đặt hẹn.")
+      if (wantLookup) hints.push("Nếu cần tra cứu thuốc/bệnh, mình có thể gợi ý mở Tra cứu để kiểm chứng.")
+      if (wantPlan) hints.push("Nếu bạn muốn theo dõi/kế hoạch, mình có thể gợi ý mở Kế hoạch.")
+      if (wantTherapy) hints.push("Nếu bạn cần bài tập thư giãn, mình có thể gợi ý mở Trị liệu.")
+      const followUp = "Bạn cho mình biết thêm: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?"
+      const actionLine = Array.isArray(actions) && actions.length ? "Mình cũng đã chuẩn bị nút/hành động phù hợp ở dưới." : ""
+      return [hints.join(" "), actionLine, followUp].filter(Boolean).join("\n")
+    }
+
     const ruleBasedActionsGuess = () => {
       const lower = message.toLowerCase()
       const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -290,6 +323,10 @@ export async function POST(req: Request) {
       if (agentProfile.id === "care_plan") return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
       if (agentProfile.id === "triage") return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Mở bác sĩ/đặt lịch để được đánh giá trực tiếp nếu bạn có dấu hiệu cần khám sớm." } }]
       if (agentProfile.id === "therapy") return [{ type: "ask_navigation", args: { feature: "tri-lieu", reason: "Mở trị liệu để xem bài tập thở/grounding và kỹ thuật giảm căng thẳng." } }]
+      if (agentProfile.id === "doctor_referral") return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Mở bác sĩ để xem hồ sơ và đặt hẹn." } }]
+      if (lower.match(/(bác sĩ|đặt hẹn|đặt lịch|khám|tư vấn trực tiếp|hẹn khám)/) || ascii.match(/(bac si|dat hen|dat lich|kham|tu van truc tiep|hen kham)/)) {
+        return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Mở bác sĩ để xem hồ sơ và đặt hẹn." } }]
+      }
       if (lower.includes("sàng lọc") || ascii.includes("sang loc")) return [{ type: "navigate", args: { path: "/sang-loc" } }]
       if (lower.includes("trị liệu") || ascii.includes("tri lieu")) return [{ type: "navigate", args: { path: "/tri-lieu" } }]
       if (lower.includes("nhắc nhở") || ascii.includes("nhac nho")) return [{ type: "navigate", args: { path: "/nhac-nho" } }]
@@ -321,7 +358,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions: [],
         conversation_id,
-        metadata: { mode: "cpu", sos: true, hotlines: sos.hotlines, reasons: sos.reasons, situation: "sos", agent_profile: agentProfile.id, duration_ms: Date.now() - started },
+        metadata: { mode: "cpu", sos: true, hotlines: sos.hotlines, reasons: sos.reasons, situation: "sos", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags },
       })
     }
 
@@ -338,7 +375,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions: [],
         conversation_id,
-        metadata: { mode: "cpu", blocked: true, hits: safetyHits, situation: "safety", agent_profile: agentProfile.id, duration_ms: Date.now() - started },
+        metadata: { mode: "cpu", blocked: true, hits: safetyHits, situation: "safety", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags },
       })
     }
 
@@ -719,7 +756,8 @@ export async function POST(req: Request) {
             const parsed = parseJsonContent(content)
             if (parsed && (typeof parsed?.response === "string" || Array.isArray(parsed?.actions))) {
               const actions = sanitizeActions(parsed?.actions)
-              const finalText = (typeof parsed?.response === "string" && String(parsed.response).trim()) ? String(parsed.response).trim() : (content || " ")
+              const rawText = (typeof parsed?.response === "string" && String(parsed.response).trim()) ? String(parsed.response).trim() : (content || " ")
+              const finalText = ensureAssistantText(rawText, actions)
               appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
               const out = AgentResponseSchema.parse({
                 response: finalText,
@@ -734,6 +772,7 @@ export async function POST(req: Request) {
                   agent_profile: agentProfile.id,
                   agent_profile_source: agentProfileSource,
                   duration_ms: Date.now() - started,
+                  intent: intentFlags,
                   llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: toolCallsCount, mcp_tool_calls_count: mcpToolCallsCount, mcp_tool_names: mcpToolNamesSeen, graph_tool_called: graphToolCalled },
                   json_mode: true,
                   tool_rounds: toolRounds,
@@ -754,7 +793,7 @@ export async function POST(req: Request) {
             ]
           }
 
-          const finalText = content || "Mình chưa nhận được JSON hợp lệ từ FOZA."
+          const finalText = ensureAssistantText(content || "Mình chưa nhận được JSON hợp lệ từ FOZA.", [])
           appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
           const out = AgentResponseSchema.parse({
             response: finalText,
@@ -769,6 +808,7 @@ export async function POST(req: Request) {
               agent_profile: agentProfile.id,
               agent_profile_source: agentProfileSource,
               duration_ms: Date.now() - started,
+              intent: intentFlags,
               llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: toolCallsCount, mcp_tool_calls_count: mcpToolCallsCount, mcp_tool_names: mcpToolNamesSeen, graph_tool_called: graphToolCalled },
               json_mode: false,
               tool_rounds: toolRounds,
@@ -832,7 +872,7 @@ export async function POST(req: Request) {
     if (providerUsed === "openai_like") {
       if (!openaiLikeOut) {
         const actions = normalizeActions(ruleBasedActionsGuess())
-        const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent. Bạn thử lại giúp mình."
+        const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent. Bạn thử lại giúp mình.", actions)
         try {
           await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
         } catch {}
@@ -844,12 +884,12 @@ export async function POST(req: Request) {
             delivery: { mode: deliveryMode },
             actions,
             conversation_id,
-            metadata: { mode: modeUsed, provider: "openai_like", fallback: "rule_based", agent_profile: agentProfile.id, duration_ms: Date.now() - started, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+            metadata: { mode: modeUsed, provider: "openai_like", fallback: "rule_based", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
           })
         )
       }
 
-      const content = openaiLikeOut.content
+      const content = ensureAssistantText(openaiLikeOut.content, openaiLikeOut.actions)
       const actions = openaiLikeOut.actions
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
@@ -862,14 +902,14 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions,
           conversation_id,
-          metadata: { mode: modeUsed, provider: "openai_like", model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, fallback, agent_profile: agentProfile.id, duration_ms: Date.now() - started, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+          metadata: { mode: modeUsed, provider: "openai_like", model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, fallback, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
         })
       )
     }
 
     if (!keyToUse) {
       const actions = normalizeActions(ruleBasedActionsGuess())
-      const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Thiếu cấu hình Gemini nên agent không thể chạy."
+      const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : "Thiếu cấu hình Gemini nên agent không thể chạy.", actions)
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
@@ -880,7 +920,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: modeUsed, provider: "gemini", fallback: "missing_gemini_key", agent_profile: agentProfile.id, duration_ms: Date.now() - started, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+        metadata: { mode: modeUsed, provider: "gemini", fallback: "missing_gemini_key", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
       })
       return NextResponse.json(out)
     }
@@ -1044,13 +1084,13 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions: [],
           conversation_id,
-          metadata: { mode: modeUsed, provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+          metadata: { mode: modeUsed, provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
         })
         return NextResponse.json(out)
       }
 
       const actions = normalizeActions(ruleBasedActionsGuess())
-      const content = actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent (Gemini). Bạn thử lại giúp mình."
+      const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent (Gemini). Bạn thử lại giúp mình.", actions)
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
@@ -1061,7 +1101,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: modeUsed, provider: "gemini", access, fallback: "rule_based", gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+        metadata: { mode: modeUsed, provider: "gemini", access, fallback: "rule_based", gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
       })
       return NextResponse.json(out)
     }
@@ -1271,14 +1311,15 @@ export async function POST(req: Request) {
     const fullContent = suggestedInvestigation 
       ? `${content}\n\n❓ ${suggestedInvestigation}`
       : content
+    const finalContent = ensureAssistantText(fullContent, actions)
     
     try {
-      await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: fullContent })
+      await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: finalContent })
     } catch {}
 
     const out = AgentResponseSchema.parse({
-      response: fullContent,
-      messages: planResponseMessages(fullContent, actions),
+      response: finalContent,
+      messages: planResponseMessages(finalContent, actions),
       delivery: { mode: deliveryMode },
       actions,
       conversation_id,
@@ -1290,6 +1331,7 @@ export async function POST(req: Request) {
         agent_profile: agentProfile.id,
         agent_profile_source: agentProfileSource,
         duration_ms: Date.now() - started, 
+        intent: intentFlags,
         hasInvestigation: !!suggestedInvestigation,
         tool_calls_count: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.length : 0,
         tool_call_names: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.map((c: any) => String(c?.name || "").trim()).filter(Boolean).slice(0, 20) : [],

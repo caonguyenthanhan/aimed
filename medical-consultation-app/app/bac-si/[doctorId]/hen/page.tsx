@@ -58,9 +58,14 @@ export default function BookDoctorAppointmentPage() {
       created_at: new Date().toISOString(),
     }
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
+      const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null
       const resp = await fetch("/api/appointments", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && role !== "doctor" ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           doctor_id: ap.doctor_id,
           patient_name: ap.patient_name,

@@ -48,3 +48,18 @@
 - CPU server launcher tự bật Memgraph (docker compose) và thêm Graph Gateway `/v1/graph/status`, `/v1/graph/evidence` để cung cấp “truth context” cho agent/FOZA qua proxy `/api/backend/*`.
 - Agent mode tự gọi graph evidence và trả `metadata.llm_context`; UI thêm nút xem context để demo hội đồng.
 - Ổn định hội thoại DB: client dùng `userId` ổn định (không phụ thuộc authToken), API list/save chấp nhận userId dạng UUID hoặc token-hash; list/load hỗ trợ GET để tương thích; script lint dùng ESLint.
+- UI chat /tu-van: bỏ height calc cứng, chuyển ChatInterface sang `flex-1/min-h-0`; composer “sticky bottom” và thêm scroll anchoring theo ResizeObserver để giảm nhảy khi composer đổi chiều cao; tăng ngưỡng virtual list để giảm giật khi message cao thấp không đều.
+- UI Agent: thêm intro/preamble (tách thành 1 message riêng, 1 lần mỗi hội thoại khi bật Agent mode) và banner trạng thái (profile/mode/provider/graph/tools) lấy từ `metadata` để giảm cảm giác “agent nói 1 khối khó hiểu”.
+- Graph stability: gateway `mcp/call` có timeout + retry/backoff cho graph tools; CPU server tự reset/reconnect graph driver; UI hiển thị graph indicator (connected/latency) khi bật Agent mode.
+- EPIC demo: thêm trang `/agent-hub` (Agent Hub) để giới thiệu profiles và kịch bản demo 1-click (copy prompt, mở /tu-van bật Agent mode).
+- DB stability: chuẩn hoá `/api/db/ping` dùng cùng pool (pg) như conversations, có retry nhẹ; UI hiển thị badge DB (ok/down + latency) trong sidebar khi đăng nhập.
+- Doctor flow + RBAC: thêm auth server-side cho `test_token_*`, chuẩn hoá doctor APIs dùng pg pool/POSTGRES_URL; `/bac-si` có directory từ API; appointments GET/PATCH enforce doctor role.
+- Agent semantics: thêm profile `doctor_referral`, rules intent detection và ép `response` luôn có nội dung + follow-up; metadata bổ sung `intent` để debug/demo.
+- Tạo `todo.md` và `lessons.md` ở repo root để bám quy trình và làm checklist demo.
+
+## 2026-05-24
+
+- Đồng bộ checklist deploy: mở rộng `DEPLOY.md` để cover routing GPU/CPU, speech integrations, external integrations và biến bật integration tests.
+- Bổ sung env còn thiếu vào `.env.sample`: `POSTGRES_URL_NO_SSL`, `RUN_LLM_INTEGRATION_TESTS`.
+- Thêm smoke script PowerShell `medical-consultation-app/smoke.ps1` để test nhanh `/api/db/ping`, `/api/conversations/*`, `/api/mcp/call (graph.status)` cho local/Vercel.
+- UI ổn định khung chat: `scrollToBottom` dùng `messagesContainer.scrollTo` (tránh body scroll gây nhảy), bỏ `sticky` ở composer và thêm padding-bottom bù MobileBottomNav + safe-area để tránh bị che khi focus input.

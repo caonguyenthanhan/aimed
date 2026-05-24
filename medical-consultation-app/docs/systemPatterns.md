@@ -15,3 +15,9 @@
 - Timeout policy: `/api/agent-chat` có env budgets/timeouts chung cho Gemini/OpenAI-like/MCP để tránh request treo và giữ fallback mượt.
 - Graph Gateway (truth context): CPU server cung cấp `/v1/graph/evidence` để trả evidence subgraph dạng JSON; launcher tự bật Memgraph docker compose. Có thể khóa bằng `GRAPH_API_KEY` (header `x-api-key`/Bearer).
 - Graph evidence injection: `/api/agent-chat` tự gọi `graph.evidence` (qua `/api/mcp/call`) và inject evidence vào `persona` để grounding. API trả `metadata.llm_context` để UI hiển thị “context gửi cho LLM”.
+- Graph reliability: `/api/mcp/call` áp dụng timeout + retry/backoff cho `graph.status` và `graph.evidence`; CPU server tự reset/reconnect neo4j driver khi mất kết nối để giảm “lúc có lúc không”.
+- Graph observability: UI poll `graph.status` khi bật Agent mode và hiển thị indicator (connected/latency) để demo và chẩn đoán nhanh.
+- DB reliability: `/api/db/ping` dùng cùng cơ chế pool (pg) như conversations, có retry nhẹ để chẩn đoán “DB lúc có lúc không”; UI hiển thị badge trạng thái DB (ok/down + latency) trong sidebar khi đăng nhập.
+- RBAC demo: server-side auth ưu tiên nhận `Bearer test_token_*` (từ login demo) để suy ra role/user; fallback gọi CPU server `/v1/user` cho token thật. Doctor APIs enforce role=doctor, patient booking không cho role=doctor.
+- Agent routing: `/api/agent-chat` có rules phát hiện intent (triage/thuốc/kế hoạch/trị liệu/bác sĩ) để chọn `agent_profile`; metadata trả `intent` để debug/demo.
+- Agent output guarantee: mọi nhánh provider (FOZA/OpenAI-like/Gemini/fallback) đều ép `response` không rỗng (auto thêm hướng dẫn + câu hỏi follow-up) để tránh “agent chỉ hiện 1 khối khó hiểu”.

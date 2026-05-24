@@ -63,6 +63,7 @@ export default function SiteHeader() {
     { href: '/', label: 'Trang chủ', icon: Home },
     { href: '/tu-van', label: 'Tư vấn', icon: MessageSquare },
     { href: '/tam-su', label: 'Tâm sự', icon: Smile },
+    { href: '/agent-hub', label: 'Agent', icon: Stethoscope },
     { href: '/gioi-thieu', label: 'Hướng dẫn', icon: BookOpenText },
   ]
 

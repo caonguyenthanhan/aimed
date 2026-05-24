@@ -1,7 +1,7 @@
 ## Trạng thái hiện tại
 
 - UI có chế độ Agent (toggle) ở trang /tu-van, gọi /api/agent-chat khi bật.
-- UI có chọn Agent Profile (tư vấn tổng quát / triage / thuốc / kế hoạch / trị liệu) và gửi `agent_id` vào /api/agent-chat.
+- UI không còn dropdown chọn Agent Profile; client luôn gửi `agent_id=auto` và backend tự suy luận profile theo ngữ nghĩa.
 - /api/agent-chat hỗ trợ Gemini function calling và trả về contract {response, actions, metadata} để frontend thực thi điều hướng.
 - /api/agent-chat đọc `data/runtime-mode.json` để chọn chạy GPU/CPU theo SSOT (hybrid auto). Ưu tiên OpenAI-compatible JSON agent (GPU/CPU) và fallback sang Gemini khi cần.
 - Agent có thể gọi tool “mcp-lite” (web/youtube) qua /api/mcp/call rồi dùng kết quả để trả lời.
@@ -9,23 +9,30 @@
 - Gợi ý nhạc có thể được “hydrate” từ YouTube service (kèm cache TTL) để tránh hardcode ID và tăng độ rõ ràng khi đề xuất.
 - Đã có Gemini STT/TTS server-side cho Vercel qua /api/speech-to-text và /api/text-to-speech (kèm stream).
 - Có Live mode demo ở /tu-van (AudioLines), dùng API key từ user hoặc pass để lấy key.
-- UI /tu-van: ChatInterface cố định chiều cao theo padding top/bottom của RootLayout để không cần scroll body và không bị “mất” composer sau khi đóng popup.
+- UI /tu-van: ChatInterface dùng layout `flex-1/min-h-0` theo RootLayout; composer là footer trong flow (không sticky) và có padding-bottom bù MobileBottomNav + safe-area để tránh bị che/nhảy khi focus input; scrollToBottom ưu tiên `messagesContainer.scrollTo(...)` để không làm body scroll.
 - Patient scenario prompting đã có module riêng (patient-scenarios) nhưng hiện đang tạm tắt trong /api/agent-chat để cô lập lỗi runtime.
 - `conversationId` đã chuyển sang UUID; API save chặn các ID legacy để tránh lỗi DB trên production.
 - Có unit test cho fallback rule-based của agent profiles (tư vấn tổng quát + tâm lý trị liệu) qua Vitest.
 - Có integration test gọi LLM thật (Gemini/Foza) cho `/api/agent-chat`, mặc định skip và bật bằng `RUN_LLM_INTEGRATION_TESTS=1`.
 - CPU server launcher (`cpu_server/launcher/run_menu.bat`) tự khởi động Memgraph (docker compose) và cung cấp Graph Gateway qua `/v1/graph/status`, `/v1/graph/evidence` để làm “truth context”.
 - Agent mode tự gọi `graph.evidence` và nhét evidence vào prompt; UI có nút xem “context gửi cho LLM” để demo (hiển thị từ `metadata.llm_context`).
+- UI /tu-van: khi Agent mode bật, hiển thị banner trạng thái (profile/mode/provider/graph/tools) từ `metadata` và tự chèn 1 tin nhắn intro/preamble (1 lần mỗi hội thoại) để giải thích vai trò + hỏi follow-up.
+- UI /tu-van: khi Agent mode bật, poll `graph.status` và hiển thị indicator graph (connected/latency) để chẩn đoán nhanh.
+- UI /tu-van: khi đăng nhập, poll `/api/db/ping` và hiển thị badge DB (ok/down + latency) trong sidebar để chẩn đoán DB chập chờn.
+- Có trang `/agent-hub` để giới thiệu agent profiles + kịch bản demo 1-click (copy prompt, mở /tu-van và tự bật Agent mode).
+- Bác sĩ: `/bac-si` hiển thị danh sách bác sĩ từ `/api/doctor-profile/list` (fallback offline theo test accounts); đặt lịch tại `/bac-si/[doctorId]/hen`; bác sĩ xem yêu cầu tại `/doctor/appointments`.
+- Agent: thêm profile `doctor_referral` và intent detection (doctor/triage/medication/plan/therapy); metadata trả `intent` và response luôn có nội dung + follow-up (không để trống).
+- Có smoke script PowerShell `medical-consultation-app/smoke.ps1` để test nhanh các endpoint cốt lõi (db ping, conversations, graph.status) cho local/Vercel.
 
 ## Next steps
 
+- Chuẩn hoá nội dung intro/preamble theo từng agent profile (triage/thuốc/kế hoạch/trị liệu) và bổ sung “câu hỏi tối thiểu” theo từng nhóm.
 - Import graph data vào Memgraph (nếu chưa) và thử query `/api/backend/v1/graph/evidence` từ UI/agent để lấy evidence subgraph.
 - Demo thực tế: bật Agent mode, gửi “mở sàng lọc” để điều hướng /sang-loc.
-- Demo agent profiles: chọn “Thuốc & Tương tác” rồi hỏi về liều/tương tác để agent gợi ý mở tra-cuu; chọn “Kế hoạch chăm sóc” rồi yêu cầu lập lộ trình để agent gợi ý mở ke-hoach.
-- Demo triage: chọn “Triage + Red flags” rồi mô tả triệu chứng nguy hiểm để agent ưu tiên hướng dẫn an toàn và gợi ý mở bac-si.
-- Demo trị liệu: chọn “Tâm lý trị liệu” rồi yêu cầu bài tập giảm lo âu để agent gợi ý mở tri-lieu/sang-loc.
+- Demo agent profiles (auto): hỏi về “thuốc/tương tác” để agent gợi ý mở tra-cuu; hỏi “lập kế hoạch chăm sóc” để agent gợi ý mở ke-hoach; mô tả “triệu chứng nguy hiểm” để agent ưu tiên an toàn và gợi ý mở bac-si; yêu cầu bài tập giảm lo âu để agent gợi ý mở tri-lieu/sang-loc.
 - Demo hybrid: đổi `data/runtime-mode.json` sang `target=gpu` hoặc `target=cpu` và quan sát `metadata.mode` + runtime events/metrics.
 - Demo tool calling: hỏi “tìm giúp mình vài nguồn về …” để agent gọi `web.search`, hoặc “gợi ý nhạc thư giãn” để gọi `youtube.recommend_music`.
+- Deploy smoke: chạy `medical-consultation-app/smoke.ps1 -BaseUrl <url>` để kiểm tra nhanh DB/conversations/graph trước khi demo.
 - Chạy purge dữ liệu legacy (non-UUID) trên DB mục tiêu để dọn sạch dữ liệu cũ.
 - Kiểm tra quota: 5 lượt dùng key hệ thống, sau đó yêu cầu user nhập API key hoặc pass.
 - Mở rộng actions cho 2-3 luồng demo khác (tin tức/trị liệu/nhắc nhở) theo cùng allowlist.

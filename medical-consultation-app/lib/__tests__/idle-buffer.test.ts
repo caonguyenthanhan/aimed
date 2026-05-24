@@ -1,4 +1,3 @@
-import { describe, expect, test, vi } from "vitest"
 import { IdleBuffer } from "../idle-buffer"
 
 describe("IdleBuffer", () => {

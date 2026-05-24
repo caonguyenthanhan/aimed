@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { upsertConversation, insertMessage } from '@/lib/db-queries'
-import { resolveDatabaseUrl, withPgClient } from '@/lib/pg'
+import { resolveDatabaseConfig, withPgClientRetry } from '@/lib/pg'
 
 // Convert token string to consistent UUID
 function tokenToUUID(token: string): string {
@@ -18,10 +18,11 @@ function normalizeUserUUID(userId: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const started = Date.now()
   try {
-    const dbUrl = resolveDatabaseUrl()
+    const { url: dbUrl, source } = resolveDatabaseConfig()
     if (!dbUrl) {
-      return NextResponse.json({ success: false, skipped: true, reason: 'database_not_configured' }, { status: 200 })
+      return NextResponse.json({ success: false, skipped: true, reason: 'database_not_configured', metadata: { source } }, { status: 200 })
     }
 
     let body: any
@@ -45,36 +46,34 @@ export async function POST(request: NextRequest) {
     }
 
     const userUUID = normalizeUserUUID(userId)
-    await withPgClient(async (client) => {
+    const out = await withPgClientRetry(async (client) => {
       await client.query('BEGIN')
+      try {
+        const { error: convError } = await upsertConversation(client, conversationId, userUUID, title || 'Hội thoại mới')
+        if (convError) throw convError
 
-      const { error: convError } = await upsertConversation(
-        client,
-        conversationId,
-        userUUID,
-        title || 'Hội thoại mới'
-      )
-      if (convError) throw convError
+        await client.query('DELETE FROM conversation_messages WHERE conv_id = $1', [conversationId])
 
-      await client.query('DELETE FROM conversation_messages WHERE conv_id = $1', [conversationId])
+        for (const msg of messages) {
+          if (!msg || typeof msg.content !== 'string') continue
+          const { error: msgError } = await insertMessage(client, conversationId, msg.isUser ? 'user' : 'assistant', msg.content)
+          if (msgError) throw msgError
+        }
 
-      for (const msg of messages) {
-        if (!msg || typeof msg.content !== 'string') continue
-        const { error: msgError } = await insertMessage(
-          client,
-          conversationId,
-          msg.isUser ? 'user' : 'assistant',
-          msg.content
-        )
-        if (msgError) throw msgError
+        await client.query('COMMIT')
+        return true
+      } catch (e) {
+        try {
+          await client.query('ROLLBACK')
+        } catch {}
+        throw e
       }
-
-      await client.query('COMMIT')
     })
 
     return NextResponse.json({ 
       success: true, 
-      conversationId 
+      conversationId,
+      metadata: { source, attempts: out.attempts, elapsed_ms: out.elapsed_ms, latency_ms: Date.now() - started },
     })
   } catch (error) {
     const code =
@@ -83,14 +82,14 @@ export async function POST(request: NextRequest) {
         : undefined
     if (code === '22P02') {
       return NextResponse.json(
-        { error: 'Invalid conversationId/userId format' },
-        { status: 400 }
+        { success: false, skipped: true, reason: 'invalid_id_format' },
+        { status: 200 }
       )
     }
     console.error('[v0] Error saving conversation:', error)
     return NextResponse.json(
-      { error: 'Failed to save conversation' },
-      { status: 500 }
+      { success: false, skipped: true, reason: 'internal_error', metadata: { latency_ms: Date.now() - started } },
+      { status: 200 }
     )
   }
 }

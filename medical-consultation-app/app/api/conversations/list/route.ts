@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { getConversationsList } from '@/lib/db-queries'
-import { resolveDatabaseUrl, withPgClient } from '@/lib/pg'
+import { resolveDatabaseConfig, withPgClientRetry } from '@/lib/pg'
 
 // Convert token string to consistent UUID
 function tokenToUUID(token: string): string {
@@ -18,10 +18,11 @@ function normalizeUserUUID(userId: string): string {
 }
 
 async function listConversations(userId: string, limit: number, offset: number) {
+  const started = Date.now()
   try {
-    const dbUrl = resolveDatabaseUrl()
+    const { url: dbUrl, source } = resolveDatabaseConfig()
     if (!dbUrl) {
-      return NextResponse.json({ conversations: [], success: false, skipped: true, reason: 'database_not_configured' }, { status: 200 })
+      return NextResponse.json({ conversations: [], success: false, skipped: true, reason: 'database_not_configured', metadata: { source } }, { status: 200 })
     }
 
     if (!userId) {
@@ -32,22 +33,16 @@ async function listConversations(userId: string, limit: number, offset: number) 
     }
 
     const userUUID = normalizeUserUUID(userId)
-    return await withPgClient(async (client) => {
-      const { rows, error } = await getConversationsList(
-        client,
-        userUUID,
-        Math.min(limit, 100),
-        offset
-      )
-
+    const out = await withPgClientRetry(async (client) => {
+      const { rows, error } = await getConversationsList(client, userUUID, Math.min(limit, 100), offset)
       if (error) throw error
-
-      return NextResponse.json({ conversations: rows })
+      return rows
     })
+    return NextResponse.json({ conversations: out.value, metadata: { source, attempts: out.attempts, elapsed_ms: out.elapsed_ms, latency_ms: Date.now() - started } })
   } catch (error) {
     console.error('[v0] Error fetching conversations:', error)
     return NextResponse.json(
-      { conversations: [], success: false, skipped: true, reason: 'internal_error' },
+      { conversations: [], success: false, skipped: true, reason: 'internal_error', metadata: { latency_ms: Date.now() - started } },
       { status: 200 }
     )
   }

@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { detectPatientScenario, getConsultationStylePrompt, PATIENT_SCENARIOS } from '../patient-scenarios'
 
 describe('Agent Consultation Integration Tests', () => {

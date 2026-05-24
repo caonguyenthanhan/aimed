@@ -14,6 +14,7 @@ import datetime
 import uuid
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -512,6 +513,17 @@ DATA_DIR = os.path.abspath(os.environ.get("CPU_DATA_DIR", "").strip() or os.path
 USER_FILE = os.path.join(DATA_DIR, "user.json")
 
 _GRAPH_DRIVER = None
+
+
+def _reset_graph_driver():
+    global _GRAPH_DRIVER
+    d = _GRAPH_DRIVER
+    _GRAPH_DRIVER = None
+    try:
+        if d is not None:
+            d.close()
+    except Exception:
+        pass
 
 
 def _get_graph_driver():
@@ -2738,16 +2750,27 @@ async def knowledge_search(req: KnowledgeSearchRequest, request: Request):
 
 @app.get("/v1/graph/status")
 async def graph_status():
+    t0 = time.time()
     driver = _get_graph_driver()
     if driver is None:
-        return {"ok": False, "connected": False}
+        return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
     try:
         with driver.session() as s:
             c = s.run("MATCH (n) RETURN count(n) AS c").single()
             nodes = int(c["c"]) if c and "c" in c else 0
-        return {"ok": True, "connected": True, "nodes": nodes}
+        return {"ok": True, "connected": True, "nodes": nodes, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
     except Exception:
-        return {"ok": False, "connected": False}
+        _reset_graph_driver()
+        driver = _get_graph_driver()
+        if driver is None:
+            return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
+        try:
+            with driver.session() as s:
+                c = s.run("MATCH (n) RETURN count(n) AS c").single()
+                nodes = int(c["c"]) if c and "c" in c else 0
+            return {"ok": True, "connected": True, "nodes": nodes, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
+        except Exception:
+            return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
 
 
 @app.post("/v1/graph/evidence")
@@ -2783,6 +2806,7 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
     rel_types = [str(x).strip() for x in (req.rel_types or []) if str(x).strip()]
     rel_types_param = rel_types if rel_types else None
 
+    t0 = time.time()
     try:
         with driver.session() as s:
             entities = list(
@@ -2828,9 +2852,60 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
                         lim=lim,
                     )
                 ]
-        return {"ok": True, "query": q, "entities": ent_rows, "edges": edges}
+        return {"ok": True, "query": q, "entities": ent_rows, "edges": edges, "elapsed_ms": int((time.time() - t0) * 1000)}
     except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e) or "Graph query error")
+        _reset_graph_driver()
+        driver2 = _get_graph_driver()
+        if driver2 is None:
+            raise HTTPException(status_code=503, detail="Graph not available")
+        try:
+            with driver2.session() as s:
+                entities = list(
+                    s.run(
+                        """
+                        WITH toLower($q) AS q
+                        MATCH (e:Entity)
+                        WHERE toLower(e.name) CONTAINS q
+                        RETURN e.__mg_id__ AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
+                        LIMIT $ent_lim
+                        """,
+                        q=q,
+                        ent_lim=ent_lim,
+                    )
+                )
+                ent_rows = [r.data() for r in entities]
+                ent_ids = [r.get("id") for r in ent_rows if r.get("id") is not None]
+                edges = []
+                if ent_ids:
+                    edges = [
+                        r.data()
+                        for r in s.run(
+                            """
+                            UNWIND $ids AS mg_id
+                            MATCH (e:Entity {__mg_id__: mg_id})
+                            MATCH (e)-[r]-(n)
+                            WHERE $rel_types IS NULL OR type(r) IN $rel_types
+                            RETURN
+                              e.__mg_id__ AS entity_id,
+                              e.name AS entity_name,
+                              CASE WHEN startNode(r) = e THEN 'OUT' ELSE 'IN' END AS dir,
+                              type(r) AS rel,
+                              n.__mg_id__ AS other_id,
+                              n.name AS other_name,
+                              labels(n) AS other_labels,
+                              r.id_doc AS id_doc,
+                              r.id_chunk AS id_chunk,
+                              r.collection AS collection
+                            LIMIT $lim
+                            """,
+                            ids=ent_ids,
+                            rel_types=rel_types_param,
+                            lim=lim,
+                        )
+                    ]
+            return {"ok": True, "query": q, "entities": ent_rows, "edges": edges, "elapsed_ms": int((time.time() - t0) * 1000)}
+        except Exception as e2:
+            raise HTTPException(status_code=502, detail=str(e2) or str(e) or "Graph query error")
 
 
 @app.get("/v1/clinical/summary/{conv_id}")

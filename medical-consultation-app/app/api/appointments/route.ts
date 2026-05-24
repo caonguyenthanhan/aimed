@@ -1,41 +1,22 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getNeonPool } from "@/lib/neon-db"
+import { getPgPool, resolveDatabaseConfig } from "@/lib/pg"
+import { getAuthedUser } from "@/lib/auth-server"
 import { normalizeAppointment, newAppointmentId } from "@/lib/appointments"
 
 function isDbEnabled() {
-  return !!String(process.env.DATABASE_URL || "").trim()
-}
-
-function backendBaseUrl() {
-  return (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "")
-}
-
-async function getAuthedUser(req: NextRequest): Promise<{ user_id: string; role: string; username?: string } | null> {
-  const auth = (req.headers.get("authorization") || "").trim()
-  if (!auth) return null
-  try {
-    const resp = await fetch(`${backendBaseUrl()}/v1/user`, { headers: { Authorization: auth } })
-    if (!resp.ok) return null
-    const j: any = await resp.json()
-    const user_id = String(j?.user_id || "").trim()
-    const role = String(j?.role || "").trim()
-    const username = String(j?.username || "").trim() || undefined
-    if (!user_id || !role) return null
-    return { user_id, role, username }
-  } catch {
-    return null
-  }
+  return !!String(resolveDatabaseConfig().url || "").trim()
 }
 
 let ensured = false
 
 async function ensureSchema() {
   if (ensured) return
-  const pool = getNeonPool()
+  const pool = getPgPool()
   await pool.query(`
     CREATE TABLE IF NOT EXISTS doctor_appointments (
       id TEXT PRIMARY KEY,
       doctor_id TEXT NOT NULL,
+      patient_id TEXT NULL,
       patient_name TEXT NOT NULL,
       contact JSONB NOT NULL DEFAULT '{}'::jsonb,
       scheduled_at TIMESTAMPTZ NOT NULL,
@@ -44,6 +25,7 @@ async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `)
+  await pool.query(`ALTER TABLE doctor_appointments ADD COLUMN IF NOT EXISTS patient_id TEXT NULL`)
   await pool.query(`CREATE INDEX IF NOT EXISTS doctor_appointments_doctor_id_scheduled_at_idx ON doctor_appointments (doctor_id, scheduled_at DESC)`)
   ensured = true
 }
@@ -70,15 +52,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid scheduled_at" }, { status: 400 })
     }
 
+    let patient_id: string | null = null
+    const auth = (req.headers.get("authorization") || "").trim()
+    if (auth) {
+      const u = await getAuthedUser(req)
+      if (!u) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      const role = String(u.role || "").toLowerCase()
+      if (role === "doctor") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+      patient_id = String(u.user_id || "").trim() || null
+    }
+
     const id = newAppointmentId()
-    const pool = getNeonPool()
+    const pool = getPgPool()
     const r = await pool.query(
       `
-      INSERT INTO doctor_appointments (id, doctor_id, patient_name, contact, scheduled_at, reason, status, created_at)
-      VALUES ($1, $2, $3, $4::jsonb, $5::timestamptz, $6, 'pending', now())
-      RETURNING id, doctor_id, patient_name, contact, scheduled_at, reason, status, created_at
+      INSERT INTO doctor_appointments (id, doctor_id, patient_id, patient_name, contact, scheduled_at, reason, status, created_at)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6::timestamptz, $7, 'pending', now())
+      RETURNING id, doctor_id, patient_id, patient_name, contact, scheduled_at, reason, status, created_at
       `,
-      [id, doctor_id, patient_name, JSON.stringify({ phone: phone || undefined, email: email || undefined }), dt.toISOString(), reason],
+      [id, doctor_id, patient_id, patient_name, JSON.stringify({ phone: phone || undefined, email: email || undefined }), dt.toISOString(), reason],
     )
     const row = r.rows[0]
     const ap = normalizeAppointment({
@@ -101,10 +93,10 @@ export async function GET(req: NextRequest) {
     if (!u) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     if (String(u.role || "").toLowerCase() !== "doctor") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     await ensureSchema()
-    const pool = getNeonPool()
+    const pool = getPgPool()
     const r = await pool.query(
       `
-      SELECT id, doctor_id, patient_name, contact, scheduled_at, reason, status, created_at
+      SELECT id, doctor_id, patient_id, patient_name, contact, scheduled_at, reason, status, created_at
       FROM doctor_appointments
       WHERE doctor_id = $1
       ORDER BY scheduled_at DESC
@@ -142,13 +134,13 @@ export async function PATCH(req: NextRequest) {
     if (!id || !["pending", "confirmed", "cancelled", "completed"].includes(status)) {
       return NextResponse.json({ error: "Invalid fields" }, { status: 400 })
     }
-    const pool = getNeonPool()
+    const pool = getPgPool()
     const r = await pool.query(
       `
       UPDATE doctor_appointments
       SET status = $1
       WHERE id = $2 AND doctor_id = $3
-      RETURNING id, doctor_id, patient_name, contact, scheduled_at, reason, status, created_at
+      RETURNING id, doctor_id, patient_id, patient_name, contact, scheduled_at, reason, status, created_at
       `,
       [status, id, u.user_id],
     )

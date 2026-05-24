@@ -9,6 +9,53 @@ type WebSearchItem = {
   displayLink?: string
 }
 
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+function nowMs() {
+  return Date.now()
+}
+
+function resolveToolTimeoutMs(toolName: string) {
+  const envDefault = Number(process.env.AGENT_CHAT_MCP_TOOL_TIMEOUT_MS || process.env.FOZA_MCP_TOOL_TIMEOUT_MS || "8000")
+  const base = Number.isFinite(envDefault) ? envDefault : 8000
+  if (toolName === "graph.status") return Math.max(800, Math.min(3000, Math.floor(base / 3)))
+  if (toolName === "graph.evidence") return Math.max(2500, Math.min(12000, base))
+  return base
+}
+
+async function fetchJsonWithRetry(url: string, init: RequestInit, opts: { tool: string; attempts: number }) {
+  const timeoutMs = resolveToolTimeoutMs(opts.tool)
+  const maxAttempts = Math.max(1, Math.min(3, opts.attempts))
+  let lastErr: any = null
+  const startedAt = nowMs()
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController()
+    const t = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const resp = await fetch(url, { ...init, signal: controller.signal })
+      clearTimeout(t)
+      const json = await resp.json().catch(() => null)
+      if (resp.ok) {
+        return { ok: true as const, status: resp.status, json, attempts: attempt, elapsed_ms: nowMs() - startedAt }
+      }
+      if (resp.status === 401 || resp.status === 403 || resp.status === 400) {
+        return { ok: false as const, status: resp.status, json, attempts: attempt, elapsed_ms: nowMs() - startedAt }
+      }
+      lastErr = { status: resp.status, json }
+    } catch (e: any) {
+      clearTimeout(t)
+      lastErr = e
+    }
+    if (attempt < maxAttempts) {
+      const backoff = 250 * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 120)
+      await sleep(backoff)
+    }
+  }
+  return { ok: false as const, status: 0, json: lastErr, attempts: maxAttempts, elapsed_ms: nowMs() - startedAt }
+}
+
 function stripTags(input: string) {
   return input
     .replace(/<script[\s\S]*?<\/script>/gi, "")
@@ -188,19 +235,18 @@ export async function POST(req: NextRequest) {
       const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "")
       const url = `${cpuBase}/v1/graph/status`
       const apiKey = (process.env.GRAPH_API_KEY || "").trim()
-      try {
-        const resp = await fetch(url, {
-          method: "GET",
-          headers: apiKey ? { "x-api-key": apiKey } : undefined,
+      const out = await fetchJsonWithRetry(
+        url,
+        { method: "GET", headers: apiKey ? { "x-api-key": apiKey } : undefined },
+        { tool: name, attempts: 3 }
+      )
+      if (!out.ok) {
+        return NextResponse.json({
+          result: { ok: false, connected: false, error: out.json || (out.status ? `HTTP ${out.status}` : "Upstream error") },
+          metadata: { tool: name, upstream: url, attempts: out.attempts, elapsed_ms: out.elapsed_ms },
         })
-        const json = await resp.json().catch(() => null)
-        if (!resp.ok) {
-          return NextResponse.json({ result: { ok: false, connected: false, error: json || `HTTP ${resp.status}` }, metadata: { tool: name, upstream: url } })
-        }
-        return NextResponse.json({ result: json, metadata: { tool: name, upstream: url } })
-      } catch (e: any) {
-        return NextResponse.json({ result: { ok: false, connected: false, error: String(e?.message || e || "") }, metadata: { tool: name, upstream: url } })
       }
+      return NextResponse.json({ result: out.json, metadata: { tool: name, upstream: url, attempts: out.attempts, elapsed_ms: out.elapsed_ms } })
     }
 
     if (name === "graph.evidence") {
@@ -215,23 +261,23 @@ export async function POST(req: NextRequest) {
       const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "")
       const url = `${cpuBase}/v1/graph/evidence`
       const apiKey = (process.env.GRAPH_API_KEY || "").trim()
-      try {
-        const resp = await fetch(url, {
+      const body = JSON.stringify({ query: q, limit, entity_limit, ...(rel_types?.length ? { rel_types } : {}) })
+      const out = await fetchJsonWithRetry(
+        url,
+        {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(apiKey ? { "x-api-key": apiKey } : {}),
-          },
-          body: JSON.stringify({ query: q, limit, entity_limit, ...(rel_types?.length ? { rel_types } : {}) }),
+          headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
+          body,
+        },
+        { tool: name, attempts: 3 }
+      )
+      if (!out.ok) {
+        return NextResponse.json({
+          result: { ok: false, query: q, entities: [], edges: [], error: out.json || (out.status ? `HTTP ${out.status}` : "Upstream error") },
+          metadata: { tool: name, upstream: url, attempts: out.attempts, elapsed_ms: out.elapsed_ms },
         })
-        const json = await resp.json().catch(() => null)
-        if (!resp.ok) {
-          return NextResponse.json({ result: { ok: false, query: q, entities: [], edges: [], error: json || `HTTP ${resp.status}` }, metadata: { tool: name, upstream: url } })
-        }
-        return NextResponse.json({ result: json, metadata: { tool: name, upstream: url } })
-      } catch (e: any) {
-        return NextResponse.json({ result: { ok: false, query: q, entities: [], edges: [], error: String(e?.message || e || "") }, metadata: { tool: name, upstream: url } })
       }
+      return NextResponse.json({ result: out.json, metadata: { tool: name, upstream: url, attempts: out.attempts, elapsed_ms: out.elapsed_ms } })
     }
 
     return NextResponse.json({ error: "Unknown tool" }, { status: 400 })

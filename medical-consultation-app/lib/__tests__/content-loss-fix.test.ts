@@ -2,7 +2,6 @@
  * Integration tests for content loss fixes
  */
 
-import { describe, it, expect } from 'vitest'
 import { planChunkedMessages, verifyContentIntegrity } from '../chat-delivery'
 
 describe('Content Loss Fix - Integration Tests', () => {
