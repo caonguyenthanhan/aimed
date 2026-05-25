@@ -3,6 +3,7 @@
 - Gemini API: dùng native tool/function calling (generateContent + functionDeclarations).
 - Local LLM: dùng OpenAI-compatible `/v1/chat/completions`, ép output JSON `{response, actions}`; hỗ trợ inject persona theo `agent_id` để tái sử dụng cho vLLM self-host.
 - Foza (OpenAI-compatible): Agent mode ưu tiên JSON-in-content `{response, actions}`; tool_calls chỉ dùng cho MCP tools (web/youtube), sau đó luôn “finalize” bằng JSON ổn định ở content.
+- LangGraph (CPU server): chạy state machine + tool orchestration trên FastAPI endpoint `/v1/agent-chat`, trả cùng contract `{response, actions, metadata}`; Next.js có thể proxy 100% để “thay thế hoàn toàn” `/api/agent-chat`.
 
 ## LLM providers (chat)
 
@@ -65,3 +66,12 @@
 - `RUN_LLM_INTEGRATION_TESTS=1`: bật test gọi LLM thật qua `/api/agent-chat` (mặc định auto-skip).
 - Gemini (E2E): cần `GEMINI_API_KEY`.
 - Foza (E2E): cần `FOZA_TOKEN` + `LLM_MODEL_NAME` (+ tuỳ chọn `FOZA_BASE_URL`).
+
+## LangGraph deps (CPU server)
+
+- `cpu_server/requirements.txt`: thêm `langgraph`, `langchain-core`, `langchain-community`.
+- Env (LangGraph CPU orchestrator):
+  - `LG_MAX_TOOL_CALLS` (default 3, max 6)
+  - `LG_WEB_TIMEOUT_S` (default 10)
+  - `LG_YOUTUBE_TIMEOUT_S` (default 10)
+  - `LG_GRAPH_TIMEOUT_S` (default 12)

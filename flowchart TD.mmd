@@ -1,0 +1,48 @@
+flowchart TD
+  U[User] --> UI[Next.js UI\nChatInterface]
+  UI -->|toggle agentMode| LS[(localStorage\nmcs_agent_mode_v1)]
+  UI -->|toggle provider/mode| CT[ComputeToggle]
+  CT --> RTMODE[/api/runtime/mode\nGET/POST/]
+  CT --> BRTSTATE[/api/backend/v1/runtime/state\n(proxy/stub)/]
+  CT --> SRVLATEST[/api/servers/latest/]
+  SRVLATEST --> REG[(data/server-registry.json)]
+  RTMODE --> MODE[(data/runtime-mode.json)]
+  RTMODE --> EVTS[(data/runtime-events.jsonl)]
+  RTMODE -->|sync| CPURTMODE[CPU FastAPI\n/v1/runtime/mode]
+
+  UI -->|POST agentMode=0| LLM[/api/llm-chat/]
+  UI -->|POST agentMode=1| AG[/api/agent-chat/]
+
+  LLM --> SOS1{SOS check}
+  SOS1 -->|trigger| OUTSOS1[response+sos metadata]
+  SOS1 -->|no| SAFE1{Safety block?}
+  SAFE1 -->|block| OUTBLK1[blocked response]
+  SAFE1 -->|ok| ROUTE1{Routing\nruntime-mode.json\n+ server-registry.json}
+  ROUTE1 -->|gpu| GPUCHAT[GPU OpenAI-like\n/v1/chat/completions]
+  ROUTE1 -->|cpu| CPUCHAT[CPU FastAPI\n/v1/chat/completions]
+  GPUCHAT -->|fail| FALL1{Fallback}
+  FALL1 -->|GEMINI key| GEM1[GeminiService\n(generateFromConfig)]
+  FALL1 -->|else| CPUCHAT
+  CPUCHAT --> OUTLLM[LLM response + metadata\npersist chat + metrics]
+  GEM1 --> OUTLLM
+  OUTLLM --> UI
+
+  AG --> SOS2{SOS check}
+  SOS2 -->|trigger| OUTSOS2[response+metadata]
+  SOS2 -->|no| SAFE2{Safety block?}
+  SAFE2 -->|block| OUTBLK2[blocked response]
+  SAFE2 -->|ok| ROUTE2{Routing\nruntime-mode.json\n+ server-registry.json}
+  ROUTE2 -->|gpu| OAIGPU[runLocalAgent\n-> GPU /v1/chat/completions\n(JSON actions)]
+  ROUTE2 -->|cpu| OAICPU[runLocalAgent\n-> CPU /v1/chat/completions\n(JSON actions)]
+  OAIGPU -->|fail| AGFALL{Fallback}
+  AGFALL -->|has key| GEM2[GeminiService\n(generateAgent + tools)]
+  AGFALL -->|no key| OAICPU
+  GEM2 -->|tool calls| MCP[/api/mcp/call/]
+  MCP --> WEB[web.search\n(DDG/Google CSE)]
+  MCP --> YT[youtube.*]
+  GEM2 --> OUTAG[AgentResponse\nresponse+actions+metadata\npersist + metrics]
+  OAIGPU --> OUTAG
+  OAICPU --> OUTAG
+  OUTAG --> UI
+  UI -->|render planned messages\n(special embeds/music/nav)| UI
+  UI -->|execute speak action| TTS[/api/text-to-speech-stream\nfallback /api/text-to-speech/]

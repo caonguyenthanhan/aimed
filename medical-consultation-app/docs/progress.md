@@ -63,3 +63,11 @@
 - Bổ sung env còn thiếu vào `.env.sample`: `POSTGRES_URL_NO_SSL`, `RUN_LLM_INTEGRATION_TESTS`.
 - Thêm smoke script PowerShell `medical-consultation-app/smoke.ps1` để test nhanh `/api/db/ping`, `/api/conversations/*`, `/api/mcp/call (graph.status)` cho local/Vercel.
 - UI ổn định khung chat: `scrollToBottom` dùng `messagesContainer.scrollTo` (tránh body scroll gây nhảy), bỏ `sticky` ở composer và thêm padding-bottom bù MobileBottomNav + safe-area để tránh bị che khi focus input.
+
+## 2026-05-25
+
+- CPU server: scaffold LangGraph agent (`cpu_server/langgraph_agent/`) và endpoint `/v1/agent-chat` trả `{response, actions, metadata}` để chuẩn bị thay thế hoàn toàn `/api/agent-chat` trên Next.js.
+- CPU server: bổ sung deps Python cho LangGraph (`langgraph`, `langchain-core`, `langchain-community`) vào `cpu_server/requirements.txt`.
+- Next.js: `/api/agent-chat` ưu tiên proxy 100% sang CPU server `/v1/agent-chat` khi có `CPU_SERVER_URL`, và sanitize actions theo allowlist trước khi trả về UI.
+- Sửa hiển thị tiếng Việt khi test bằng PowerShell: ép `Content-Type: application/json; charset=utf-8` cho `/api/agent-chat` và `/v1/agent-chat`.
+- Bổ sung biến môi trường LangGraph (`LG_*`) vào `.env.sample` và `DEPLOY.md` để deploy/local không thiếu cấu hình tool budget/timeout.

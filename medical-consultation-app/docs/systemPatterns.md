@@ -1,6 +1,7 @@
 ## Agent function calling (pattern)
 
 - Contract ổn định giữa backend và frontend: API trả `{ response, actions, metadata }`, frontend chỉ thực thi action trong allowlist.
+- Khi cần test bằng PowerShell, response JSON nên có `Content-Type: application/json; charset=utf-8` để decode tiếng Việt đúng.
 - Allowlist điều hướng lấy từ 1 nguồn SSOT (`ALLOWED_PATH_PREFIXES`) và được dùng đồng thời cho local-agent prompt và server enforcement.
 - Tool calling ở Gemini được chuẩn hoá thành action `navigate` để frontend chỉ xử lý một kiểu điều hướng.
 - Metadata `mode: cpu|gpu` được dùng để đồng bộ UI với runtime mode.
@@ -21,3 +22,4 @@
 - RBAC demo: server-side auth ưu tiên nhận `Bearer test_token_*` (từ login demo) để suy ra role/user; fallback gọi CPU server `/v1/user` cho token thật. Doctor APIs enforce role=doctor, patient booking không cho role=doctor.
 - Agent routing: `/api/agent-chat` có rules phát hiện intent (triage/thuốc/kế hoạch/trị liệu/bác sĩ) để chọn `agent_profile`; metadata trả `intent` để debug/demo.
 - Agent output guarantee: mọi nhánh provider (FOZA/OpenAI-like/Gemini/fallback) đều ép `response` không rỗng (auto thêm hướng dẫn + câu hỏi follow-up) để tránh “agent chỉ hiện 1 khối khó hiểu”.
+- LangGraph CPU orchestrator: CPU server cung cấp `/v1/agent-chat` chạy LangGraph (state machine + tool orchestration) và trả cùng contract `{response, actions, metadata}` để UI tái sử dụng; hướng triển khai “thay thế hoàn toàn” là Next.js `/api/agent-chat` proxy 100% sang CPU server, giữ fallback khi CPU server down.

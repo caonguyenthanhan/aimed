@@ -2,6 +2,7 @@
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -98,6 +99,9 @@ def _load_dotenv_file(path: str) -> None:
 
 
 _load_dotenv_file(os.path.join(os.path.dirname(__file__), ".env"))
+_load_dotenv_file(os.path.join(REPO_ROOT, ".env.local"))
+_load_dotenv_file(os.path.join(REPO_ROOT, "medical-consultation-app", ".env.local"))
+_load_dotenv_file(os.path.join(REPO_ROOT, "medical-consultation-app", ".env"))
 
 try:
     from .db import (
@@ -394,6 +398,14 @@ class ChatRequest(BaseModel):
     message: Optional[str] = None
     system: Optional[str] = None
     provider: Optional[str] = None
+
+
+class AgentChatRequest(BaseModel):
+    message: str
+    user_id: Optional[str] = None
+    conversation_id: Optional[str] = None
+    agent_id: Optional[str] = None
+    include_tools: Optional[bool] = True
 
 class ChatChoice(BaseModel):
     index: int
@@ -849,6 +861,20 @@ def _append_runtime_event(event: dict):
         events_path = os.path.join(pdir, "runtime-events.jsonl")
         with open(events_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(event) + "\n")
+    except Exception:
+        pass
+
+
+def _append_runtime_metric(metric: dict):
+    try:
+        _ensure_runtime_files()
+        pdir = _front_data_dir()
+        metrics_path = os.path.join(pdir, "runtime-metrics.jsonl")
+        if not os.path.exists(metrics_path):
+            with open(metrics_path, "w", encoding="utf-8") as f:
+                f.write("")
+        with open(metrics_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(metric) + "\n")
     except Exception:
         pass
 
@@ -1452,6 +1478,61 @@ async def friend_chat_completions(req: ChatRequest, request: Request):
             "mode_used": "cpu",
             **({"model_init": True} if just_loaded else {})
         }
+
+
+@app.post("/v1/agent-chat")
+async def agent_chat(req: AgentChatRequest, request: Request):
+    token_user = get_current_user(request)
+    user_id = (token_user if token_user and token_user != "anonymous" else (req.user_id or "anonymous")).strip() or "anonymous"
+    conversation_id = (req.conversation_id or "").strip() or None
+    if not conversation_id:
+        conversation_id = create_conversation(user_id)
+    started = time.time()
+    now = datetime.datetime.utcnow().isoformat()
+    try:
+        from .langgraph_agent.runtime import invoke_agent
+        out = invoke_agent(
+            message=str(req.message or "").strip(),
+            user_id=user_id,
+            conversation_id=conversation_id,
+            agent_id=(req.agent_id or "auto").strip() or "auto",
+            include_tools=bool(req.include_tools if req.include_tools is not None else True),
+        )
+        md = out.get("metadata") if isinstance(out, dict) else None
+        if not isinstance(md, dict):
+            md = {}
+        md["mode"] = "cpu"
+        md["duration_ms"] = int((time.time() - started) * 1000)
+        out["metadata"] = md
+        try:
+            _append_runtime_event({"type": "agent_chat", "orchestrator": "langgraph", "provider": md.get("provider"), "user_id": user_id, "conversation_id": conversation_id, "ok": True, "ts": now})
+        except Exception:
+            pass
+        try:
+            _append_runtime_metric({"ts": now, "orchestrator": "langgraph", "provider": md.get("provider"), "duration_ms": md.get("duration_ms"), "conversation_id": conversation_id})
+        except Exception:
+            pass
+        return JSONResponse(content=out, media_type="application/json; charset=utf-8")
+    except Exception as e:
+        msg = str(e)[:400]
+        try:
+            _append_runtime_event({"type": "agent_chat", "orchestrator": "langgraph", "user_id": user_id, "conversation_id": conversation_id, "ok": False, "error": msg, "ts": now})
+        except Exception:
+            pass
+        try:
+            _append_runtime_metric({"ts": now, "orchestrator": "langgraph", "provider": "foza", "duration_ms": int((time.time() - started) * 1000), "conversation_id": conversation_id, "ok": False})
+        except Exception:
+            pass
+        return JSONResponse(
+            content={
+            "response": "Xin lỗi, hiện agent đang gặp sự cố khi chạy LangGraph. Bạn thử lại giúp mình nhé.",
+            "actions": [],
+            "metadata": {"mode": "cpu", "orchestrator": "langgraph", "provider": "foza", "fallback": "langgraph_failed", "error": msg, "duration_ms": int((time.time() - started) * 1000)},
+            "conversation_id": conversation_id,
+            },
+            media_type="application/json; charset=utf-8",
+        )
+
 
 @app.post("/v1/vision-multi")
 async def vision_multi(req: VisionMultiRequest):

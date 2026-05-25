@@ -10,3 +10,6 @@ pydub==0.25.1
 psycopg[binary]==3.2.6
 llama-cpp-python
 neo4j==5.28.1
+langgraph
+langchain-core
+langchain-community
