@@ -101,6 +101,23 @@ function shouldRecommendMusic(message: string, history: any[]): boolean {
   return false
 }
 
+function parseGeminiRetryAfterSec(raw: string): number | null {
+  const text = String(raw || '')
+  const m1 = text.match(/"retryDelay"\s*:\s*"(\d+)s"/)
+  if (m1?.[1]) return Number(m1[1])
+  const m2 = text.match(/Please retry in\s+([0-9.]+)s/i)
+  if (m2?.[1]) return Math.ceil(Number(m2[1]))
+  return null
+}
+
+function buildGeminiRateLimitedMessage(rawError: string) {
+  const retryAfter = parseGeminiRetryAfterSec(rawError)
+  const content = retryAfter
+    ? `Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau khoảng ${retryAfter}s, hoặc chuyển sang provider khác để tiếp tục.`
+    : 'Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau, hoặc chuyển sang provider khác để tiếp tục.'
+  return { content, retryAfter }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const bodyIn = await request.json()
@@ -176,58 +193,92 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 })
       }
       const startGemini = Date.now()
-      const out = await geminiService.generateFromConfig({
-        category: 'friend',
-        tier: modeHeader,
-        question: userMessage,
-        persona: '',
-        messages: conversationHistory,
-        generationConfig: { temperature, maxOutputTokens: max_tokens }
-      })
-              const durationGemini = Date.now() - startGemini
-              const content = String(out?.text || '').trim()
-              if (!content) {
-                return NextResponse.json({ error: 'No content in response' }, { status: 502 })
-              }
-              const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
-              try {
-                await persistChatTurn({
-                  sessionId: sid,
-                  kind: 'friend',
-                  userText: userMessage,
-                  assistantText: content
-                })
-              } catch {}
-              
-              // Check for suggestions in Gemini response
-              const suggestionNeeded = detectSuggestionNeeded(userMessage, conversationHistory)
-              const mood = detectMood(userMessage, conversationHistory)
-              const includeMusic = shouldRecommendMusic(userMessage, conversationHistory)
-              const musicRecommendations = includeMusic ? (HEALING_MUSIC[mood] || HEALING_MUSIC.default) : undefined
-              
-              return NextResponse.json({
-                response: content,
-                metadata: {
-                  timestamp: new Date().toISOString(),
-                  mode: 'gpu',
-                  fallback: false,
-                  provider: 'gemini',
-                  duration_ms: durationGemini,
-                  model: out?.model || process.env.GEMINI_MODEL || 'gemini'
-                },
-                conversation_id: sid,
-                suggestion: suggestionNeeded ? {
-                  feature: suggestionNeeded.feature,
-                  reason: suggestionNeeded.reason
-                } : undefined,
-                music: musicRecommendations ? {
-                  mood,
-                  recommendations: musicRecommendations,
-                  message: mood !== 'default' 
-                    ? `Mình gợi ý một vài bản nhạc để giúp bạn cảm thấy tốt hơn nhé:`
-                    : `Đây là một số nhạc thư giãn cho bạn:`
-                } : undefined
-              })
+      try {
+        const out = await geminiService.generateFromConfig({
+          category: 'friend',
+          tier: modeHeader,
+          question: userMessage,
+          persona: '',
+          messages: conversationHistory,
+          generationConfig: { temperature, maxOutputTokens: max_tokens }
+        })
+        const durationGemini = Date.now() - startGemini
+        const content = String(out?.text || '').trim()
+        if (!content) {
+          return NextResponse.json({ error: 'No content in response' }, { status: 502 })
+        }
+        const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+        try {
+          await persistChatTurn({
+            sessionId: sid,
+            kind: 'friend',
+            userText: userMessage,
+            assistantText: content
+          })
+        } catch {}
+        
+        const suggestionNeeded = detectSuggestionNeeded(userMessage, conversationHistory)
+        const mood = detectMood(userMessage, conversationHistory)
+        const includeMusic = shouldRecommendMusic(userMessage, conversationHistory)
+        const musicRecommendations = includeMusic ? (HEALING_MUSIC[mood] || HEALING_MUSIC.default) : undefined
+        
+        return NextResponse.json({
+          response: content,
+          metadata: {
+            timestamp: new Date().toISOString(),
+            mode: 'gpu',
+            fallback: false,
+            provider: 'gemini',
+            duration_ms: durationGemini,
+            model: out?.model || process.env.GEMINI_MODEL || 'gemini'
+          },
+          conversation_id: sid,
+          suggestion: suggestionNeeded ? {
+            feature: suggestionNeeded.feature,
+            reason: suggestionNeeded.reason
+          } : undefined,
+          music: musicRecommendations ? {
+            mood,
+            recommendations: musicRecommendations,
+            message: mood !== 'default' 
+              ? `Mình gợi ý một vài bản nhạc để giúp bạn cảm thấy tốt hơn nhé:`
+              : `Đây là một số nhạc thư giãn cho bạn:`
+          } : undefined
+        })
+      } catch (error: any) {
+        const errorMessage = String(error?.message || error || '')
+        const errorStatus = error?.status || error?.response?.status || 500
+        const is429 =
+          errorStatus === 429 ||
+          errorMessage.includes(' 429 ') ||
+          errorMessage.includes('RESOURCE_EXHAUSTED') ||
+          errorMessage.includes('"code": 429')
+        if (is429) {
+          const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+          const { content, retryAfter } = buildGeminiRateLimitedMessage(errorMessage)
+          try {
+            await persistChatTurn({
+              sessionId: sid,
+              kind: 'friend',
+              userText: userMessage,
+              assistantText: content
+            })
+          } catch {}
+          return NextResponse.json({
+            response: content,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              mode: 'gpu',
+              fallback: false,
+              provider: 'gemini',
+              rate_limited: true,
+              retry_after_sec: retryAfter ?? undefined
+            },
+            conversation_id: sid
+          })
+        }
+        throw error
+      }
     }
 
     const dataDir = path.join(process.cwd(), 'data')

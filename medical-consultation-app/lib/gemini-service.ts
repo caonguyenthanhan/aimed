@@ -175,7 +175,22 @@ export class GeminiService {
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => '')
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText} ${errorText}`)
+      const error = new Error(`Gemini API error: ${response.status} ${response.statusText} ${errorText}`) as Error & {
+        status?: number
+        response?: { status: number }
+        retryAfterSec?: number | null
+      }
+      const parseRetryAfterSec = (raw: string) => {
+        const m1 = String(raw || '').match(/"retryDelay"\s*:\s*"(\d+)s"/)
+        if (m1?.[1]) return Number(m1[1])
+        const m2 = String(raw || '').match(/Please retry in\s+([0-9.]+)s/i)
+        if (m2?.[1]) return Math.ceil(Number(m2[1]))
+        return null
+      }
+      error.status = response.status
+      error.response = { status: response.status }
+      error.retryAfterSec = parseRetryAfterSec(errorText)
+      throw error
     }
 
     const data = (await response.json()) as GeminiResponse

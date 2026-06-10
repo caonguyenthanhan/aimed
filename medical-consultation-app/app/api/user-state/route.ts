@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
-import { resolveDatabaseConfig, withPgClientRetry } from "@/lib/pg"
+
+export const runtime = "nodejs"
 
 let ensured = false
 
-function isDbEnabled() {
+async function loadPgHelpers() {
+  return import("@/lib/pg")
+}
+
+async function isDbEnabled() {
+  const { resolveDatabaseConfig } = await loadPgHelpers()
   return !!String(resolveDatabaseConfig().url || "").trim()
 }
 
 async function ensureSchema() {
   if (ensured) return
+  const { withPgClientRetry } = await loadPgHelpers()
   await withPgClientRetry(async (client) => {
     await client.query(`
       CREATE TABLE IF NOT EXISTS app_user_state (
@@ -43,7 +50,7 @@ function buildDisabledGetResponse(request: NextRequest, degraded = false) {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isDbEnabled()) {
+    if (!(await isDbEnabled())) {
       return buildDisabledGetResponse(request)
     }
     const ownerId = getOwnerId(request)
@@ -54,6 +61,7 @@ export async function GET(request: NextRequest) {
     if (!namespace) return NextResponse.json({ error: "Missing namespace" }, { status: 400 })
 
     await ensureSchema()
+    const { withPgClientRetry } = await loadPgHelpers()
 
     if (key) {
       const { value } = await withPgClientRetry((client) => client.query(
@@ -76,7 +84,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!isDbEnabled()) {
+    if (!(await isDbEnabled())) {
       return NextResponse.json({ ok: false, disabled: true })
     }
     const ownerId = getOwnerId(request)
@@ -89,6 +97,7 @@ export async function POST(request: NextRequest) {
     if (value === undefined) return NextResponse.json({ error: "Missing value" }, { status: 400 })
 
     await ensureSchema()
+    const { withPgClientRetry } = await loadPgHelpers()
     await withPgClientRetry((client) => client.query(
       `
       INSERT INTO app_user_state (owner_id, namespace, key, value, updated_at)
@@ -107,7 +116,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    if (!isDbEnabled()) {
+    if (!(await isDbEnabled())) {
       return NextResponse.json({ ok: false, disabled: true })
     }
     const ownerId = getOwnerId(request)
@@ -118,6 +127,7 @@ export async function DELETE(request: NextRequest) {
     if (!namespace || !key) return NextResponse.json({ error: "Missing namespace or key" }, { status: 400 })
 
     await ensureSchema()
+    const { withPgClientRetry } = await loadPgHelpers()
     await withPgClientRetry((client) => client.query(
       `DELETE FROM app_user_state WHERE owner_id=$1 AND namespace=$2 AND key=$3`,
       [ownerId, namespace, key],
