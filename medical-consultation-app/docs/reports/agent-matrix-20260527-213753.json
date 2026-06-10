@@ -1,0 +1,151 @@
+﻿{
+    "results":  [
+                    {
+                        "expected_profile":  "default",
+                        "got_profile":  "default",
+                        "latency_ms":  17255,
+                        "action_types":  [
+                                             "ask_navigation"
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  false,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  false,
+                                       "wants_graph":  false,
+                                       "wants_tools":  false
+                                   },
+                        "ok_profile":  true,
+                        "actions_count":  1,
+                        "response_preview":  "Chào bạn! Mình có thể hỗ trợ bạn về sức khỏe tổng quát như: ăn uống, giấc ngủ, vận động, cân nặng, huyết áp, stress, các triệu chứng đang gặp, hoặc gợi ý khi nào nên đi khám. Bạn c",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "triage",
+                        "got_profile":  "default",
+                        "latency_ms":  17461,
+                        "action_types":  [
+                                             "speak"
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  false,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  false,
+                                       "wants_graph":  false,
+                                       "wants_tools":  false
+                                   },
+                        "ok_profile":  false,
+                        "actions_count":  1,
+                        "response_preview":  "Đau ngực kèm khó thở mới xuất hiện là dấu hiệu có thể nguy hiểm. Bạn hãy gọi cấp cứu 115 ngay hoặc nhờ người đưa đến khoa Cấp cứu gần nhất. Không tự lái xe. Trong lúc chờ: ngồi ngh",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "medication",
+                        "got_profile":  "medication",
+                        "latency_ms":  18795,
+                        "action_types":  [
+                                             "ask_navigation"
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  true,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  false,
+                                       "wants_graph":  false,
+                                       "wants_tools":  false
+                                   },
+                        "ok_profile":  true,
+                        "actions_count":  1,
+                        "response_preview":  "Ibuprofen và paracetamol nhìn chung không có tương tác thuốc đáng kể và có thể được dùng trong cùng một đợt để giảm đau/hạ sốt nếu dùng đúng liều. Tuy nhiên cần lưu ý:\n\n- Paracetam",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "care_plan",
+                        "got_profile":  "default",
+                        "latency_ms":  33559,
+                        "action_types":  [
+                                             "navigate"
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  false,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  false,
+                                       "wants_graph":  false,
+                                       "wants_tools":  false
+                                   },
+                        "ok_profile":  false,
+                        "actions_count":  1,
+                        "response_preview":  "Mình sẽ giúp bạn lập kế hoạch theo dõi huyết áp trong 2 tuần. Bạn nên đo huyết áp đều đặn, ghi lại kết quả và theo dõi các dấu hiệu bất thường.\n\nKế hoạch 14 ngày:\n\n1. Thời điểm đo ",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "therapy",
+                        "got_profile":  "therapy",
+                        "latency_ms":  19566,
+                        "action_types":  [
+                                             "speak"
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  false,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  true,
+                                       "wants_graph":  false,
+                                       "wants_tools":  false
+                                   },
+                        "ok_profile":  true,
+                        "actions_count":  1,
+                        "response_preview":  "Mình hiểu—lo âu và mất ngủ rất khó chịu. Bạn có thể thử bài thở 4–6 đơn giản ngay bây giờ:\n\n1) Ngồi hoặc nằm thoải mái, thả lỏng vai và hàm.\n2) Đặt một tay lên bụng, một tay lên ng",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "doctor_referral",
+                        "got_profile":  "default",
+                        "latency_ms":  7191,
+                        "action_types":  [
+                                             "navigate"
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  false,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  false,
+                                       "wants_graph":  false,
+                                       "wants_tools":  true
+                                   },
+                        "ok_profile":  false,
+                        "actions_count":  1,
+                        "response_preview":  "Mình sẽ đưa bạn đến mục đặt hẹn bác sĩ. Bạn có thể chọn chuyên khoa Tim mạch và khung giờ phù hợp tại đó.",
+                        "tool_calls":  [
+                                           "web.search"
+                                       ]
+                    }
+                ],
+    "total":  6,
+    "include_tools":  true,
+    "started_at":  "2026-05-27T21:35:59",
+    "pass":  3,
+    "base_url":  "http://127.0.0.1:8000",
+    "pass_rate":  50,
+    "target":  "cpu",
+    "agent_id":  "auto",
+    "provider":  "foza"
+}

@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
+const toHeaderRecord = (headers?: HeadersInit): Record<string, string> => {
+  if (!headers) return {}
+  if (headers instanceof Headers) {
+    const out: Record<string, string> = {}
+    headers.forEach((v, k) => (out[k] = v))
+    return out
+  }
+  if (Array.isArray(headers)) return Object.fromEntries(headers)
+  return { ...(headers as Record<string, string>) }
+}
+
+const json = (data: any, init?: ResponseInit) =>
+  NextResponse.json(data, {
+    ...(init || {}),
+    headers: {
+      ...toHeaderRecord(init?.headers),
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+  })
+
 const dataDir = path.join(process.cwd(), 'data')
 const modePath = path.join(dataDir, 'runtime-mode.json')
 const eventsPath = path.join(dataDir, 'runtime-events.jsonl')
@@ -19,15 +39,15 @@ export async function GET() {
     if (process.env.VERCEL) {
       const gpuBase = (process.env.GPU_SERVER_URL || '').trim().replace(/\/$/, '')
       const cpuBase = (process.env.CPU_SERVER_URL || '').trim().replace(/\/$/, '')
-      if (gpuBase) return NextResponse.json({ target: 'gpu', gpu_url: gpuBase, updated_at: new Date().toISOString() })
-      if (cpuBase) return NextResponse.json({ target: 'cpu', updated_at: new Date().toISOString() })
-      return NextResponse.json({ target: 'cpu', updated_at: new Date().toISOString() })
+      if (gpuBase) return json({ target: 'gpu', gpu_url: gpuBase, updated_at: new Date().toISOString() })
+      if (cpuBase) return json({ target: 'cpu', updated_at: new Date().toISOString() })
+      return json({ target: 'cpu', updated_at: new Date().toISOString() })
     }
     const raw = fs.readFileSync(modePath, 'utf-8')
     const data = JSON.parse(raw)
-    return NextResponse.json(data)
+    return json(data)
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'read_error' }, { status: 500 })
+    return json({ error: e?.message || 'read_error' }, { status: 500 })
   }
 }
 
@@ -51,8 +71,8 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify(payload)
       }).catch(() => {})
     } catch {}
-    return NextResponse.json({ ok: true, mode: payload })
+    return json({ ok: true, mode: payload })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'write_error' }, { status: 500 })
+    return json({ error: e?.message || 'write_error' }, { status: 500 })
   }
 }

@@ -1,0 +1,140 @@
+version: 1
+
+logging:
+  enabled: true
+  sinks:
+    jsonl:
+      enabled: true
+      events_path: medical-consultation-app/data/runtime-events.jsonl
+      metrics_path: medical-consultation-app/data/runtime-metrics.jsonl
+      max_record_bytes: 20000
+
+tracing:
+  enabled: true
+  provider: langsmith
+  langsmith:
+    enabled: true
+    tracing: true
+    project: medical-consulting-system
+    endpoint: https://api.smith.langchain.com
+    sample_rate: 1.0
+    log_inputs: true
+    log_outputs: true
+    max_payload_chars: 16000
+
+guardrails:
+  enabled: true
+  prompt_injection:
+    enabled: true
+    max_chars: 8000
+    blocked_patterns:
+      - "(?i)ignore\\s+previous\\s+instructions"
+      - "(?i)disregard\\s+all\\s+previous"
+      - "(?i)system\\s+prompt"
+      - "(?i)developer\\s+message"
+      - "(?i)reveal\\s+your\\s+hidden"
+      - "(?i)jailbreak"
+      - "(?i)prompt\\s+injection"
+    blocked_substrings:
+      - "<system"
+      - "</system"
+      - "BEGIN SYSTEM PROMPT"
+      - "END SYSTEM PROMPT"
+    allow_on_match: false
+    user_facing_block_message: "Mình không thể hỗ trợ yêu cầu này vì có dấu hiệu can thiệp vào hướng dẫn hệ thống. Bạn hãy mô tả mục tiêu y tế/sức khỏe của bạn theo cách bình thường để mình hỗ trợ an toàn nhé."
+
+  grounding:
+    enabled: true
+    require_context_for_profiles:
+      - medication
+      - triage
+    context_min_chars: 120
+    fallback_tools:
+      - name: web.search
+        args:
+          num: 5
+      - name: graph.evidence
+        args:
+          limit: 60
+          entity_limit: 5
+    user_facing_no_context_message: "Mình chưa có đủ thông tin/nguồn để trả lời chắc chắn. Mình sẽ tra cứu thêm và bạn có thể cho mình biết triệu chứng, thời gian khởi phát, thuốc đang dùng, và bệnh nền (nếu có) nhé."
+
+  routing:
+    enabled: true
+    provider: semantic_router
+    semantic_router:
+      enabled: false
+      encoder: openai
+      threshold: 0.62
+      routes:
+        - name: jailbreak
+          utterances:
+            - "ignore previous instructions"
+            - "reveal the system prompt"
+            - "disregard all previous"
+        - name: medical
+          utterances:
+            - "I have chest pain"
+            - "Is ibuprofen safe"
+            - "I feel anxious"
+
+eval:
+  enabled: true
+  ragas:
+    enabled: true
+    metrics:
+      faithfulness: true
+      answer_relevance: true
+      context_precision: true
+      context_recall: true
+    llm:
+      provider: openai_like
+      base_url_env: LLMOPS_EVAL_LLM_BASE_URL
+      api_key_env: LLMOPS_EVAL_LLM_API_KEY
+      model: gpt-4o-mini
+      fallback_base_url_env: FOZA_BASE_URL
+      fallback_api_key_envs:
+        - FOZA_TOKEN
+        - FOZA_TOKEN_2
+      fallback_model_env: LLM_MODEL_NAME
+    embeddings:
+      provider: openai_like
+      base_url_env: LLMOPS_EVAL_EMBEDDINGS_BASE_URL
+      api_key_env: LLMOPS_EVAL_EMBEDDINGS_API_KEY
+      model: text-embedding-3-small
+      fallback_base_url_env: FOZA_BASE_URL
+      fallback_api_key_envs:
+        - FOZA_TOKEN
+        - FOZA_TOKEN_2
+  dataset:
+    sample_path: tests/eval/data/sample_eval_dataset.jsonl
+  blackbox:
+    base_url_env: CPU_SERVER_URL
+    endpoint_path: /v1/agent-chat
+    timeout_s: 60
+  inprocess:
+    enabled: true
+  gating:
+    enabled: true
+    baseline_path: configs/llmops_eval_baseline.yaml
+    max_relative_drop: 0.08
+    min_quality:
+      source_grounding: 0.60
+      question_alignment: 0.60
+      context_accuracy: 0.55
+      context_coverage: 0.55
+  reporting:
+    labels:
+      source_grounding: "Groundedness vs evidence"
+      question_alignment: "Relevance to user question"
+      context_accuracy: "Retrieval precision"
+      context_coverage: "Retrieval recall"
+    metric_map:
+      source_grounding:
+        - faithfulness
+      question_alignment:
+        - answer_relevance
+      context_accuracy:
+        - context_precision
+      context_coverage:
+        - context_recall

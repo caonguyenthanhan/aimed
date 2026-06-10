@@ -2,10 +2,10 @@
 
 ## Getting Started
 
-Copy the `.env.example` file to `.env.local` and fill in the required values:
+Copy the `.env.sample` file to `.env.local` and fill in the required values:
 
-```bash
-cp .env.example .env.local
+```powershell
+Copy-Item .env.sample .env.local
 ```
 
 ## Configuration
@@ -20,16 +20,19 @@ cp .env.example .env.local
 
 ### Database Configuration
 
-Configure your PostgreSQL database connection:
+Configure your PostgreSQL connection string (recommended: Neon/Vercel Postgres variables):
+
+```
+POSTGRES_URL=postgresql://user:password@host:port/database_name
+```
+
+Fallback (if you use a single DSN):
 
 ```
 DATABASE_URL=postgresql://user:password@host:port/database_name
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=medical_consultation
-DB_USER=postgres
-DB_PASSWORD=your_password
 ```
+
+For a complete list of supported variables and provider routing, see `docs/ENV_GUIDE.md`.
 
 ## Features
 
@@ -47,7 +50,7 @@ This prevents the agent from jumping too quickly without giving users time to re
 
 After setting up your environment variables:
 
-```bash
+```powershell
 npm install
 npm run dev
 ```

@@ -1,0 +1,150 @@
+﻿{
+    "results":  [
+                    {
+                        "expected_profile":  "default",
+                        "got_profile":  "default",
+                        "latency_ms":  12103,
+                        "action_types":  [
+
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  false,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  false,
+                                       "wants_graph":  false,
+                                       "wants_tools":  false
+                                   },
+                        "ok_profile":  true,
+                        "actions_count":  0,
+                        "response_preview":  "Chào bạn! Mình có thể hỗ trợ bạn về sức khỏe tổng quát như: ăn uống, giấc ngủ, vận động, kiểm tra sức khỏe định kỳ, các triệu chứng thường gặp, hoặc khi nào cần đi khám. Bạn muốn h",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "triage",
+                        "got_profile":  "default",
+                        "latency_ms":  19742,
+                        "action_types":  [
+                                             "speak"
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  false,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  false,
+                                       "wants_graph":  false,
+                                       "wants_tools":  false
+                                   },
+                        "ok_profile":  false,
+                        "actions_count":  1,
+                        "response_preview":  "Đau ngực kèm khó thở mới xuất hiện có thể là tình huống cấp cứu. Bạn hãy gọi cấp cứu 115 ngay hoặc nhờ người bên cạnh đưa đến khoa Cấp cứu gần nhất. Không tự lái xe.\n\nTrong lúc chờ",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "medication",
+                        "got_profile":  "medication",
+                        "latency_ms":  64328,
+                        "action_types":  [
+
+                                         ],
+                        "intent":  {
+                                       "triage":  false,
+                                       "medication":  true,
+                                       "plan":  false,
+                                       "therapy":  false,
+                                       "doctor":  false,
+                                       "wantsGraph":  false,
+                                       "source":  "rules_v1"
+                                   },
+                        "ok_profile":  true,
+                        "actions_count":  0,
+                        "response_preview":  "Ibuprofen và paracetamol thường có thể dùng cùng nhau, vì chúng không có tương tác nguy hiểm phổ biến khi dùng đúng liều. Chúng là hai thuốc giảm đau/hạ sốt khác cơ chế.\n\nLưu ý qua",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "care_plan",
+                        "got_profile":  "default",
+                        "latency_ms":  80116,
+                        "action_types":  [
+
+                                         ],
+                        "intent":  {
+                                       "triage":  false,
+                                       "medication":  false,
+                                       "plan":  false,
+                                       "therapy":  false,
+                                       "doctor":  false,
+                                       "wantsGraph":  false,
+                                       "source":  "rules_v1"
+                                   },
+                        "ok_profile":  false,
+                        "actions_count":  0,
+                        "response_preview":  "Mình gặp sự cố khi gọi agent. Bạn thử lại giúp mình.",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "therapy",
+                        "got_profile":  "default",
+                        "latency_ms":  78854,
+                        "action_types":  [
+
+                                         ],
+                        "intent":  {
+                                       "triage":  false,
+                                       "medication":  false,
+                                       "plan":  false,
+                                       "therapy":  false,
+                                       "doctor":  false,
+                                       "wantsGraph":  false,
+                                       "source":  "rules_v1"
+                                   },
+                        "ok_profile":  false,
+                        "actions_count":  0,
+                        "response_preview":  "Mình ở đây với bạn. Thử bài thở rất đơn giản này trong 2–3 phút nhé:\n\n**Thở 4–6**\n- Ngồi hoặc nằm thoải mái, thả lỏng vai và hàm.\n- Đặt một tay lên bụng nếu muốn.\n- Hít vào bằng mũ",
+                        "tool_calls":  [
+
+                                       ]
+                    },
+                    {
+                        "expected_profile":  "doctor_referral",
+                        "got_profile":  "default",
+                        "latency_ms":  7451,
+                        "action_types":  [
+                                             "navigate"
+                                         ],
+                        "intent":  {
+                                       "wants_doctor":  false,
+                                       "wants_triage":  false,
+                                       "wants_medication":  false,
+                                       "wants_plan":  false,
+                                       "wants_therapy":  false,
+                                       "wants_graph":  false,
+                                       "wants_tools":  true
+                                   },
+                        "ok_profile":  false,
+                        "actions_count":  1,
+                        "response_preview":  "Mình sẽ đưa bạn đến mục đặt hẹn với bác sĩ. Bạn có thể chọn chuyên khoa Tim mạch và thời gian phù hợp tại đó.",
+                        "tool_calls":  [
+                                           "web.search"
+                                       ]
+                    }
+                ],
+    "total":  6,
+    "started_at":  "2026-05-27T21:30:20",
+    "pass":  2,
+    "base_url":  "http://localhost:3000",
+    "pass_rate":  33.33,
+    "include_tools":  true,
+    "agent_id":  "auto",
+    "provider":  "foza"
+}

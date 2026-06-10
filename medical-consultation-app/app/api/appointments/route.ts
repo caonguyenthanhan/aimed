@@ -1,7 +1,11 @@
-import { NextRequest, NextResponse } from "next/server"
+﻿import { NextRequest, NextResponse } from "next/server"
 import { getPgPool, resolveDatabaseConfig } from "@/lib/pg"
 import { getAuthedUser } from "@/lib/auth-server"
 import { normalizeAppointment, newAppointmentId } from "@/lib/appointments"
+import { TEST_ACCOUNTS } from "@/lib/test-accounts"
+import { defaultPublicProfile, normalizePublicProfile } from "@/lib/doctor-profile"
+import { parseBody, CreateAppointmentSchema, PatchAppointmentSchema } from "@/lib/api-schemas"
+import { trackError } from "@/lib/error-tracker"
 
 function isDbEnabled() {
   return !!String(resolveDatabaseConfig().url || "").trim()
@@ -12,6 +16,26 @@ let ensured = false
 async function ensureSchema() {
   if (ensured) return
   const pool = getPgPool()
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS doctor_profiles (
+      doctor_id TEXT PRIMARY KEY,
+      public_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+      private_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+  for (const d of TEST_ACCOUNTS.doctors) {
+    const base = defaultPublicProfile({ displayName: d.fullName })
+    const publicJson = normalizePublicProfile({ ...base, displayName: d.fullName, title: "BÃ¡c sÄ©", specialties: [d.specialty], bio: "" })
+    await pool.query(
+      `
+      INSERT INTO doctor_profiles (doctor_id, public_json, private_json, updated_at)
+      VALUES ($1, $2::jsonb, '{}'::jsonb, now())
+      ON CONFLICT (doctor_id) DO NOTHING
+      `,
+      [String(d.id), JSON.stringify(publicJson)],
+    )
+  }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS doctor_appointments (
       id TEXT PRIMARY KEY,
@@ -35,22 +59,13 @@ export async function POST(req: NextRequest) {
     if (!isDbEnabled()) return NextResponse.json({ error: "Database not configured" }, { status: 503 })
     await ensureSchema()
 
-    const body: any = await req.json().catch(() => null)
-    const doctor_id = String(body?.doctor_id || "").trim()
-    const patient_name = String(body?.patient_name || "").trim()
-    const reason = String(body?.reason || "").trim()
-    const scheduled_at = String(body?.scheduled_at || "").trim()
-    const contact = body?.contact || {}
+    const { data: body, error: validationError } = await parseBody(req, CreateAppointmentSchema)
+    if (validationError) return validationError
+
+    const { doctor_id, patient_name, reason, scheduled_at, contact } = body
+    const dt = new Date(scheduled_at)
     const phone = String(contact?.phone || "").trim()
     const email = String(contact?.email || "").trim()
-
-    if (!doctor_id || !patient_name || !reason || !scheduled_at) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 })
-    }
-    const dt = new Date(scheduled_at)
-    if (!Number.isFinite(dt.getTime())) {
-      return NextResponse.json({ error: "Invalid scheduled_at" }, { status: 400 })
-    }
 
     let patient_id: string | null = null
     const auth = (req.headers.get("authorization") || "").trim()
@@ -62,8 +77,11 @@ export async function POST(req: NextRequest) {
       patient_id = String(u.user_id || "").trim() || null
     }
 
-    const id = newAppointmentId()
     const pool = getPgPool()
+    const dr = await pool.query(`SELECT 1 as ok FROM doctor_profiles WHERE doctor_id = $1 LIMIT 1`, [doctor_id])
+    if (!dr.rows?.[0]) return NextResponse.json({ error: "Doctor not found" }, { status: 404 })
+
+    const id = newAppointmentId()
     const r = await pool.query(
       `
       INSERT INTO doctor_appointments (id, doctor_id, patient_id, patient_name, contact, scheduled_at, reason, status, created_at)
@@ -81,7 +99,8 @@ export async function POST(req: NextRequest) {
     })
     if (!ap) return NextResponse.json({ error: "Invalid row" }, { status: 500 })
     return NextResponse.json(ap)
-  } catch {
+  } catch (err) {
+    await trackError("POST /api/appointments failed", { route: "/api/appointments", error: err })
     return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }
@@ -94,6 +113,29 @@ export async function GET(req: NextRequest) {
     if (String(u.role || "").toLowerCase() !== "doctor") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     await ensureSchema()
     const pool = getPgPool()
+    const url = new URL(req.url)
+    const id = String(url.searchParams.get("id") || "").trim()
+    if (id) {
+      const r = await pool.query(
+        `
+        SELECT id, doctor_id, patient_id, patient_name, contact, scheduled_at, reason, status, created_at
+        FROM doctor_appointments
+        WHERE id = $1 AND doctor_id = $2
+        LIMIT 1
+        `,
+        [id, u.user_id],
+      )
+      const row = r.rows[0]
+      if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 })
+      const item = normalizeAppointment({
+        ...row,
+        contact: row?.contact || {},
+        scheduled_at: new Date(row.scheduled_at).toISOString(),
+        created_at: new Date(row.created_at).toISOString(),
+      })
+      if (!item) return NextResponse.json({ error: "Invalid row" }, { status: 500 })
+      return NextResponse.json({ item })
+    }
     const r = await pool.query(
       `
       SELECT id, doctor_id, patient_id, patient_name, contact, scheduled_at, reason, status, created_at
@@ -115,7 +157,8 @@ export async function GET(req: NextRequest) {
       )
       .filter(Boolean)
     return NextResponse.json({ items })
-  } catch {
+  } catch (err) {
+    await trackError("GET /api/appointments failed", { route: "/api/appointments", error: err })
     return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }
@@ -128,12 +171,10 @@ export async function PATCH(req: NextRequest) {
     if (String(u.role || "").toLowerCase() !== "doctor") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     await ensureSchema()
 
-    const body: any = await req.json().catch(() => null)
-    const id = String(body?.id || "").trim()
-    const status = String(body?.status || "").trim()
-    if (!id || !["pending", "confirmed", "cancelled", "completed"].includes(status)) {
-      return NextResponse.json({ error: "Invalid fields" }, { status: 400 })
-    }
+    const { data: body, error: validationError } = await parseBody(req, PatchAppointmentSchema)
+    if (validationError) return validationError
+
+    const { id, status } = body
     const pool = getPgPool()
     const r = await pool.query(
       `
@@ -154,7 +195,8 @@ export async function PATCH(req: NextRequest) {
     })
     if (!ap) return NextResponse.json({ error: "Invalid row" }, { status: 500 })
     return NextResponse.json(ap)
-  } catch {
+  } catch (err) {
+    await trackError("PATCH /api/appointments failed", { route: "/api/appointments", error: err })
     return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }

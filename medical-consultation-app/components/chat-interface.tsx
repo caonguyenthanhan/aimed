@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useLayoutEffect } from "react"
 import { useRouter } from "next/navigation"
 import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, ChevronRight, Search, MessageSquare } from "lucide-react"
 // Force refresh - clear cache - v3
@@ -546,6 +546,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const sendingRef = useRef<boolean>(false)
   const messagesRef = useRef<Message[]>([])
   const messagesCountRef = useRef<number>(0)
+  const prevMessagesCountRef = useRef<number>(0)
   const isAtBottomRef = useRef<boolean>(true)
   const composerHeightRef = useRef<number>(0)
   const userBufferRef = useRef<string[]>([])
@@ -674,19 +675,26 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     messagesEndRef.current?.scrollIntoView({ behavior })
   }
 
-  useEffect(() => {
-    messagesCountRef.current = messages.length
-    if (messages.length <= 250) {
+  useLayoutEffect(() => {
+    const nextCount = messages.length
+    const prevCount = prevMessagesCountRef.current
+    const lenIncreased = nextCount > prevCount
+    const last = nextCount > 0 ? messages[nextCount - 1] : null
+    const shouldScroll = isAtBottomRef.current || (lenIncreased && !!last?.isUser)
+
+    messagesCountRef.current = nextCount
+    if (nextCount <= 250 && shouldScroll) {
       scrollToBottom()
     }
     messagesRef.current = messages
+    prevMessagesCountRef.current = nextCount
   }, [messages])
 
   const refreshIsAtBottom = () => {
     const el = messagesContainerRef.current
     if (!el) return
     const gap = el.scrollHeight - (el.scrollTop + el.clientHeight)
-    isAtBottomRef.current = gap < 48
+    isAtBottomRef.current = gap < 120
   }
 
   useEffect(() => {
@@ -1173,7 +1181,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setIsPlayingAudio(messageId)
 
       // Ưu tiên phát theo luồng để bắt đầu nghe sớm
-      const sanitized = sanitizeTtsText(String(text))
+      const sanitized = sanitizeTtsText(String(text), { lang: "vi" })
       const streamUrl = `/api/text-to-speech-stream?text=${encodeURIComponent(sanitized)}&lang=vi`
       const audio = new Audio(streamUrl)
       audioRef.current = audio
@@ -2302,7 +2310,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           <div className="space-y-4 py-4">
             {messages.map((message, index) => (
               <div
-                key={index}
+                key={String(message.id || index)}
                 className={`flex items-end gap-3 animate-message-in ${
                   message.isUser ? 'justify-end' : 'justify-start'
                 }`}

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  lint-test-build:
+    name: Lint + Test + Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: medical-consultation-app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: medical-consultation-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test with coverage
+        run: npx vitest run --coverage
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-test-secret-at-least-32-chars-long
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: medical-consultation-app/coverage/
+          retention-days: 7
+
+      - name: Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+          # WHY: build-time env stubs — real secrets injected via Vercel/deployment env
+          JWT_SECRET: ci-build-placeholder-not-real
+          NEXT_PUBLIC_APP_NAME: AIMed

@@ -4,6 +4,7 @@ import fs from "fs"
 import path from "path"
 import { GeminiService, geminiService } from "@/lib/gemini-service"
 import { shouldBlock, buildBlockResponse } from "@/lib/safety"
+import { appendMedicalDisclaimer } from "@/lib/medical-disclaimer"
 import { assessSos, buildSosResponse } from "@/lib/sos-mode"
 import { geminiToolDeclarations, toolCallsToActions } from "@/lib/agent-tools"
 // Temporarily disabled to isolate runtime error
@@ -28,6 +29,12 @@ export async function POST(req: Request) {
 
     const ensureDataDir = () => {
       if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true })
+      if (!fs.existsSync(runtimeModePath)) {
+        fs.writeFileSync(runtimeModePath, JSON.stringify({ target: "cpu", updated_at: new Date().toISOString() }, null, 2))
+      }
+      if (!fs.existsSync(serverRegistryPath)) {
+        fs.writeFileSync(serverRegistryPath, JSON.stringify({ servers: [], updated_at: new Date().toISOString() }, null, 2))
+      }
       if (!fs.existsSync(runtimeEventsPath)) fs.writeFileSync(runtimeEventsPath, "")
       if (!fs.existsSync(runtimeMetricsPath)) fs.writeFileSync(runtimeMetricsPath, "")
     }
@@ -47,6 +54,9 @@ export async function POST(req: Request) {
     }
 
     const readRuntimeRouting = (): { target: "cpu" | "gpu"; gpuBaseUrl: string } => {
+      try {
+        ensureDataDir()
+      } catch {}
       const envGpuBase = (process.env.GPU_SERVER_URL || process.env.DEFAULT_GPU_URL || "").trim().replace(/\/$/, "")
       const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "").trim().replace(/\/$/, "")
       const localGpuFallback = envGpuBase || "http://127.0.0.1:8001"
@@ -1311,8 +1321,8 @@ export async function POST(req: Request) {
     const fullContent = suggestedInvestigation 
       ? `${content}\n\n❓ ${suggestedInvestigation}`
       : content
-    const finalContent = ensureAssistantText(fullContent, actions)
-    
+    const finalContent = appendMedicalDisclaimer(ensureAssistantText(fullContent, actions))
+
     try {
       await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: finalContent })
     } catch {}

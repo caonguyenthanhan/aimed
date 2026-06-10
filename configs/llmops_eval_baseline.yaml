@@ -1,0 +1,46 @@
+# RAGAS evaluation baseline — v1.0.0 (2026-06-10)
+# WHY: serves as reference for regression detection in CI/CD
+# Run: pytest tests/eval/ to update these scores after model/config changes
+
+version: "1.0.0"
+generated_at: "2026-06-10T00:00:00Z"
+model: "N/A - baseline before first run"
+provider: "N/A"
+
+# Gating thresholds (from configs/llmops.yaml gating.min_quality)
+thresholds:
+  source_grounding: 0.60
+  question_alignment: 0.60
+  context_accuracy: 0.55
+  context_coverage: 0.55
+
+# Aggregate RAGAS scores (filled after first pytest run)
+metrics:
+  faithfulness:
+    mean: null
+    std: null
+    n: 0
+  answer_relevance:
+    mean: null
+    std: null
+    n: 0
+  context_precision:
+    mean: null
+    std: null
+    n: 0
+  context_recall:
+    mean: null
+    std: null
+    n: 0
+
+# Per-difficulty breakdown (filled after first run)
+per_difficulty:
+  easy: {}
+  medium: {}
+  hard: {}
+
+# Notes
+notes: |
+  This is the initial baseline — all scores are null.
+  Run `pytest tests/eval/` to populate actual scores after deploying.
+  CI will fail if new scores drop below thresholds or regress >8% vs this baseline.

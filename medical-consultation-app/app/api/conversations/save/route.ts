@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { upsertConversation, insertMessage } from '@/lib/db-queries'
 import { resolveDatabaseConfig, withPgClientRetry } from '@/lib/pg'
+import { conversationListCache } from '@/lib/cache'
+import { parseBody, SaveConversationSchema } from '@/lib/api-schemas'
+
+const toHeaderRecord = (headers?: HeadersInit): Record<string, string> => {
+  if (!headers) return {}
+  if (headers instanceof Headers) {
+    const out: Record<string, string> = {}
+    headers.forEach((v, k) => (out[k] = v))
+    return out
+  }
+  if (Array.isArray(headers)) return Object.fromEntries(headers)
+  return { ...(headers as Record<string, string>) }
+}
+
+const json = (data: any, init?: ResponseInit) =>
+  NextResponse.json(data, {
+    ...(init || {}),
+    headers: {
+      ...toHeaderRecord(init?.headers),
+      "Content-Type": "application/json; charset=utf-8",
+    },
+  })
 
 // Convert token string to consistent UUID
 function tokenToUUID(token: string): string {
@@ -19,31 +41,16 @@ function normalizeUserUUID(userId: string): string {
 
 export async function POST(request: NextRequest) {
   const started = Date.now()
+  const { url: dbUrl, source } = resolveDatabaseConfig()
   try {
-    const { url: dbUrl, source } = resolveDatabaseConfig()
     if (!dbUrl) {
-      return NextResponse.json({ success: false, skipped: true, reason: 'database_not_configured', metadata: { source } }, { status: 200 })
+      return json({ success: false, skipped: true, reason: 'database_not_configured', metadata: { source } }, { status: 200 })
     }
 
-    let body: any
-    try {
-      body = await request.json()
-    } catch {
-      return NextResponse.json({ success: false, skipped: true, reason: 'invalid_json' }, { status: 200 })
-    }
+    const { data: body, error: validationError } = await parseBody(request, SaveConversationSchema)
+    if (validationError) return validationError
 
-    const conversationId =
-      typeof body?.conversationId === 'string' ? body.conversationId.trim() : ''
-    const userId = typeof body?.userId === 'string' ? body.userId.trim() : ''
-    const title = typeof body?.title === 'string' ? body.title : undefined
-    const messages = Array.isArray(body?.messages) ? body.messages : null
-
-    if (!conversationId || !userId || !messages) {
-      return NextResponse.json(
-        { success: false, skipped: true, reason: 'missing_fields', conversationId: conversationId || undefined },
-        { status: 200 }
-      )
-    }
+    const { conversationId, userId, title, messages } = body
 
     const userUUID = normalizeUserUUID(userId)
     const out = await withPgClientRetry(async (client) => {
@@ -68,10 +75,13 @@ export async function POST(request: NextRequest) {
         } catch {}
         throw e
       }
-    })
+    }, { attempts: 3, baseDelayMs: 250 })
 
-    return NextResponse.json({ 
-      success: true, 
+    // WHY: invalidate conversation list cache after save so next list request gets fresh data
+    conversationListCache.invalidatePrefix(`convs:${userId}:`)
+
+    return json({
+      success: true,
       conversationId,
       metadata: { source, attempts: out.attempts, elapsed_ms: out.elapsed_ms, latency_ms: Date.now() - started },
     })
@@ -81,15 +91,29 @@ export async function POST(request: NextRequest) {
         ? (error as any).code
         : undefined
     if (code === '22P02') {
-      return NextResponse.json(
-        { success: false, skipped: true, reason: 'invalid_id_format' },
+      return json(
+        { success: false, skipped: true, reason: 'invalid_id_format', metadata: { source } },
         { status: 200 }
       )
     }
-    console.error('[v0] Error saving conversation:', error)
-    return NextResponse.json(
-      { success: false, skipped: true, reason: 'internal_error', metadata: { latency_ms: Date.now() - started } },
-      { status: 200 }
+    const retry_attempts =
+      error && typeof error === "object" && "__pg_retry_attempts" in (error as any) ? (error as any).__pg_retry_attempts : undefined
+    const retry_elapsed_ms =
+      error && typeof error === "object" && "__pg_retry_elapsed_ms" in (error as any) ? (error as any).__pg_retry_elapsed_ms : undefined
+    return json(
+      {
+        success: false,
+        skipped: true,
+        reason: "db_unavailable",
+        metadata: {
+          source,
+          latency_ms: Date.now() - started,
+          retry_attempts,
+          retry_elapsed_ms,
+          error: String((error as any)?.message || "db_error"),
+        },
+      },
+      { status: 200 },
     )
   }
 }
