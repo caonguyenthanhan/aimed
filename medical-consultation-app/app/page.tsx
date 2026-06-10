@@ -1,6 +1,7 @@
-import LandingPage from "@/components/landing-page"
+import { redirect } from "next/navigation"
 
-export default function MedicalApp() {
-  return <LandingPage />
+export default function RootPage() {
+  // Redirect to default locale
+  redirect("/vi")
 }
 

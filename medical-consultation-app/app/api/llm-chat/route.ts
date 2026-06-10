@@ -8,6 +8,26 @@ import crypto from 'crypto'
 import { assessSos, buildSosResponse } from '@/lib/sos-mode'
 import { planChunkedMessages, verifyContentIntegrity } from '@/lib/chat-delivery'
 
+const toHeaderRecord = (headers?: HeadersInit): Record<string, string> => {
+  if (!headers) return {}
+  if (headers instanceof Headers) {
+    const out: Record<string, string> = {}
+    headers.forEach((v, k) => (out[k] = v))
+    return out
+  }
+  if (Array.isArray(headers)) return Object.fromEntries(headers)
+  return { ...(headers as Record<string, string>) }
+}
+
+const json = (data: any, init?: ResponseInit) =>
+  NextResponse.json(data, {
+    ...(init || {}),
+    headers: {
+      ...toHeaderRecord(init?.headers),
+      'Content-Type': 'application/json; charset=utf-8',
+    },
+  })
+
 // Determine context based on the conversation or user input
 function determineContext(userMessage: string, conversationHistory?: any[]): string {
   const message = userMessage.toLowerCase()
@@ -68,7 +88,7 @@ export async function POST(request: NextRequest) {
     
     const userMessage = message || question || prompt
     if (!userMessage) {
-      return NextResponse.json(
+      return json(
         { error: 'Message is required' },
         { status: 400 }
       )
@@ -86,7 +106,7 @@ export async function POST(request: NextRequest) {
           assistantText: content
         })
       } catch {}
-      return NextResponse.json({
+      return json({
         response: content,
         messages: planResponseMessages(content),
         delivery: { mode: deliveryMode },
@@ -112,7 +132,7 @@ export async function POST(request: NextRequest) {
           assistantText: buildBlockResponse(safetyHits)
         })
       } catch {}
-      return NextResponse.json({
+      return json({
         response: buildBlockResponse(safetyHits),
         messages: planResponseMessages(buildBlockResponse(safetyHits)),
         delivery: { mode: deliveryMode },
@@ -171,7 +191,7 @@ export async function POST(request: NextRequest) {
           const BASE_SYSTEM_PROMPT = `Bạn là Trợ lý Y tế AI (Medical Consultant AI). Nhiệm vụ của bạn là cung cấp thông tin y tế hữu ích, chính xác và an toàn bằng Tiếng Việt.
 
 NGUYÊN TẮC QUAN TRỌNG:
-1. AN TOÀN LÀ TRÊN HẾT: Luôn khuyến cáo ng��ời dùng đi khám bác sĩ hoặc đến cơ sở y tế nếu có dấu hiệu nghiêm trọng. Không đưa ra chẩn đoán khẳng định hoặc kê đơn thuốc thay thế bác sĩ.
+1. AN TOÀN LÀ TRÊN HẾT: Luôn khuyến cáo người dùng đi khám bác sĩ hoặc đến cơ sở y tế nếu có dấu hiệu nghiêm trọng. Không đưa ra chẩn đoán khẳng định hoặc kê đơn thuốc thay thế bác sĩ.
 2. KHÁCH QUAN & KHOA HỌC: Dựa trên kiến thức y khoa đã được kiểm chứng.
 3. NGÔN NGỮ: Sử dụng Tiếng Việt chuẩn mực, dễ hiểu, giọng điệu ân cần, chuyên nghiệp.
 4. TỪ CHỐI TRẢ LỜI: Nếu câu hỏi không liên quan đến y tế/sức khỏe hoặc vi phạm đạo đức, hãy lịch sự từ chối hoặc lái về chủ đề y tế.`
@@ -215,7 +235,7 @@ NGUYÊN TẮC QUAN TRỌNG:
       const systemKey = String(process.env.GEMINI_API_KEY || '').trim()
       const keyToUse = passOk ? systemKey : (accessSecret || systemKey)
       if (!keyToUse) {
-        return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 })
+        return json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 })
       }
 
       const startGemini = Date.now()
@@ -240,7 +260,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           const msg = retryAfter
             ? `Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau khoảng ${retryAfter}s, hoặc nhập API key/pass để tiếp tục.`
             : 'Hiện Gemini đang giới hạn lượt dùng. Bạn thử lại sau, hoặc nhập API key/pass để tiếp tục.'
-          return NextResponse.json({
+          return json({
             response: msg,
             messages: planResponseMessages(msg),
             delivery: { mode: deliveryMode },
@@ -265,7 +285,7 @@ NGUYÊN TẮC QUAN TRỌNG:
       const durationGemini = Date.now() - startGemini
       const content = String(out?.text || '').trim()
       if (!content) {
-        return NextResponse.json({ error: 'No content in response' }, { status: 502 })
+        return json({ error: 'No content in response' }, { status: 502 })
       }
       const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
       try {
@@ -277,7 +297,7 @@ NGUYÊN TẮC QUAN TRỌNG:
         })
       } catch {}
 
-      return NextResponse.json({
+      return json({
         response: content,
         messages: planResponseMessages(content),
         delivery: { mode: deliveryMode },
@@ -307,10 +327,10 @@ NGUYÊN TẮC QUAN TRỌNG:
       const token = String(process.env.FOZA_TOKEN || '').trim()
       const modelName = String(process.env.LLM_MODEL_NAME || '').trim() || (rawModel && !['flash', 'pro', 'gemini'].includes(rawModel.toLowerCase()) ? rawModel : '')
       if (!token) {
-        return NextResponse.json({ error: 'Missing FOZA_TOKEN' }, { status: 500 })
+        return json({ error: 'Missing FOZA_TOKEN' }, { status: 500 })
       }
       if (!modelName) {
-        return NextResponse.json({ error: 'Missing LLM_MODEL_NAME for FOZA' }, { status: 500 })
+        return json({ error: 'Missing LLM_MODEL_NAME for FOZA' }, { status: 500 })
       }
 
       const fozaMessages = [
@@ -359,7 +379,7 @@ NGUYÊN TẮC QUAN TRỌNG:
             assistantText: content
           })
         } catch {}
-        return NextResponse.json({
+        return json({
           response: content,
           messages: planResponseMessages(content),
           delivery: { mode: deliveryMode },
@@ -404,7 +424,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                   assistantText: content
                 })
               } catch {}
-              return NextResponse.json({
+              return json({
                 response: content,
                 messages: planResponseMessages(content),
                 delivery: { mode: deliveryMode },
@@ -482,7 +502,7 @@ NGUYÊN TẮC QUAN TRỌNG:
               const durationGemini = Date.now() - startGemini
               const content = String(out?.text || '').trim()
               if (content) {
-                return NextResponse.json({
+                return json({
                   response: content,
                   messages: planResponseMessages(content),
                   delivery: { mode: deliveryMode },
@@ -533,7 +553,7 @@ NGUYÊN TẮC QUAN TRỌNG:
     if (!resp.ok) {
       const text = await resp.text()
       console.error('LLM server error:', text)
-      return NextResponse.json(
+      return json(
         { error: 'LLM server error', details: text, debug: { target: originalTarget, fastApiUrl, cpuFallback } },
         { status: 502 }
       )
@@ -572,7 +592,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                 assistantText: content
               })
             } catch {}
-            return NextResponse.json({
+            return json({
               response: content,
               messages: planResponseMessages(content),
               delivery: { mode: deliveryMode },
@@ -597,7 +617,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           }
         } catch {}
       }
-      return NextResponse.json(
+      return json(
         { error: 'Invalid JSON response from server', details: parseError instanceof Error ? parseError.message : 'Unknown parsing error' },
         { status: 502 }
       )
@@ -629,7 +649,7 @@ NGUYÊN TẮC QUAN TRỌNG:
 
     if (!content) {
       console.error('[LLM] No content in response:', JSON.stringify(data).substring(0, 500))
-      return NextResponse.json(
+      return json(
         { error: 'No content in response', details: JSON.stringify(data).substring(0, 500) },
         { status: 502 }
       )
@@ -645,7 +665,7 @@ NGUYÊN TẮC QUAN TRỌNG:
       })
     } catch {}
 
-    return NextResponse.json({
+    return json({
       response: content,
       messages: planResponseMessages(content),
       delivery: { mode: deliveryMode },
@@ -671,7 +691,7 @@ NGUYÊN TẮC QUAN TRỌNG:
     
   } catch (error) {
     console.error('Error in internal chat API:', error)
-    return NextResponse.json(
+    return json(
       { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )

@@ -13,3 +13,11 @@ neo4j==5.28.1
 langgraph
 langchain-core
 langchain-community
+langchain-openai
+langsmith
+PyYAML
+python-dotenv
+semantic-router>=0.1.15
+ragas
+datasets
+pytest

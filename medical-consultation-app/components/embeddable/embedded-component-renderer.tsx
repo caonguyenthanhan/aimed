@@ -1,5 +1,10 @@
 'use client'
 import { MiniPsychologicalScreening } from './mini-psychological-screening'
+import { EmbedTriLieu } from '@/components/embeds/embed-tri-lieu'
+import { EmbedTraCuu } from '@/components/embeds/embed-tra-cuu'
+import { EmbedBacSi } from '@/components/embeds/embed-bac-si'
+import { EmbedKeHoach } from '@/components/embeds/embed-ke-hoach'
+import { EmbedThongKe } from '@/components/embeds/embed-thong-ke'
 
 interface EmbeddedComponentRendererProps {
   type: 'sang-loc' | 'tri-lieu' | 'tra-cuu' | 'bac-si' | 'ke-hoach' | 'thong-ke'
@@ -26,47 +31,47 @@ export function EmbeddedComponentRenderer({
 
     case 'tri-lieu':
       return (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            [Trị liệu component - sắp có]
-          </div>
-        </div>
+        <EmbedTriLieu
+          context={props?.context}
+          onComplete={onClose}
+          onNavigate={onExpand}
+        />
       )
 
     case 'tra-cuu':
       return (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            [Tra cứu component - sắp có]
-          </div>
-        </div>
+        <EmbedTraCuu
+          context={props?.context}
+          onComplete={onClose}
+          onNavigate={onExpand}
+        />
       )
 
     case 'bac-si':
       return (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            [Đặt lịch bác sĩ component - sắp có]
-          </div>
-        </div>
+        <EmbedBacSi
+          context={props?.context}
+          onComplete={onClose}
+          onNavigate={onExpand}
+        />
       )
 
     case 'ke-hoach':
       return (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            [Kế hoạch chăm sóc component - sắp có]
-          </div>
-        </div>
+        <EmbedKeHoach
+          context={props?.context}
+          onComplete={onClose}
+          onNavigate={onExpand}
+        />
       )
 
     case 'thong-ke':
       return (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 p-4">
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            [Thống kê sức khỏe component - sắp có]
-          </div>
-        </div>
+        <EmbedThongKe
+          context={props?.context}
+          onComplete={onClose}
+          onNavigate={onExpand}
+        />
       )
 
     default:

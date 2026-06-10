@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import os
 import json
+import re
 import asyncio
 import tempfile
 import datetime
@@ -1913,14 +1914,105 @@ async def list_thuoc(q: Optional[str] = None):
     except Exception as e:
         return {"error": str(e), "items": []}
 
+def _tts_provider() -> str:
+    v = os.environ.get("CPU_TTS_PROVIDER") or os.environ.get("TTS_PROVIDER") or ""
+    return str(v).strip().lower()
+
+def _supertone_base_url() -> str:
+    v = os.environ.get("SUPERTONIC_TTS_URL") or os.environ.get("SUPERTONIC_SERVER_URL") or os.environ.get("SUPERTONIC_URL") or ""
+    return str(v).strip().rstrip("/")
+
+def _supertone_tts_bytes(text: str, lang: str = "vi"):
+    base = _supertone_base_url()
+    if not base:
+        return None
+    t = str(text or "").strip()
+    if not t:
+        return None
+    model = str(os.environ.get("SUPERTONIC_TTS_MODEL") or os.environ.get("SUPERTONIC_MODEL") or "supertonic-3").strip() or "supertonic-3"
+    voice = str(os.environ.get("SUPERTONIC_TTS_VOICE") or os.environ.get("SUPERTONIC_VOICE") or "M1").strip() or "M1"
+    try:
+        speed = float(os.environ.get("SUPERTONIC_TTS_SPEED") or "1.0")
+    except Exception:
+        speed = 1.0
+    try:
+        payload = {"model": model, "input": t, "voice": voice, "response_format": "mp3", "speed": speed}
+        resp = requests.post(f"{base}/v1/audio/speech", headers={"Content-Type": "application/json"}, data=json.dumps(payload), timeout=15)
+        if resp is not None and resp.status_code < 400 and resp.content:
+            return resp.content
+    except Exception:
+        pass
+    try:
+        payload = {"text": t, "lang": str(lang or "vi")}
+        resp = requests.post(f"{base}/v1/tts", headers={"Content-Type": "application/json"}, data=json.dumps(payload), timeout=15)
+        if resp is not None and resp.status_code < 400 and resp.content:
+            return resp.content
+    except Exception:
+        return None
+    return None
+
+def _save_audio_bytes(audio_bytes: bytes, prefix: str = "tts_output_"):
+    now = datetime.datetime.now()
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+    filename = f"{prefix}{timestamp}.mp3"
+    audio_dir = os.path.join(os.path.dirname(__file__), "audio")
+    os.makedirs(audio_dir, exist_ok=True)
+    file_path = os.path.join(audio_dir, filename)
+    with open(file_path, "wb") as f:
+        f.write(audio_bytes)
+    return filename, file_path
+
+def _normalize_vi_med_tts(text: str, lang: str = "vi") -> str:
+    l = str(lang or "").strip().lower()
+    if not (l == "vi" or l.startswith("vi-")):
+        return str(text or "")
+    t = str(text or "")
+    t = re.sub(r"(\d{2,3})\s*/\s*(\d{2,3})(?=\s*mmhg\b)", r"\1 trên \2", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bmmhg\b", "mi li mét thủy ngân", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*mg\s*/\s*dl\b", r"\1 mi li gam trên đề xi lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*g\s*/\s*dl\b", r"\1 gam trên đề xi lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*mmol\s*/\s*l\b", r"\1 mi li mol trên lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*meq\s*/\s*l\b", r"\1 mi li đương lượng trên lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bmg\s*/\s*dl\b", "mi li gam trên đề xi lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bg\s*/\s*dl\b", "gam trên đề xi lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bmmol\s*/\s*l\b", "mi li mol trên lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bmeq\s*/\s*l\b", "mi li đương lượng trên lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bbpm\b", "nhịp mỗi phút", t, flags=re.IGNORECASE)
+    t = re.sub(r"\bspo2\b", "S P O 2", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*°\s*c\b", r"\1 độ C", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*(mcg|µg)\b", r"\1 mi crô gam", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*mg\b", r"\1 mi li gam", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*g\b", r"\1 gam", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*kg\b", r"\1 ki lô gam", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*ml\b", r"\1 mi li lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"(\d+(?:[.,]\d+)?)\s*l\b", r"\1 lít", t, flags=re.IGNORECASE)
+    t = re.sub(r"\s{2,}", " ", t)
+    return t.strip()
+
 @app.post("/v1/text-to-speech")
 async def text_to_speech(req: TextToSpeechRequest):
-    if gTTS is None:
-        raise HTTPException(status_code=500, detail="gTTS library not available")
+    provider = _tts_provider()
+    if provider in ["off", "disabled"]:
+        raise HTTPException(status_code=403, detail="TTS disabled")
     
     try:
+        normalized_text = _normalize_vi_med_tts(req.text, req.lang or "vi")
+        if provider in ["supertone", "local"] or (provider in ["auto", ""] and _supertone_base_url()):
+            audio_bytes = _supertone_tts_bytes(normalized_text, req.lang or "vi")
+            if audio_bytes:
+                filename, file_path = _save_audio_bytes(audio_bytes, prefix="tts_supertone_")
+                return {
+                    "success": True,
+                    "filename": filename,
+                    "file_path": file_path,
+                    "download_url": f"/v1/audio/{filename}",
+                    "provider": "supertone",
+                }
+        if gTTS is None:
+            raise HTTPException(status_code=500, detail="gTTS library not available")
+
         # Tạo đối tượng gTTS
-        tts = gTTS(text=req.text, lang=req.lang)
+        tts = gTTS(text=normalized_text, lang=req.lang)
         
         # Tạo tên file với timestamp
         now = datetime.datetime.now()
@@ -1941,7 +2033,8 @@ async def text_to_speech(req: TextToSpeechRequest):
             "success": True,
             "filename": filename,
             "file_path": file_path,
-            "download_url": f"/v1/audio/{filename}"
+            "download_url": f"/v1/audio/{filename}",
+            "provider": "gtts",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating audio: {str(e)}")
@@ -1951,6 +2044,11 @@ async def text_to_speech_streaming(req: TextToSpeechRequest):
     """
     Enhanced text-to-speech with text chunking for faster response
     """
+    provider = _tts_provider()
+    if provider in ["off", "disabled"]:
+        raise HTTPException(status_code=403, detail="TTS disabled")
+    if provider in ["supertone", "local"] or (provider in ["auto", ""] and _supertone_base_url()):
+        return await text_to_speech(req)
     if gTTS is None:
         raise HTTPException(status_code=500, detail="gTTS library not available")
     
@@ -1959,14 +2057,14 @@ async def text_to_speech_streaming(req: TextToSpeechRequest):
         return await text_to_speech(req)
     
     try:
-        # Chunk the text into smaller parts
-        print(f"Chunking text for streaming TTS: {req.text[:100]}...")
-        chunks = TextChunker.chunk_by_sentences(req.text, max_chunk_length=150)
+        normalized_text = _normalize_vi_med_tts(req.text, req.lang or "vi")
+        req2 = TextToSpeechRequest(text=normalized_text, lang=req.lang)
+        print(f"Chunking text for streaming TTS: {normalized_text[:100]}...")
+        chunks = TextChunker.chunk_by_sentences(normalized_text, max_chunk_length=150)
         print(f"Text chunked into {len(chunks)} parts")
         
         if len(chunks) <= 1:
-            # If only one chunk, use regular processing
-            return await text_to_speech(req)
+            return await text_to_speech(req2)
         
         # Create audio for each chunk
         audio_files = []
@@ -2059,6 +2157,44 @@ async def text_to_speech_stream(text: str, lang: str = "vi"):
     - Trả về luồng `audio/mpeg` để trình duyệt có thể bắt đầu phát sớm
     - Nếu không có TextChunker, xử lý toàn bộ văn bản một lần rồi stream
     """
+    provider = _tts_provider()
+    if provider in ["off", "disabled"]:
+        raise HTTPException(status_code=403, detail="TTS disabled")
+    normalized_text = _normalize_vi_med_tts(text, lang)
+    if provider in ["supertone", "local"] or (provider in ["auto", ""] and _supertone_base_url()):
+        base = _supertone_base_url()
+        t = str(normalized_text or "").strip()
+        l = str(lang or "vi")
+        def gen():
+            try:
+                payload = {"model": str(os.environ.get("SUPERTONIC_TTS_MODEL") or os.environ.get("SUPERTONIC_MODEL") or "supertonic-3").strip() or "supertonic-3",
+                           "input": t,
+                           "voice": str(os.environ.get("SUPERTONIC_TTS_VOICE") or os.environ.get("SUPERTONIC_VOICE") or "M1").strip() or "M1",
+                           "response_format": "mp3",
+                           "speed": float(os.environ.get("SUPERTONIC_TTS_SPEED") or "1.0")}
+            except Exception:
+                payload = {"model": "supertonic-3", "input": t, "voice": "M1", "response_format": "mp3", "speed": 1.0}
+            try:
+                with requests.post(f"{base.rstrip('/')}/v1/audio/speech", headers={"Content-Type": "application/json"}, data=json.dumps(payload), timeout=300, stream=True) as resp:
+                    if resp.status_code >= 400:
+                        return
+                    for chunk in resp.iter_content(chunk_size=64 * 1024):
+                        if chunk:
+                            yield chunk
+                    return
+            except Exception:
+                pass
+            try:
+                with requests.post(f"{base.rstrip('/')}/v1/tts", headers={"Content-Type": "application/json"}, data=json.dumps({"text": t, "lang": l}), timeout=300, stream=True) as resp:
+                    if resp.status_code >= 400:
+                        return
+                    for chunk in resp.iter_content(chunk_size=64 * 1024):
+                        if chunk:
+                            yield chunk
+            except Exception:
+                return
+        return StreamingResponse(gen(), media_type="audio/mpeg")
+
     if gTTS is None:
         try:
             base = _choose_gpu_url(round_robin=True)
@@ -2069,7 +2205,7 @@ async def text_to_speech_stream(text: str, lang: str = "vi"):
             def gen():
                 try:
                     import base64 as pybase64
-                    with requests.post(f"{base.rstrip('/')}/v1/tts/stream", headers=headers, data=json.dumps({"text": text, "lang": lang}), timeout=300, stream=True) as resp:
+                    with requests.post(f"{base.rstrip('/')}/v1/tts/stream", headers=headers, data=json.dumps({"text": normalized_text, "lang": lang}), timeout=300, stream=True) as resp:
                         for line in resp.iter_lines():
                             if not line:
                                 continue
@@ -2099,7 +2235,7 @@ async def text_to_speech_stream(text: str, lang: str = "vi"):
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
                 tmp_path = temp_file.name
-            tts = gTTS(text=text, lang=lang)
+            tts = gTTS(text=normalized_text, lang=lang)
             tts.save(tmp_path)
             def stream_file_bytes_with_cleanup(path: str, chunk_size: int = 64 * 1024):
                 try:
@@ -2121,7 +2257,7 @@ async def text_to_speech_stream(text: str, lang: str = "vi"):
 
     # Có TextChunker: stream từng chunk ngay khi sẵn sàng
     try:
-        chunks = TextChunker.chunk_by_sentences(text, max_chunk_length=150)
+        chunks = TextChunker.chunk_by_sentences(normalized_text, max_chunk_length=150)
 
         async def audio_generator():
             for i, chunk in enumerate(chunks):
@@ -2838,7 +2974,7 @@ async def graph_status():
     try:
         with driver.session() as s:
             c = s.run("MATCH (n) RETURN count(n) AS c").single()
-            nodes = int(c["c"]) if c and "c" in c else 0
+            nodes = int(c.get("c")) if c and c.get("c") is not None else 0
         return {"ok": True, "connected": True, "nodes": nodes, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
     except Exception:
         _reset_graph_driver()
@@ -2848,7 +2984,7 @@ async def graph_status():
         try:
             with driver.session() as s:
                 c = s.run("MATCH (n) RETURN count(n) AS c").single()
-                nodes = int(c["c"]) if c and "c" in c else 0
+                nodes = int(c.get("c")) if c and c.get("c") is not None else 0
             return {"ok": True, "connected": True, "nodes": nodes, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
         except Exception:
             return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
@@ -2890,20 +3026,26 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
     t0 = time.time()
     try:
         with driver.session() as s:
-            entities = list(
-                s.run(
-                    """
-                    WITH toLower($q) AS q
-                    MATCH (e:Entity)
-                    WHERE toLower(e.name) CONTAINS q
-                    RETURN e.__mg_id__ AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
-                    LIMIT $ent_lim
-                    """,
-                    q=q,
-                    ent_lim=ent_lim,
+            def _query_entities(collection: Optional[str]) -> List[dict]:
+                rows = list(
+                    s.run(
+                        """
+                        WITH toLower($q) AS q
+                        MATCH (e:Entity)
+                        WHERE toLower(e.name) CONTAINS q AND ($collection IS NULL OR e.collection = $collection)
+                        RETURN id(e) AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
+                        LIMIT $ent_lim
+                        """,
+                        q=q,
+                        ent_lim=ent_lim,
+                        collection=collection,
+                    )
                 )
-            )
-            ent_rows = [r.data() for r in entities]
+                return [r.data() for r in rows]
+
+            ent_rows = _query_entities("demo")
+            if not ent_rows:
+                ent_rows = _query_entities(None)
             ent_ids = [r.get("id") for r in ent_rows if r.get("id") is not None]
             edges = []
             if ent_ids:
@@ -2912,15 +3054,15 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
                     for r in s.run(
                         """
                         UNWIND $ids AS mg_id
-                        MATCH (e:Entity {__mg_id__: mg_id})
+                        MATCH (e:Entity) WHERE id(e) = mg_id
                         MATCH (e)-[r]-(n)
                         WHERE $rel_types IS NULL OR type(r) IN $rel_types
                         RETURN
-                          e.__mg_id__ AS entity_id,
+                          id(e) AS entity_id,
                           e.name AS entity_name,
                           CASE WHEN startNode(r) = e THEN 'OUT' ELSE 'IN' END AS dir,
                           type(r) AS rel,
-                          n.__mg_id__ AS other_id,
+                          id(n) AS other_id,
                           n.name AS other_name,
                           labels(n) AS other_labels,
                           r.id_doc AS id_doc,

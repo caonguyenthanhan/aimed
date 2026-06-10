@@ -9,6 +9,33 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
+_CACHE: Dict[str, Any] = {}
+
+
+def _cache_get(key: str) -> Optional[Dict[str, Any]]:
+    try:
+        row = _CACHE.get(key)
+        if not row:
+            return None
+        exp, val = row
+        if float(exp) <= time.time():
+            _CACHE.pop(key, None)
+            return None
+        return val
+    except Exception:
+        return None
+
+
+def _cache_set(key: str, value: Dict[str, Any], ttl_s: float) -> None:
+    try:
+        ttl = float(ttl_s or 0.0)
+        if ttl <= 0:
+            return
+        _CACHE[key] = (time.time() + ttl, value)
+    except Exception:
+        return
+
+
 def _env_timeout(key: str, default: float) -> float:
     try:
         v = float(str(os.environ.get(key) or "").strip())
@@ -37,6 +64,10 @@ def web_search(query: str, num: int = 5, timeout_s: float = 10.0) -> Dict[str, A
         return {"ok": True, "query": q, "results": []}
     if not key or not cx:
         return {"ok": False, "error": "missing_google_cse_env", "query": q, "results": []}
+    cache_key = f"web.search|{cx}|{q}|{int(num or 5)}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     num_i = int(num or 5)
     if num_i < 1:
         num_i = 1
@@ -58,7 +89,9 @@ def web_search(query: str, num: int = 5, timeout_s: float = 10.0) -> Dict[str, A
                     "snippet": str(it.get("snippet") or ""),
                 }
             )
-    return {"ok": bool(r.get("ok")), "query": q, "results": items, "status": r.get("status")}
+    out = {"ok": bool(r.get("ok")), "query": q, "results": items, "status": r.get("status")}
+    _cache_set(cache_key, out, float(os.environ.get("LG_WEB_CACHE_TTL_S") or 300.0))
+    return out
 
 
 def youtube_search(query: Optional[str] = None, mood: Optional[str] = None, maxResults: int = 5, timeout_s: float = 10.0) -> Dict[str, Any]:
@@ -78,6 +111,10 @@ def youtube_search(query: Optional[str] = None, mood: Optional[str] = None, maxR
         n = 1
     if n > 10:
         n = 10
+    cache_key = f"youtube.search|{q}|{n}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     r = _http_get_json(
         "https://www.googleapis.com/youtube/v3/search",
         params={"key": key, "part": "snippet", "q": q, "maxResults": n, "type": "video"},
@@ -98,7 +135,9 @@ def youtube_search(query: Optional[str] = None, mood: Optional[str] = None, maxR
                         "thumbnail": ((sn.get("thumbnails") or {}).get("high") or {}).get("url"),
                     }
                 )
-    return {"ok": bool(r.get("ok")), "query": q, "results": items, "status": r.get("status")}
+    out = {"ok": bool(r.get("ok")), "query": q, "results": items, "status": r.get("status")}
+    _cache_set(cache_key, out, float(os.environ.get("LG_YOUTUBE_CACHE_TTL_S") or 300.0))
+    return out
 
 
 def youtube_video(videoId: str, timeout_s: float = 10.0) -> Dict[str, Any]:
@@ -109,6 +148,10 @@ def youtube_video(videoId: str, timeout_s: float = 10.0) -> Dict[str, Any]:
         return {"ok": False, "error": "missing_youtube_api_key"}
     if not vid:
         return {"ok": False, "error": "missing_videoId"}
+    cache_key = f"youtube.video|{vid}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     r = _http_get_json(
         "https://www.googleapis.com/youtube/v3/videos",
         params={"key": key, "part": "snippet,contentDetails,statistics", "id": vid},
@@ -117,7 +160,9 @@ def youtube_video(videoId: str, timeout_s: float = 10.0) -> Dict[str, Any]:
     data = r.get("data") or {}
     items = data.get("items") or []
     item = items[0] if items else None
-    return {"ok": bool(r.get("ok")), "video": item, "status": r.get("status")}
+    out = {"ok": bool(r.get("ok")), "video": item, "status": r.get("status")}
+    _cache_set(cache_key, out, float(os.environ.get("LG_YOUTUBE_CACHE_TTL_S") or 300.0))
+    return out
 
 
 def youtube_recommend_music(mood: Optional[str] = None, maxResults: int = 5, timeout_s: float = 10.0) -> Dict[str, Any]:
@@ -136,11 +181,16 @@ def graph_status(timeout_s: float = 8.0) -> Dict[str, Any]:
     driver = getattr(srv, "_get_graph_driver", lambda: None)()
     if driver is None:
         return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
+    cached = _cache_get("graph.status")
+    if cached is not None:
+        return cached
     try:
         with driver.session() as s:
             c = s.run("MATCH (n) RETURN count(n) AS c").single()
-            nodes = int(c["c"]) if c and "c" in c else 0
-        return {"ok": True, "connected": True, "nodes": nodes, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
+            nodes = int(c.get("c")) if c and c.get("c") is not None else 0
+        out = {"ok": True, "connected": True, "nodes": nodes, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
+        _cache_set("graph.status", out, float(os.environ.get("LG_GRAPH_STATUS_CACHE_TTL_S") or 2.0))
+        return out
     except Exception:
         try:
             getattr(srv, "_reset_graph_driver", lambda: None)()
@@ -154,6 +204,10 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
     q = (query or "").strip()
     if not q:
         return {"ok": True, "query": q, "entities": [], "edges": []}
+    cache_key = f"graph.evidence|{q}|{int(limit or 60)}|{int(entity_limit or 5)}|{','.join([str(x).strip() for x in (rel_types or []) if str(x).strip()])}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
     srv = importlib.import_module("cpu_server.server")
     driver = getattr(srv, "_get_graph_driver", lambda: None)()
     if driver is None:
@@ -173,20 +227,26 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
     t0 = time.time()
     try:
         with driver.session() as s:
-            entities = list(
-                s.run(
-                    """
-                    WITH toLower($q) AS q
-                    MATCH (e:Entity)
-                    WHERE toLower(e.name) CONTAINS q
-                    RETURN e.__mg_id__ AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
-                    LIMIT $ent_lim
-                    """,
-                    q=q,
-                    ent_lim=ent_lim,
+            def _query_entities(collection: Optional[str]) -> List[dict]:
+                rows = list(
+                    s.run(
+                        """
+                        WITH toLower($q) AS q
+                        MATCH (e:Entity)
+                        WHERE toLower(e.name) CONTAINS q AND ($collection IS NULL OR e.collection = $collection)
+                        RETURN id(e) AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
+                        LIMIT $ent_lim
+                        """,
+                        q=q,
+                        ent_lim=ent_lim,
+                        collection=collection,
+                    )
                 )
-            )
-            ent_rows = [r.data() for r in entities]
+                return [r.data() for r in rows]
+
+            ent_rows = _query_entities("demo")
+            if not ent_rows:
+                ent_rows = _query_entities(None)
             ent_ids = [r.get("id") for r in ent_rows if r.get("id") is not None]
             edges = []
             if ent_ids:
@@ -195,15 +255,15 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
                     for r in s.run(
                         """
                         UNWIND $ids AS mg_id
-                        MATCH (e:Entity {__mg_id__: mg_id})
+                        MATCH (e:Entity) WHERE id(e) = mg_id
                         MATCH (e)-[r]-(n)
                         WHERE $rel_types IS NULL OR type(r) IN $rel_types
                         RETURN
-                          e.__mg_id__ AS entity_id,
+                          id(e) AS entity_id,
                           e.name AS entity_name,
                           CASE WHEN startNode(r) = e THEN 'OUT' ELSE 'IN' END AS dir,
                           type(r) AS rel,
-                          n.__mg_id__ AS other_id,
+                          id(n) AS other_id,
                           n.name AS other_name,
                           labels(n) AS other_labels,
                           r.id_doc AS id_doc,
@@ -216,7 +276,9 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
                         lim=lim,
                     )
                 ]
-        return {"ok": True, "query": q, "entities": ent_rows, "edges": edges, "elapsed_ms": int((time.time() - t0) * 1000)}
+        out = {"ok": True, "query": q, "entities": ent_rows, "edges": edges, "elapsed_ms": int((time.time() - t0) * 1000)}
+        _cache_set(cache_key, out, float(os.environ.get("LG_GRAPH_EVIDENCE_CACHE_TTL_S") or 60.0))
+        return out
     except Exception as e:
         try:
             getattr(srv, "_reset_graph_driver", lambda: None)()

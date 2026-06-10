@@ -6,8 +6,11 @@
 - Tool calling ở Gemini được chuẩn hoá thành action `navigate` để frontend chỉ xử lý một kiểu điều hướng.
 - Metadata `mode: cpu|gpu` được dùng để đồng bộ UI với runtime mode.
 - Agent routing đọc `data/runtime-mode.json` (SSOT) để quyết định ưu tiên GPU/CPU và fallback; các chuyển mode được ghi vào `runtime-events.jsonl` và `runtime-metrics.jsonl`.
+- Các endpoint dùng SSOT runtime nên tự khởi tạo `data/runtime-mode.json` và `data/server-registry.json` khi thiếu để tránh “lần chạy đầu” lệch mode.
 - Tool “server-side” được gom theo pattern mcp-lite: agent gọi tool name (web/youtube) → /api/mcp/call thực thi → trả kết quả về agent để tổng hợp phản hồi.
 - Có thể mở rộng action dạng “tool nặng” (ví dụ `speak`) nhưng vẫn qua allowlist/schema.
+- TTS gateway (UI `speak`): `/api/text-to-speech-stream` ưu tiên Supertonic local khi bật (`TTS_PROVIDER=auto|supertone` + `SUPERTONIC_TTS_URL`), fallback Gemini nếu có key, rồi fallback CPU server; mọi lượt gọi ghi runtime events/metrics.
+- CPU server TTS: `/v1/text-to-speech` và `/v1/text-to-speech-stream` hỗ trợ ưu tiên Supertonic local qua `CPU_TTS_PROVIDER`/`TTS_PROVIDER` + `SUPERTONIC_TTS_URL`, fallback gTTS/GPU để tránh giọng mặc định kém trong bối cảnh y tế/tâm lý.
 - Các heuristic “forced actions” được điều khiển bằng env flag để tránh gây nhiễu luồng (mặc định tắt trong production).
 - `recommend_music` có thể được hydrate bằng YouTube service (cache TTL) để trả danh sách đề xuất thực tế thay vì hardcode.
 - Agent Profiles (persona routing): UI gửi `agent_id`, gateway inject persona vào Gemini/local provider và trả `metadata.agent_profile` để quan sát và debug theo profile.
@@ -20,6 +23,9 @@
 - Graph observability: UI poll `graph.status` khi bật Agent mode và hiển thị indicator (connected/latency) để demo và chẩn đoán nhanh.
 - DB reliability: `/api/db/ping` dùng cùng cơ chế pool (pg) như conversations, có retry nhẹ để chẩn đoán “DB lúc có lúc không”; UI hiển thị badge trạng thái DB (ok/down + latency) trong sidebar khi đăng nhập.
 - RBAC demo: server-side auth ưu tiên nhận `Bearer test_token_*` (từ login demo) để suy ra role/user; fallback gọi CPU server `/v1/user` cho token thật. Doctor APIs enforce role=doctor, patient booking không cho role=doctor.
+- Appointments ownership: `/api/appointments` filter theo `doctor_id = user_id` và hỗ trợ `GET ?id=` để xem chi tiết theo appointment id nhưng vẫn enforce ownership; PATCH status cũng enforce ownership. Booking bắt buộc `doctor_id` tồn tại trong `doctor_profiles` (auto-seed demo profiles từ TEST_ACCOUNTS khi DB bật).
 - Agent routing: `/api/agent-chat` có rules phát hiện intent (triage/thuốc/kế hoạch/trị liệu/bác sĩ) để chọn `agent_profile`; metadata trả `intent` để debug/demo.
 - Agent output guarantee: mọi nhánh provider (FOZA/OpenAI-like/Gemini/fallback) đều ép `response` không rỗng (auto thêm hướng dẫn + câu hỏi follow-up) để tránh “agent chỉ hiện 1 khối khó hiểu”.
 - LangGraph CPU orchestrator: CPU server cung cấp `/v1/agent-chat` chạy LangGraph (state machine + tool orchestration) và trả cùng contract `{response, actions, metadata}` để UI tái sử dụng; hướng triển khai “thay thế hoàn toàn” là Next.js `/api/agent-chat` proxy 100% sang CPU server, giữ fallback khi CPU server down.
+- LangGraph latency pattern: tool calls chạy song song (thread pool), tool results có cache TTL theo env (`LG_*_CACHE_TTL_S`) để giảm latency lặp; FOZA timeout dùng `FOZA_REQUEST_TIMEOUT_MS` và quy đổi ms → giây ở CPU server.
+- Production LLMOps pattern: cấu hình tập trung trong `configs/llmops.yaml` (env-driven), module `core_lib/llmops/` cung cấp JSONL logging + LangSmith tracing + guardrails; LangGraph nodes được bọc observer để log state transitions/latency, và policy grounding đảm bảo “không có context → fallback/search hoặc hỏi thêm”, không đoán.

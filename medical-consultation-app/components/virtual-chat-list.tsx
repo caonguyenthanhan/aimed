@@ -29,6 +29,7 @@ export function VirtualChatList({
   const scrollRef = useRef<HTMLDivElement>(null)
   const [visibleRange, setVisibleRange] = React.useState({ start: 0, end: 10 })
   const [isAtBottom, setIsAtBottom] = React.useState(true)
+  const prevLenRef = useRef<number>(messages.length)
 
   const totalHeight = useMemo(() => messages.length * itemHeight, [messages.length, itemHeight])
 
@@ -53,13 +54,18 @@ export function VirtualChatList({
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (isAtBottom && scrollRef.current) {
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-        }
-      }, 0)
-    }
+    const prevLen = prevLenRef.current
+    const nextLen = messages.length
+    prevLenRef.current = nextLen
+    if (!isAtBottom) return
+    if (nextLen <= prevLen) return
+    const el = scrollRef.current
+    if (!el) return
+    requestAnimationFrame(() => {
+      const nextEl = scrollRef.current
+      if (!nextEl) return
+      nextEl.scrollTop = nextEl.scrollHeight
+    })
   }, [messages.length, isAtBottom])
 
   const visibleMessages = useMemo(

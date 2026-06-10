@@ -11,6 +11,15 @@ _GRAPH = None
 def _get_graph():
     global _GRAPH
     if _GRAPH is None:
+        try:
+            from cpu_server.llmops_bootstrap import bootstrap_llmops
+        except Exception:
+            bootstrap_llmops = None
+        if bootstrap_llmops is not None:
+            try:
+                bootstrap_llmops()
+            except Exception:
+                pass
         _GRAPH = build_graph()
     return _GRAPH
 
@@ -39,4 +48,3 @@ def invoke_agent(
         "metadata": out.get("metadata") or {},
         "conversation_id": conversation_id,
     }
-

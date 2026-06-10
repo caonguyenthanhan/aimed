@@ -9,6 +9,8 @@ class AgentState(TypedDict, total=False):
     include_tools: bool
     tool_requests: List[Dict[str, Any]]
     tool_results: Dict[str, Any]
+    tool_durations: Dict[str, int]
+    tool_elapsed_ms: int
     response: str
     actions: List[Dict[str, Any]]
     metadata: Dict[str, Any]
@@ -16,3 +18,7 @@ class AgentState(TypedDict, total=False):
     provider: str
     model: str
     agent_profile: str
+    intent: Dict[str, Any]
+    route_decision: Dict[str, Any]
+    blocked: bool
+    guardrails: Dict[str, Any]

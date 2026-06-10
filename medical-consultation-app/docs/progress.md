@@ -71,3 +71,49 @@
 - Next.js: `/api/agent-chat` ưu tiên proxy 100% sang CPU server `/v1/agent-chat` khi có `CPU_SERVER_URL`, và sanitize actions theo allowlist trước khi trả về UI.
 - Sửa hiển thị tiếng Việt khi test bằng PowerShell: ép `Content-Type: application/json; charset=utf-8` cho `/api/agent-chat` và `/v1/agent-chat`.
 - Bổ sung biến môi trường LangGraph (`LG_*`) vào `.env.sample` và `DEPLOY.md` để deploy/local không thiếu cấu hình tool budget/timeout.
+
+## 2026-05-26
+
+- TTS: tích hợp Supertonic local vào `/api/text-to-speech` và `/api/text-to-speech-stream` (ưu tiên local khi cấu hình), fallback Gemini rồi CPU server; thêm env `TTS_PROVIDER` và nhóm `SUPERTONIC_TTS_*` vào `.env.sample`.
+- Observability: mọi lượt gọi TTS ghi `runtime-events.jsonl` và `runtime-metrics.jsonl` để theo dõi provider/latency.
+- CPU server: TTS endpoints ưu tiên Supertonic local qua `CPU_TTS_PROVIDER`/`TTS_PROVIDER` + `SUPERTONIC_TTS_URL`, fallback gTTS/GPU.
+- TTS: chuẩn hoá text tiếng Việt cho ngữ cảnh y tế (mmHg, mg/dL, mmol/L, bpm, °C, liều mg/mL...) trước khi synth để đọc tự nhiên hơn.
+
+## 2026-06-04
+
+- LLMOps production: thêm `core_lib/llmops/` (Pydantic v2 settings, JSONL logging sink, LangSmith tracing wrapper, guardrails prompt injection + anti-hallucination grounding, RAGAS evaluation runner).
+- LangGraph CPU orchestrator: bọc node transitions bằng observer (events/metrics + LangSmith runs) và bật policy “context rỗng → fallback/search hoặc hỏi thêm”, không đoán cho các profile rủi ro (triage/thuốc).
+- Evaluation: thêm pytest suite `tests/eval/` (blackbox HTTP + in-process) và script `scripts/llmops_eval.ps1`.
+
+## 2026-05-27
+
+- Runtime SSOT ổn định hơn: `/api/agent-chat` tự tạo `data/runtime-mode.json` + `data/server-registry.json` khi thiếu để tránh lệch mode ở lần chạy đầu.
+- JSON charset: `/api/runtime/mode` và `/api/llm-chat` trả `application/json; charset=utf-8` để PowerShell không bị mojibake tiếng Việt.
+- i18n không 404: thêm `/[locale]/*` catch-all để điều hướng về route gốc tương ứng khi chưa có page dưới `[locale]`.
+- Local demo full green: thêm Postgres docker compose (`postgres-platform/`) + init schema tối thiểu (conversations/messages); bật Memgraph docker compose (`memgraph-platform/`) để `graph.status` connected.
+- CPU server LangGraph: tối ưu latency tool bằng cache TTL (web/youtube/graph) + chạy song song tools; bổ sung đo thời gian tools (`metadata.tool_elapsed_ms`, `metadata.tool_durations`) và retry FOZA cho 408/429/5xx.
+- CPU server FOZA: `FOZA_REQUEST_TIMEOUT_MS` được hiểu theo ms (tự quy đổi sang giây) và reuse HTTP session để giảm overhead kết nối.
+- Demo bảo vệ: thêm checklist Vercel → CPU public và smoke script PowerShell `scripts/demo-smoke-vercel.ps1`.
+- Luận văn: thêm script sinh phụ lục đánh giá agent từ report matrix (bảng + biểu đồ Mermaid) xuất `thesis/APPENDIX_AGENT_EVALUATION.md` + CSV.
+
+## 2026-05-29
+
+- **GÓI BẢO VỆ HOÀN THIỆN:**
+  - LLMOps-lite: protocol (metric, gating, reproducibility), script sinh phụ lục runtime metrics/events (bảng + biểu đồ Mermaid), CSV artifacts.
+  - Script 1-lệnh kiểm thử toàn hệ thống: `llmops-run.ps1` (smoke → agent-matrix → sinh appendices → gate pass/fail).
+  - Hướng dẫn hội đồng: `thesis/MANUAL_HOI_DONG.md` (bước-by-bước, checklist, artefact paths).
+  - Tổng quan thesis: `thesis/README.md` (mapping nội dung chương/phụ lục, artefact paths).
+- **Todo cập nhật:** đánh dấu các phần hoàn thành (EPIC0,3,5,6; gói bảo vệ; LLMOps-lite).
+- **Memory Bank cập nhật:** `activeContext.md` để phản ánh gói bảo vệ hoàn thiện.
+
+## 2026-06-02
+
+- Thiết lập SSOT quy trình repo: thêm `_workspace/00_logic.md`, `_workspace/01_module_registry.md`, `_workspace/02_change_log.md`.
+- Thêm tài liệu/visuals: `_workspace/docs/ui_style_guide.md`, `_workspace/docs/project_overview.html`.
+- Chuẩn hoá env docs cho Windows/PowerShell: cập nhật `medical-consultation-app/ENV_SETUP.md` và làm mới `medical-consultation-app/env.example` để bám `.env.sample`.
+- DB stability (EPIC1): `/api/db/ping` không còn trả 5xx khi DB down; conversations routes trả JSON utf-8 và `reason=db_unavailable` khi DB lỗi để UI fallback localStorage.
+- Tests: thêm unit tests cho DB stability contracts (`lib/__tests__/db-stability.test.ts`).
+- UI chat stability (EPIC2): ChatInterface auto-scroll chỉ khi at-bottom/just-sent, key message ổn định; VirtualChatList đổi auto-scroll sang requestAnimationFrame.
+- RBAC ownership (EPIC5): `/api/appointments` hỗ trợ `GET ?id=` và enforce ownership theo `doctor_id`; thêm unit tests `lib/__tests__/appointments-rbac.test.ts`.
+- Booking validation: `POST /api/appointments` bắt buộc `doctor_id` tồn tại trong `doctor_profiles` trước khi insert; API auto-seed demo doctor_profiles từ TEST_ACCOUNTS khi DB bật.
+- QA: chạy `npm run lint`, `npm test`, và `npm run build` đều pass.

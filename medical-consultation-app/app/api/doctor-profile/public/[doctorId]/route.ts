@@ -20,6 +20,18 @@ async function ensureSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `)
+  for (const d of TEST_ACCOUNTS.doctors) {
+    const base = defaultPublicProfile({ displayName: d.fullName })
+    const publicJson = normalizePublicProfile({ ...base, displayName: d.fullName, title: "Bác sĩ", specialties: [d.specialty], bio: "" })
+    await pool.query(
+      `
+      INSERT INTO doctor_profiles (doctor_id, public_json, private_json, updated_at)
+      VALUES ($1, $2::jsonb, '{}'::jsonb, now())
+      ON CONFLICT (doctor_id) DO NOTHING
+      `,
+      [String(d.id), JSON.stringify(publicJson)],
+    )
+  }
   ensured = true
 }
 
@@ -50,4 +62,3 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ doctorId: s
     return NextResponse.json({ error: "Internal error" }, { status: 500 })
   }
 }
-

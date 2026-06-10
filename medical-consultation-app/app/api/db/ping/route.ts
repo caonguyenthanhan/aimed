@@ -1,6 +1,26 @@
 import { NextResponse } from "next/server"
 import { getPgPool, resolveDatabaseConfig } from "@/lib/pg"
 
+const toHeaderRecord = (headers?: HeadersInit): Record<string, string> => {
+  if (!headers) return {}
+  if (headers instanceof Headers) {
+    const out: Record<string, string> = {}
+    headers.forEach((v, k) => (out[k] = v))
+    return out
+  }
+  if (Array.isArray(headers)) return Object.fromEntries(headers)
+  return { ...(headers as Record<string, string>) }
+}
+
+const json = (data: any, init?: ResponseInit) =>
+  NextResponse.json(data, {
+    ...(init || {}),
+    headers: {
+      ...toHeaderRecord(init?.headers),
+      "Content-Type": "application/json; charset=utf-8",
+    },
+  })
+
 function isDbEnabled() {
   return !!String(resolveDatabaseConfig().url || "").trim()
 }
@@ -8,7 +28,7 @@ function isDbEnabled() {
 export async function GET() {
   const started = Date.now()
   if (!isDbEnabled()) {
-    return NextResponse.json({ ok: false, dbEnabled: false, error: "Missing database env" }, { status: 503 })
+    return json({ ok: false, status: "disabled", dbEnabled: false, error: "Missing database env" })
   }
   try {
     const { source } = resolveDatabaseConfig()
@@ -18,7 +38,7 @@ export async function GET() {
     for (let i = 1; i <= attempts; i++) {
       try {
         await pool.query("SELECT 1 as ok")
-        return NextResponse.json({ ok: true, dbEnabled: true, latencyMs: Date.now() - started, source, attempts: i })
+        return json({ ok: true, status: "ok", dbEnabled: true, latencyMs: Date.now() - started, source, attempts: i })
       } catch (e: any) {
         lastErr = e
         if (i < attempts) {
@@ -26,16 +46,13 @@ export async function GET() {
         }
       }
     }
-    return NextResponse.json(
-      { ok: false, dbEnabled: true, latencyMs: Date.now() - started, source, attempts, error: String(lastErr?.message || "db_error") },
-      { status: 500 },
+    return json(
+      { ok: false, status: "down", dbEnabled: true, latencyMs: Date.now() - started, source, attempts, error: String(lastErr?.message || "db_error") },
     )
   } catch (e: any) {
     const { source } = resolveDatabaseConfig()
-    return NextResponse.json(
-      { ok: false, dbEnabled: true, latencyMs: Date.now() - started, source, error: String(e?.message || "db_error") },
-      { status: 500 },
+    return json(
+      { ok: false, status: "down", dbEnabled: true, latencyMs: Date.now() - started, source, error: String(e?.message || "db_error") },
     )
   }
 }
-
