@@ -1,27 +1,28 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getNeonPool } from "@/lib/neon-db"
+import { resolveDatabaseConfig, withPgClientRetry } from "@/lib/pg"
 
 let ensured = false
 
 function isDbEnabled() {
-  return !!String(process.env.DATABASE_URL || "").trim()
+  return !!String(resolveDatabaseConfig().url || "").trim()
 }
 
 async function ensureSchema() {
   if (ensured) return
-  const pool = getNeonPool()
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS app_user_state (
-      owner_id TEXT NOT NULL,
-      namespace TEXT NOT NULL,
-      key TEXT NOT NULL,
-      value JSONB NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      PRIMARY KEY (owner_id, namespace, key)
-    )
-  `)
-  await pool.query(`CREATE INDEX IF NOT EXISTS app_user_state_owner_ns_idx ON app_user_state (owner_id, namespace)`)
+  await withPgClientRetry(async (client) => {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app_user_state (
+        owner_id TEXT NOT NULL,
+        namespace TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (owner_id, namespace, key)
+      )
+    `)
+    await client.query(`CREATE INDEX IF NOT EXISTS app_user_state_owner_ns_idx ON app_user_state (owner_id, namespace)`)
+  }, { attempts: 3, baseDelayMs: 250 })
   ensured = true
 }
 
@@ -31,15 +32,19 @@ function getOwnerId(request: NextRequest) {
   return `device:${deviceId}`
 }
 
+function buildDisabledGetResponse(request: NextRequest, degraded = false) {
+  const url = new URL(request.url)
+  const namespace = (url.searchParams.get("namespace") || "").trim()
+  const key = (url.searchParams.get("key") || "").trim()
+  if (!namespace) return NextResponse.json({ error: "Missing namespace" }, { status: 400 })
+  if (key) return NextResponse.json({ item: null, disabled: true, degraded })
+  return NextResponse.json({ items: [], disabled: true, degraded })
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!isDbEnabled()) {
-      const url = new URL(request.url)
-      const namespace = (url.searchParams.get("namespace") || "").trim()
-      const key = (url.searchParams.get("key") || "").trim()
-      if (!namespace) return NextResponse.json({ error: "Missing namespace" }, { status: 400 })
-      if (key) return NextResponse.json({ item: null, disabled: true })
-      return NextResponse.json({ items: [], disabled: true })
+      return buildDisabledGetResponse(request)
     }
     const ownerId = getOwnerId(request)
     if (!ownerId) return NextResponse.json({ error: "Missing x-device-id" }, { status: 400 })
@@ -49,23 +54,23 @@ export async function GET(request: NextRequest) {
     if (!namespace) return NextResponse.json({ error: "Missing namespace" }, { status: 400 })
 
     await ensureSchema()
-    const pool = getNeonPool()
 
     if (key) {
-      const { rows } = await pool.query(
+      const { value } = await withPgClientRetry((client) => client.query(
         `SELECT key, value, updated_at FROM app_user_state WHERE owner_id=$1 AND namespace=$2 AND key=$3`,
         [ownerId, namespace, key],
-      )
-      return NextResponse.json({ item: rows[0] || null })
+      ), { attempts: 3, baseDelayMs: 250 })
+      return NextResponse.json({ item: value.rows[0] || null })
     }
 
-    const { rows } = await pool.query(
+    const { value } = await withPgClientRetry((client) => client.query(
       `SELECT key, value, updated_at FROM app_user_state WHERE owner_id=$1 AND namespace=$2 ORDER BY updated_at DESC`,
       [ownerId, namespace],
-    )
-    return NextResponse.json({ items: rows })
+    ), { attempts: 3, baseDelayMs: 250 })
+    return NextResponse.json({ items: value.rows })
   } catch (e: any) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.warn("[user-state] falling back to disabled mode for GET", String(e?.message || e || "unknown"))
+    return buildDisabledGetResponse(request, true)
   }
 }
 
@@ -84,8 +89,7 @@ export async function POST(request: NextRequest) {
     if (value === undefined) return NextResponse.json({ error: "Missing value" }, { status: 400 })
 
     await ensureSchema()
-    const pool = getNeonPool()
-    await pool.query(
+    await withPgClientRetry((client) => client.query(
       `
       INSERT INTO app_user_state (owner_id, namespace, key, value, updated_at)
       VALUES ($1, $2, $3, $4, now())
@@ -93,10 +97,11 @@ export async function POST(request: NextRequest) {
       SET value = EXCLUDED.value, updated_at = now()
       `,
       [ownerId, namespace, key, value],
-    )
+    ), { attempts: 3, baseDelayMs: 250 })
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.warn("[user-state] write degraded", String(e?.message || e || "unknown"))
+    return NextResponse.json({ ok: false, disabled: true, degraded: true })
   }
 }
 
@@ -113,14 +118,14 @@ export async function DELETE(request: NextRequest) {
     if (!namespace || !key) return NextResponse.json({ error: "Missing namespace or key" }, { status: 400 })
 
     await ensureSchema()
-    const pool = getNeonPool()
-    await pool.query(
+    await withPgClientRetry((client) => client.query(
       `DELETE FROM app_user_state WHERE owner_id=$1 AND namespace=$2 AND key=$3`,
       [ownerId, namespace, key],
-    )
+    ), { attempts: 3, baseDelayMs: 250 })
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.warn("[user-state] delete degraded", String(e?.message || e || "unknown"))
+    return NextResponse.json({ ok: false, disabled: true, degraded: true })
   }
 }
 

@@ -2104,7 +2104,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <Drawer open={showSidebar} onOpenChange={setShowSidebar} direction="left">
           <DrawerContent className="data-[vaul-drawer-direction=left]:w-full data-[vaul-drawer-direction=left]:max-w-none data-[vaul-drawer-direction=left]:border-r p-0">
             <DrawerTitle className="sr-only">Lịch sử hội thoại</DrawerTitle>
-            <div className="h-[100dvh] bg-white flex flex-col">
+            <div className="h-full min-h-0 bg-white flex flex-col">
               <div className="flex items-center justify-between px-4 py-3 border-b">
                 <span className="text-sm font-semibold text-slate-800">Lịch sử hội thoại</span>
                 <button onClick={() => setShowSidebar(false)} className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button">
@@ -2175,7 +2175,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </DrawerContent>
         </Drawer>
       )}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] sm:pb-0">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {!showSidebar && !isMobile && (
           <div className="absolute top-20 left-3 z-20">
             <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">
@@ -2419,7 +2419,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <div ref={messagesEndRef} />
       </div>
 
-      <div ref={composerWrapperRef} className="shrink-0">
+      <div ref={composerWrapperRef} className="shrink-0 mb-[calc(5rem+env(safe-area-inset-bottom))] sm:mb-0">
         <UnifiedComposer
           value={input}
           onValueChange={setInput}
