@@ -616,8 +616,18 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
     }
   }
 
+  const mobileBottomInset = isMobile ? "calc(5rem + env(safe-area-inset-bottom))" : "0px"
+
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50" style={{ paddingTop: headerPad }}>
+    <div
+      className="flex overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50"
+      style={{
+        paddingTop: headerPad,
+        paddingBottom: mobileBottomInset,
+        height: `calc(100dvh - ${headerPad})`,
+        boxSizing: "border-box",
+      }}
+    >
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
@@ -678,7 +688,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 <div className="sr-only">
                   <DrawerTitle>Lịch sử tâm sự</DrawerTitle>
                 </div>
-                <div className="h-[100dvh] bg-white dark:bg-slate-900 flex flex-col">
+                <div className="h-full min-h-0 bg-white dark:bg-slate-900 flex flex-col">
                   <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
                     <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Lịch sử tâm sự</div>
                     <button className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition" type="button" onClick={() => setShowSidebar(false)}>
@@ -949,7 +959,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               )}
             </div>
 
-            <div className="px-2 sm:px-4 py-2 sm:py-4 border-t border-border bg-card flex items-end gap-2 sm:gap-3">
+            <div className="px-2 sm:px-4 py-2 sm:py-4 border-t border-border bg-card flex items-end gap-2 sm:gap-3 mb-[calc(5rem+env(safe-area-inset-bottom))] sm:mb-0">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}

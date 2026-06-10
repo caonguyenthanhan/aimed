@@ -3,7 +3,7 @@ import { geminiService } from '@/lib/gemini-service'
 import { buildBlockResponse, shouldBlock } from '@/lib/safety'
 import { assessSos, buildSosResponse } from '@/lib/sos-mode'
 import { pageInsightStore, PageInsight } from '@/lib/page-insight-store'
-import { getRateLimit } from '@/lib/rate-limiter'
+import { getClientIp, getRateLimit } from '@/lib/rate-limiter'
 import { retryWithBackoff } from '@/lib/retry-backoff'
 import crypto from 'crypto'
 
@@ -12,6 +12,28 @@ interface PageInsightRequest {
   user_question?: string
   page_data?: Record<string, any>
   conversation_history?: Array<{ role?: string; content?: string }>
+}
+
+function buildSkippedInsight(reason: string, status = 200) {
+  return NextResponse.json(
+    {
+      success: true,
+      cached: false,
+      insight: {
+        show_insight: false,
+        main_response: '',
+        suggested_page: null,
+        suggestion_reason: null,
+        insight_type: 'advice',
+        timestamp: Date.now(),
+      },
+      metadata: {
+        degraded: true,
+        reason,
+      },
+    },
+    { status }
+  )
 }
 
 // Map page context to friendly name
@@ -57,17 +79,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Apply rate limiting per page context (5 requests per minute)
-    const rateLimitKey = `page-insight:${pageContext}`
+    const deviceId = String(request.headers.get('x-device-id') || '').trim()
+    const clientIp = getClientIp(request)
+    const rateLimitScope = deviceId || clientIp || 'anonymous'
+    const rateLimitKey = `page-insight:${pageContext}:${rateLimitScope}`
     const rateLimitCheck = getRateLimit(rateLimitKey)
     if (!rateLimitCheck.allowed) {
-      return NextResponse.json(
-        {
-          error: 'Rate limit exceeded',
-          details: `Too many requests. Please wait ${rateLimitCheck.retryAfter}s before trying again`,
-          retry_after: rateLimitCheck.retryAfter,
-        },
-        { status: 429, headers: { 'Retry-After': String(rateLimitCheck.retryAfter || 60) } }
-      )
+      return buildSkippedInsight(`page insight rate limited for ${rateLimitScope}`)
     }
 
     // Check if already cached and not dismissed
@@ -144,10 +162,7 @@ LƯU Ý: Giọng điệu ấm áp, chuyên nghiệp, hỗ trợ. Chỉ trả v�
 
     try {
       if (!process.env.GEMINI_API_KEY) {
-        return NextResponse.json(
-          { error: 'Missing GEMINI_API_KEY' },
-          { status: 500 }
-        )
+        return buildSkippedInsight('missing GEMINI_API_KEY')
       }
 
       const startTime = Date.now()
@@ -215,34 +230,11 @@ LƯU Ý: Giọng điệu ấm áp, chuyên nghiệp, hỗ trợ. Chỉ trả v�
       
       // Handle specific error cases - return graceful degradation
       if (errorStatus === 503 || errorMessage.includes('UNAVAILABLE')) {
-        // Return a generic helpful response instead of error
-        const fallbackInsight: PageInsight = {
-          show_insight: false, // Don't show insight but don't crash
-          main_response: '',
-          suggested_page: null,
-          suggestion_reason: null,
-          insight_type: 'advice',
-          timestamp: Date.now(),
-        }
-        return NextResponse.json({
-          success: true,
-          cached: false,
-          insight: fallbackInsight,
-          metadata: {
-            degraded: true,
-            reason: 'AI model temporarily overloaded',
-          },
-        })
+        return buildSkippedInsight('AI model temporarily overloaded')
       }
       
       if (errorStatus === 429) {
-        return NextResponse.json(
-          {
-            error: 'Rate limit exceeded',
-            details: 'Too many requests, please wait before trying again',
-          },
-          { status: 429 }
-        )
+        return buildSkippedInsight('upstream AI rate limited')
       }
       
       return NextResponse.json(

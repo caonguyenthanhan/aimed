@@ -82,9 +82,13 @@ export function PageAiInsight({
   const [isLoading, setIsLoading] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const hasMeaningfulInput =
+    !!String(userQuestion || '').trim() ||
+    !!(pageData && Object.keys(pageData).length) ||
+    conversationHistory.some((item) => item?.role === 'user' && String(item?.content || '').trim())
 
   const fetchInsight = useCallback(async () => {
-    if (!pageContext || isDismissed) return
+    if (!pageContext || isDismissed || !hasMeaningfulInput) return
 
     setIsLoading(true)
     setError(null)
@@ -118,6 +122,10 @@ export function PageAiInsight({
       const data: InsightResponse = await response.json()
 
       if (data.success && data.insight) {
+        if (data.metadata?.degraded && !data.insight.show_insight) {
+          setInsight(null)
+          return
+        }
         setInsight(data.insight)
         if (data.insight.isDismissed) {
           setIsDismissed(true)
@@ -130,7 +138,7 @@ export function PageAiInsight({
     } finally {
       setIsLoading(false)
     }
-  }, [pageContext, userQuestion, pageData, conversationHistory, isDismissed])
+  }, [pageContext, userQuestion, pageData, conversationHistory, isDismissed, hasMeaningfulInput])
 
   // Fetch insight on mount or when dependencies change - with delay to avoid rate limiting
   useEffect(() => {
