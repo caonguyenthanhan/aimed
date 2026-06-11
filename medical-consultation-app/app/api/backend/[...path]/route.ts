@@ -1,8 +1,23 @@
 import { NextRequest } from 'next/server'
+import defaultStubConfig from '@/data/backend-proxy-stub.json'
 
-function getBackendBase(): string {
+export const runtime = 'nodejs'
+
+type DeployMode = 'demo' | 'prod'
+
+function getDeployMode(): DeployMode {
+  const raw = String(process.env.MCS_DEPLOY_MODE || '').trim().toLowerCase()
+  return raw === 'prod' ? 'prod' : 'demo'
+}
+
+function getBackendBase(): string | null {
   const base = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || '').trim().replace(/\/$/, '')
-  return base || 'http://127.0.0.1:8000'
+  if (!base) return null
+
+  const isVercel = String(process.env.VERCEL || '').trim() === '1'
+  if (isVercel && /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:\d+)?$/i.test(base)) return null
+
+  return base
 }
 
 type StubConversation = {
@@ -29,6 +44,14 @@ type StubConsent = {
   share_chat_content: boolean
 }
 
+type StubConfig = {
+  profile?: StubProfile
+  consent?: StubConsent
+}
+
+let stubConfigLoaded = false
+let stubConfig: StubConfig | null = defaultStubConfig as any
+
 const stubStore: {
   runtime: { target: 'cpu' | 'gpu'; gpu_url?: string; updated_at: string }
   conversations: Map<string, StubConversation>
@@ -52,6 +75,26 @@ const stubStore: {
     share_scores: true,
     share_chat_content: true,
   },
+}
+
+function loadStubConfig() {
+  if (stubConfigLoaded) return
+  stubConfigLoaded = true
+
+  try {
+    const overrideRaw = String(process.env.BACKEND_PROXY_STUB_JSON || '').trim()
+    if (overrideRaw) {
+      const parsed = JSON.parse(overrideRaw)
+      if (parsed && typeof parsed === 'object') stubConfig = { ...(stubConfig || {}), ...(parsed as any) }
+    }
+  } catch {}
+
+  if (stubConfig?.profile && typeof stubConfig.profile === 'object') {
+    stubStore.profile = { ...stubStore.profile, ...(stubConfig.profile as any) }
+  }
+  if (stubConfig?.consent && typeof stubConfig.consent === 'object') {
+    stubStore.consent = { ...stubStore.consent, ...(stubConfig.consent as any) }
+  }
 }
 
 function buildHeaders(req: NextRequest): Headers {
@@ -129,6 +172,7 @@ function touchConversation(c: StubConversation) {
 }
 
 async function handleStub(req: NextRequest, pathParts: string[]) {
+  loadStubConfig()
   const method = req.method.toUpperCase()
 
   if (isRuntimeStatePath(pathParts)) {
@@ -239,11 +283,14 @@ async function handleStub(req: NextRequest, pathParts: string[]) {
 }
 
 async function proxy(req: NextRequest, params: { path?: string[] }) {
+  const mode = getDeployMode()
+  const isDemo = mode === 'demo'
+
   const base = getBackendBase()
   const pathParts = Array.isArray(params?.path) ? params.path : []
   const subPath = pathParts.map(p => encodeURIComponent(p)).join('/')
   const url = new URL(req.url)
-  const target = `${base}/${subPath}${url.search}`
+  const target = base ? `${base}/${subPath}${url.search}` : ''
 
   const method = req.method.toUpperCase()
   const headers = buildHeaders(req)
@@ -254,30 +301,55 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
     body = await req.arrayBuffer()
   }
 
-  try {
-    const resp = await fetch(target, {
-      method,
-      headers,
-      body: body ? body : undefined,
-      redirect: 'manual'
-    })
-
-    if (resp.status !== 404) {
-      const outHeaders = new Headers(resp.headers)
-      outHeaders.delete('content-encoding')
-      outHeaders.delete('content-length')
-      return new Response(resp.body, {
-        status: resp.status,
-        statusText: resp.statusText,
-        headers: outHeaders
+  if (base) {
+    try {
+      const resp = await fetch(target, {
+        method,
+        headers,
+        body: body ? body : undefined,
+        redirect: 'manual'
       })
+
+      if (!isDemo || resp.status !== 404) {
+        const outHeaders = new Headers(resp.headers)
+        outHeaders.delete('content-encoding')
+        outHeaders.delete('content-length')
+        return new Response(resp.body, {
+          status: resp.status,
+          statusText: resp.statusText,
+          headers: outHeaders
+        })
+      }
+    } catch (e: any) {
+      if (!isDemo) {
+        return json(
+          {
+            error: 'CPU server unreachable',
+            mode,
+            hint: 'Set CPU_SERVER_URL to a reachable backend (https://...) or switch to MCS_DEPLOY_MODE=demo',
+            details: String(e?.message || e || 'unknown'),
+          },
+          503
+        )
+      }
     }
-  } catch {}
+  } else if (!isDemo) {
+    return json(
+      {
+        error: 'CPU server not configured',
+        mode,
+        hint: 'Set CPU_SERVER_URL in Vercel env to a reachable backend (https://...) or switch to MCS_DEPLOY_MODE=demo',
+      },
+      503
+    )
+  }
 
-  const stub = await handleStub(fallbackReq, pathParts)
-  if (stub) return stub
+  if (isDemo) {
+    const stub = await handleStub(fallbackReq, pathParts)
+    if (stub) return stub
+  }
 
-  return json({ error: 'Not found' }, 404)
+  return json({ error: 'Not found', mode }, 404)
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ path: string[] }> }) {

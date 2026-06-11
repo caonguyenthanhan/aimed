@@ -1,0 +1,17 @@
+{
+  "profile": {
+    "full_name": "Minh Anh",
+    "nickname": "patient.minh",
+    "bio": "Demo patient account for Vercel deployment.",
+    "email": "patient.minh@aimed.demo",
+    "email_verified": true,
+    "phone": "0901234567",
+    "joined_at": "2026-01-01T00:00:00.000Z",
+    "avatar_url": "",
+    "social_links": { "google": true, "facebook": false }
+  },
+  "consent": {
+    "share_scores": true,
+    "share_chat_content": true
+  }
+}
