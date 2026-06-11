@@ -721,7 +721,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
             </Drawer>
           ) : null}
 
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
             <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto">
               <div className="min-w-0 flex-1">
                 {conversationId && renamingId === conversationId ? (
@@ -814,22 +814,23 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               ) : null}
             </div>
 
-            <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto bg-background custom-scrollbar">
-              <PageAiInsight
-                pageContext="emotional_support"
-                userQuestion={messages.length > 0 ? messages[messages.length - 1]?.role === "user" ? messages[messages.length - 1]?.content : undefined : undefined}
-                conversationHistory={messages.map(m => ({ role: m.role, content: m.content }))}
-              />
-              {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-12">
+            <div className="flex-1 min-h-0 overflow-y-auto bg-background custom-scrollbar">
+              <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
+                <PageAiInsight
+                  pageContext="emotional_support"
+                  userQuestion={messages.length > 0 ? messages[messages.length - 1]?.role === "user" ? messages[messages.length - 1]?.content : undefined : undefined}
+                  conversationHistory={messages.map(m => ({ role: m.role, content: m.content }))}
+                />
+                {messages.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
                     <Heart className="h-10 w-10 text-accent" />
                   </div>
                   <h3 className="text-xl font-bold text-foreground">Nguoi Ban Lang Nghe</h3>
                   <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">Khong gian an toan de ban chia se cam xuc va suy nghi cua minh. Toi luon o day lang nghe ban.</p>
-                </div>
-              ) : (
-                <>
+                  </div>
+                ) : (
+                  <>
                   {messages.map((m) => (
                     <div key={m.id} className={`flex items-end gap-3 animate-message-in ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                       {m.role !== "user" && (
@@ -954,38 +955,41 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                     </div>
                   )}
                   
-                  <div ref={endRef} />
-                </>
-              )}
+                    <div ref={endRef} />
+                  </>
+                )}
+              </div>
             </div>
 
-            <div className="sticky bottom-0 z-20 px-2 sm:px-4 py-2 sm:py-4 border-t border-border bg-card/95 flex items-end gap-2 sm:gap-3">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    void send()
-                  }
-                }}
-                placeholder="Bạn đang nghĩ gì, nói với mình nhé..."
-                className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm resize-none max-h-40 text-slate-900 dark:text-slate-50 placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                rows={1}
-                disabled={isLoading}
-              />
-              <button
-                onClick={() => void send()}
-                disabled={!canSend}
-                className={`px-3 sm:px-5 py-2 sm:py-3 text-xs sm:text-sm font-medium rounded-lg transition-all whitespace-nowrap flex-shrink-0 ${
-                  canSend 
-                    ? "bg-blue-600 dark:bg-blue-600 text-white shadow-md hover:bg-blue-700 dark:hover:bg-blue-700 active:scale-95" 
-                    : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed"
-                }`}
-                type="button"
-              >
-                {isLoading ? "..." : "Gửi"}
-              </button>
+            <div className="shrink-0 border-t border-border/60 bg-card/85 backdrop-blur-xl">
+              <div className="mx-auto flex w-full max-w-3xl items-end gap-2 px-2 py-2 sm:gap-3 sm:px-4 sm:py-4">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      void send()
+                    }
+                  }}
+                  placeholder="Bạn đang nghĩ gì, nói với mình nhé..."
+                  className="flex-1 rounded-[28px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 placeholder-slate-500 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 dark:placeholder-slate-400 sm:px-4 sm:py-3 sm:text-sm resize-none max-h-40"
+                  rows={1}
+                  disabled={isLoading}
+                />
+                <button
+                  onClick={() => void send()}
+                  disabled={!canSend}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-xs font-medium transition-all sm:px-5 sm:py-3 sm:text-sm ${
+                    canSend 
+                      ? "bg-blue-600 text-white shadow-md hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 active:scale-95" 
+                      : "cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                  }`}
+                  type="button"
+                >
+                  {isLoading ? "..." : "Gửi"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
