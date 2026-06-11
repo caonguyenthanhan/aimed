@@ -2230,7 +2230,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       {/* Messages Container */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 sm:px-6 min-h-0 custom-scrollbar"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 min-h-0 custom-scrollbar pb-4"
         style={{ 
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain'
@@ -2419,7 +2419,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <div ref={messagesEndRef} />
       </div>
 
-      <div ref={composerWrapperRef} className="shrink-0 mb-[calc(5rem+env(safe-area-inset-bottom))] sm:mb-0">
+      <div ref={composerWrapperRef} className="sticky bottom-0 z-20 shrink-0 bg-background/95">
         <UnifiedComposer
           value={input}
           onValueChange={setInput}
