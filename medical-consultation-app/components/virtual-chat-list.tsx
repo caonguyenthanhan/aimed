@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useCallback, useMemo } from 'react'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
 
 interface Message {
   id: string
@@ -16,6 +17,7 @@ interface VirtualChatListProps {
   itemHeight?: number
   overscan?: number
   onLoadMore?: () => void
+  contentClassName?: string
 }
 
 export function VirtualChatList({
@@ -24,6 +26,7 @@ export function VirtualChatList({
   itemHeight = 80,
   overscan = 5,
   onLoadMore,
+  contentClassName,
 }: VirtualChatListProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -79,7 +82,7 @@ export function VirtualChatList({
     <ScrollArea ref={scrollRef} className="flex-1 min-h-0" viewportClassName="overflow-y-auto" onScroll={handleScroll}>
       <div ref={containerRef} className="relative" style={{ height: totalHeight }}>
         <div
-          className="space-y-2 px-4"
+          className={cn("space-y-2 px-4", contentClassName)}
           style={{
             transform: `translateY(${offsetY}px)`,
           }}

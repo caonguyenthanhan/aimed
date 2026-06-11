@@ -66,19 +66,18 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
 
   return (
     <div
-      className="flex-shrink-0 p-3 sm:p-4 bg-card/80 backdrop-blur-sm border-t border-border relative z-10"
+      className="relative z-10 flex-shrink-0 border-t border-border/60 bg-background/80 px-3 py-3 backdrop-blur-xl sm:px-4 sm:py-4"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       onDragOver={props.onDragOver}
       onDrop={props.onDrop}
     >
-      <div className="max-w-2xl mx-auto">
-        {/* Suggested Questions - 3 items in a row */}
-        <div className="mb-3 grid grid-cols-1 sm:grid-cols-3 gap-1.5 sm:gap-2">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-2">
           {props.suggestedQuestions.slice(0, 3).map((q, i) => (
             <button
               key={i}
               onClick={() => props.onSuggestedQuestion(q)}
-              className="px-3 py-2 rounded-xl bg-secondary hover:bg-accent hover:text-accent-foreground text-foreground text-xs font-medium border border-border hover:border-accent transition-all duration-200 text-left truncate"
+              className="shrink-0 rounded-full border border-border bg-secondary px-3 py-2 text-left text-xs font-medium text-foreground transition-all duration-200 hover:border-accent hover:bg-accent hover:text-accent-foreground"
             >
               {q}
             </button>
@@ -126,7 +125,7 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
           </div>
         )}
 
-        <div className="rounded-2xl bg-card shadow-lg border border-border px-3 sm:px-4 py-2 flex items-center gap-2 transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50">
+        <div className="flex items-center gap-2 rounded-[28px] border border-border bg-card px-3 py-2 shadow-lg transition-all focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 sm:px-4">
           <textarea
             value={props.value}
             onChange={(e) => props.onValueChange(e.target.value)}

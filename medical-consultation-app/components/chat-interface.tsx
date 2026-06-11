@@ -1968,7 +1968,15 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     }
   }, [messages, conversationId])
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden hero-gradient dark:hero-gradient-dark" suppressHydrationWarning>
+    <div
+      className="flex flex-1 min-h-0 overflow-hidden hero-gradient dark:hero-gradient-dark"
+      suppressHydrationWarning
+      style={{
+        height: isMobile
+          ? "calc(100dvh - 4rem - 6rem)"
+          : "calc(100dvh - 5rem)",
+      }}
+    >
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
@@ -2175,7 +2183,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </DrawerContent>
         </Drawer>
       )}
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
         {!showSidebar && !isMobile && (
           <div className="absolute top-20 left-3 z-20">
             <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">
@@ -2183,54 +2191,52 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             </button>
           </div>
         )}
-      {/* Input and actions moved to bottom */}
-      {/* Medical Disclaimer - Compact */}
+        <div className="mx-auto flex h-full w-full max-w-5xl min-w-0 flex-col">
       {!disclaimerDismissed && (
-        <div className="mx-3 sm:mx-4 mb-2">
-          <div className="flex items-center justify-between bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/50 dark:border-amber-800/50 rounded-xl px-3 py-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              <span className="text-xs text-amber-800 dark:text-amber-200">Thông tin chỉ mang tính tham khảo. Hãy tham khảo ý kiến bác sĩ.</span>
+            <div className="mx-3 mb-2 sm:mx-4">
+              <div className="mx-auto flex w-full max-w-3xl items-center justify-between rounded-2xl border border-amber-200/50 bg-amber-50/80 px-3 py-2 dark:border-amber-800/50 dark:bg-amber-950/30">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span className="text-xs text-amber-800 dark:text-amber-200">Thông tin chỉ mang tính tham khảo. Hãy tham khảo ý kiến bác sĩ.</span>
+                </div>
+                <button
+                  onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }}
+                  className="ml-2 flex-shrink-0 rounded-lg p-1 transition hover:bg-amber-200/50 dark:hover:bg-amber-800/30"
+                >
+                  <X className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                </button>
+              </div>
             </div>
-            <button 
-              onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }} 
-              className="ml-2 p-1 rounded-lg hover:bg-amber-200/50 dark:hover:bg-amber-800/30 transition flex-shrink-0"
-            >
-              <X className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-            </button>
-          </div>
-        </div>
-      )}
+          )}
 
-      {agentMode && (
-        <div className="mx-3 sm:mx-4 mb-2">
-          <div className="rounded-xl border border-border bg-card/70 backdrop-blur-sm px-3 py-2">
-            <div className="text-xs font-semibold text-foreground">Trợ lý AI (Agent)</div>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
-                profile: {labelAgentProfile(agentStatus?.agent_profile)}
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
-                mode: {String(agentStatus?.mode || "auto")}
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
-                provider: {String(agentStatus?.provider || "auto")}
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
-                graph: {graphStatus?.connected ? `ok${typeof graphStatus.latency_ms === "number" ? ` (${graphStatus.latency_ms}ms)` : ""}` : graphStatus ? "down" : agentStatus?.graph_injected ? "bật" : agentStatus?.graph_tool_called ? "lỗi/tắt" : "tắt"}
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
-                tools: {String(agentStatus?.mcp_tool_calls_count ?? 0)}
-              </span>
+          {agentMode && (
+            <div className="mx-3 mb-2 sm:mx-4">
+              <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border bg-card/70 px-3 py-2 backdrop-blur-sm">
+                <div className="text-xs font-semibold text-foreground">Trợ lý AI (Agent)</div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
+                    profile: {labelAgentProfile(agentStatus?.agent_profile)}
+                  </span>
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
+                    mode: {String(agentStatus?.mode || "auto")}
+                  </span>
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
+                    provider: {String(agentStatus?.provider || "auto")}
+                  </span>
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
+                    graph: {graphStatus?.connected ? `ok${typeof graphStatus.latency_ms === "number" ? ` (${graphStatus.latency_ms}ms)` : ""}` : graphStatus ? "down" : agentStatus?.graph_injected ? "bật" : agentStatus?.graph_tool_called ? "lỗi/tắt" : "tắt"}
+                  </span>
+                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
+                    tools: {String(agentStatus?.mcp_tool_calls_count ?? 0)}
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Messages Container */}
-      <div 
+      <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto px-4 sm:px-6 min-h-0 custom-scrollbar pb-4"
+            className="flex-1 min-h-0 overflow-y-auto custom-scrollbar"
         style={{ 
           WebkitOverflowScrolling: 'touch',
           overscrollBehavior: 'contain'
@@ -2241,6 +2247,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           // Use virtual scroll for large message lists
           <VirtualChatList
             messages={messages}
+                contentClassName="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6 sm:py-6"
             renderMessage={(msg, idx) => {
               return (
               <div
@@ -2307,7 +2314,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           />
         ) : (
           // Normal rendering for small message lists
-          <div className="space-y-4 py-4">
+              <div className="mx-auto w-full max-w-3xl space-y-4 px-3 py-4 sm:px-6 sm:py-6">
             {messages.map((message, index) => (
               <div
                 key={String(message.id || index)}
@@ -2388,6 +2395,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         )}
 
         {/* Special Messages (Embeds, Music Players, Navigation Prompts) */}
+            <div className="mx-auto w-full max-w-3xl px-3 pb-4 sm:px-6 sm:pb-6">
         {specialMessages.map((specialMsg) => (
           <ChatSpecialMessage 
             key={specialMsg.id} 
@@ -2396,30 +2404,30 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           />
         ))}
 
-        {/* Loading Animation */}
         {isLoading && (
-          <div className="flex justify-start animate-message-in">
-            <div className="flex items-end gap-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
-                <Bot className="h-4 w-4 text-white animate-pulse" />
-              </div>
-              <div className="chat-bubble-bot border border-border/50 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-1.5">
-                    <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <div className="flex justify-start animate-message-in">
+                  <div className="flex items-end gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                      <Bot className="h-4 w-4 text-white animate-pulse" />
+                    </div>
+                    <div className="chat-bubble-bot border border-border/50 px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex gap-1.5">
+                          <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                          <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                          <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        </div>
+                        <span className="text-sm text-muted-foreground font-medium">Dang suy nghi...</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-sm text-muted-foreground font-medium">Dang suy nghi...</span>
                 </div>
-              </div>
-            </div>
-          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
+          </div>
 
-      <div ref={composerWrapperRef} className="sticky bottom-0 z-20 shrink-0 bg-background/95">
+      <div ref={composerWrapperRef} className="shrink-0 border-t border-border/60 bg-background/85 backdrop-blur-xl">
         <UnifiedComposer
           value={input}
           onValueChange={setInput}
@@ -2460,6 +2468,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           onManageKey={() => setAuthOpen(true)}
         />
       </div>
+        </div>
       <Dialog open={llmContextOpen} onOpenChange={setLlmContextOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
