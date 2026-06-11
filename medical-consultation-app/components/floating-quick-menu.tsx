@@ -18,11 +18,22 @@ const DEFAULT_ITEMS = [
   { href: "/speech-chat", label: "Stream", icon: Mic },
 ]
 
+const HIDDEN_PATHS = new Set([
+  "/account",
+  "/ke-hoach",
+  "/tu-van",
+  "/tam-su",
+  "/tri-lieu",
+  "/speech-chat",
+  "/nhac-nho",
+  "/sang-loc",
+])
+
 export default function FloatingQuickMenu() {
   const pathname = usePathname()
 
   if (!pathname) return null
-  if (pathname === "/ke-hoach") return null
+  if (HIDDEN_PATHS.has(pathname)) return null
 
   return (
     <div className="hidden sm:block fixed bottom-8 right-8 z-50">
