@@ -12,12 +12,46 @@ type StubConversation = {
   last_active: string
 }
 
+type StubProfile = {
+  full_name: string
+  nickname?: string
+  bio?: string
+  email?: string
+  email_verified?: boolean
+  phone?: string
+  joined_at?: string
+  avatar_url?: string
+  social_links?: { google?: boolean; facebook?: boolean }
+}
+
+type StubConsent = {
+  share_scores: boolean
+  share_chat_content: boolean
+}
+
 const stubStore: {
   runtime: { target: 'cpu' | 'gpu'; gpu_url?: string; updated_at: string }
   conversations: Map<string, StubConversation>
+  profile: StubProfile
+  consent: StubConsent
 } = {
   runtime: { target: 'cpu', updated_at: new Date().toISOString() },
   conversations: new Map(),
+  profile: {
+    full_name: 'Minh Anh',
+    nickname: 'patient.minh',
+    bio: 'Tai khoan demo patient cho ban deploy Vercel.',
+    email: 'patient.minh@aimed.demo',
+    email_verified: true,
+    phone: '0901234567',
+    joined_at: '2026-01-01T00:00:00.000Z',
+    avatar_url: '',
+    social_links: { google: true, facebook: false },
+  },
+  consent: {
+    share_scores: true,
+    share_chat_content: true,
+  },
 }
 
 function buildHeaders(req: NextRequest): Headers {
@@ -49,12 +83,40 @@ async function tryReadJson(req: NextRequest) {
   }
 }
 
+async function tryReadPayload(req: NextRequest) {
+  const contentType = String(req.headers.get('content-type') || '').toLowerCase()
+  if (contentType.includes('application/json')) {
+    return tryReadJson(req)
+  }
+  if (contentType.includes('multipart/form-data') || contentType.includes('application/x-www-form-urlencoded')) {
+    try {
+      const form = await req.formData()
+      const out: Record<string, any> = {}
+      for (const [key, value] of form.entries()) {
+        if (typeof value === 'string') out[key] = value
+      }
+      return out
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
 function isConversationsPath(parts: string[]) {
   return parts?.[0] === 'v1' && parts?.[1] === 'conversations'
 }
 
 function isRuntimeStatePath(parts: string[]) {
   return parts?.[0] === 'v1' && parts?.[1] === 'runtime' && parts?.[2] === 'state'
+}
+
+function isUserPath(parts: string[]) {
+  return parts?.[0] === 'v1' && parts?.[1] === 'user'
+}
+
+function isConsentPath(parts: string[]) {
+  return parts?.[0] === 'v1' && parts?.[1] === 'consent'
 }
 
 function newConvId() {
@@ -77,6 +139,50 @@ async function handleStub(req: NextRequest, pathParts: string[]) {
       const gpu_url = typeof body?.gpu_url === 'string' && body.gpu_url.trim() ? body.gpu_url.trim() : undefined
       stubStore.runtime = { target, gpu_url, updated_at: new Date().toISOString() }
       return json({ ok: true, ...stubStore.runtime })
+    }
+    return json({ error: 'Method not allowed' }, 405)
+  }
+
+  if (isUserPath(pathParts)) {
+    const sub = pathParts.slice(2)
+    if (sub.length === 0) {
+      if (method === 'GET') return json(stubStore.profile)
+      if (method === 'PUT' || method === 'PATCH') {
+        const body = await tryReadPayload(req)
+        stubStore.profile = {
+          ...stubStore.profile,
+          full_name: typeof body?.full_name === 'string' && body.full_name.trim() ? body.full_name.trim() : stubStore.profile.full_name,
+          nickname: typeof body?.nickname === 'string' ? body.nickname.trim() : stubStore.profile.nickname,
+          bio: typeof body?.bio === 'string' ? body.bio.trim() : stubStore.profile.bio,
+          avatar_url: typeof body?.avatar_url === 'string' ? body.avatar_url.trim() : stubStore.profile.avatar_url,
+        }
+        return json(stubStore.profile)
+      }
+      return json({ error: 'Method not allowed' }, 405)
+    }
+
+    if (sub[0] === 'password') {
+      if (method !== 'PUT') return json({ error: 'Method not allowed' }, 405)
+      return json({ ok: true, message: 'Password updated in demo stub mode' })
+    }
+
+    if (sub[0] === 'sessions' && sub[1] === 'logout-all') {
+      if (method !== 'POST') return json({ error: 'Method not allowed' }, 405)
+      return json({ ok: true, message: 'All sessions cleared in demo stub mode' })
+    }
+
+    return json({ error: 'Not found' }, 404)
+  }
+
+  if (isConsentPath(pathParts)) {
+    if (method === 'GET') return json(stubStore.consent)
+    if (method === 'PUT' || method === 'PATCH') {
+      const body = await tryReadPayload(req)
+      stubStore.consent = {
+        share_scores: typeof body?.share_scores === 'boolean' ? body.share_scores : stubStore.consent.share_scores,
+        share_chat_content: typeof body?.share_chat_content === 'boolean' ? body.share_chat_content : stubStore.consent.share_chat_content,
+      }
+      return json(stubStore.consent)
     }
     return json({ error: 'Method not allowed' }, 405)
   }
@@ -141,6 +247,7 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
 
   const method = req.method.toUpperCase()
   const headers = buildHeaders(req)
+  const fallbackReq = method === 'GET' || method === 'HEAD' ? req : req.clone()
 
   let body: ArrayBuffer | undefined
   if (method !== 'GET' && method !== 'HEAD') {
@@ -167,7 +274,7 @@ async function proxy(req: NextRequest, params: { path?: string[] }) {
     }
   } catch {}
 
-  const stub = await handleStub(req, pathParts)
+  const stub = await handleStub(fallbackReq, pathParts)
   if (stub) return stub
 
   return json({ error: 'Not found' }, 404)
