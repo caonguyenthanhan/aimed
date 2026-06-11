@@ -959,7 +959,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               )}
             </div>
 
-            <div className="px-2 sm:px-4 py-2 sm:py-4 border-t border-border bg-card flex items-end gap-2 sm:gap-3 mb-[calc(5rem+env(safe-area-inset-bottom))] sm:mb-0">
+            <div className="sticky bottom-0 z-20 px-2 sm:px-4 py-2 sm:py-4 border-t border-border bg-card/95 flex items-end gap-2 sm:gap-3">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
