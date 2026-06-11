@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_WALKTHROUGH",
+  "summary": "Walkthrough verification of Next.js proxy modes on Vercel (demo vs prod). Confirms successful validation of Case A (Demo mode with stubbing) and checks logic for Case B and Case C.",
+  "updatedAt": "2026-06-11T07:47:18.332254600Z"
+}

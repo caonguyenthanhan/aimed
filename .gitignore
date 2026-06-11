@@ -97,3 +97,4 @@ PLAN_LOCAL.md
 Neo4j-*.txt
 /_models/
 aimed-log-export-*.json
+.worktrees/
