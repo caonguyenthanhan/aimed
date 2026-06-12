@@ -2197,7 +2197,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </DrawerContent>
         </Drawer>
       )}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden h-full">
         {!showSidebar && !isMobile && (
           <div className="absolute top-20 left-3 z-20">
             <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">

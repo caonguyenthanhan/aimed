@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server"
+﻿﻿import { NextRequest, NextResponse } from "next/server"
 import { getPgPool, resolveDatabaseConfig } from "@/lib/pg"
 import { getAuthedUser } from "@/lib/auth-server"
 import { normalizeAppointment, newAppointmentId } from "@/lib/appointments"
