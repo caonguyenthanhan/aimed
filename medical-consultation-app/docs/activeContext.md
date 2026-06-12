@@ -1,4 +1,4 @@
-﻿## Trạng thái hiện tại
+## Trạng thái hiện tại
 
 - Đã có kế hoạch phát triển toàn vẹn + checklist xây dựng theo phase (P0→P4) tại `_workspace/DEVELOPMENT_PLAN.md` và `_workspace/BUILD_CHECKLIST.md`, dựa trên kết quả audit hệ thống (auth không an toàn là điểm chặn production hàng đầu).
 - UI có chế độ Agent (toggle) ở trang /tu-van, gọi /api/agent-chat khi bật (Next.js proxy sang CPU `/v1/agent-chat` nếu CPU_SERVER_URL được cấu hình).
@@ -30,6 +30,8 @@
 - Có smoke script PowerShell `medical-consultation-app/smoke.ps1` để test nhanh các endpoint cốt lõi (db ping, conversations, graph.status) cho local/Vercel.
 - CPU server đã scaffold LangGraph agent và expose endpoint `/v1/agent-chat` (orchestrator=langgraph) trả `{response, actions, metadata}` để chuẩn bị thay thế hoàn toàn `/api/agent-chat` trên Vercel.
 - CPU server FOZA timeout dùng `FOZA_REQUEST_TIMEOUT_MS` (ms; tự quy đổi sang giây) và reuse HTTP session để giảm overhead kết nối.
+- Agent FOZA (Next.js `/api/agent-chat`): thêm circuit breaker in-memory để tránh FOZA timeout lặp lại gây cascade fallback khó hiểu (`FOZA_CIRCUIT_FAIL_THRESHOLD`, `FOZA_CIRCUIT_OPEN_MS`).
+- Agent metadata: luôn trả `requested_provider`, `root_cause`, `fallback`, `fallback_chain` để debug nhanh khi FOZA/GPU/CPU/Gemini failover.
 - Khi test bằng PowerShell, các endpoint chat trả `Content-Type: application/json; charset=utf-8` để tránh lỗi mojibake tiếng Việt.
 - SSOT runtime files (`data/runtime-mode.json`, `data/server-registry.json`) được tự tạo khi thiếu để tránh lệch mode (lần chạy đầu không cần gọi /api/runtime/mode trước).
 - Các endpoint `/api/runtime/mode` và `/api/llm-chat` cũng ép `application/json; charset=utf-8` để PowerShell decode tiếng Việt ổn định.

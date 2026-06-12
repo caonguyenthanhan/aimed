@@ -78,7 +78,7 @@ Các biến này áp dụng cho Gemini + OpenAI-like + MCP trong `/api/agent-cha
 ## 10) Auth/DB/Team tools
 
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: Google OAuth client id (frontend).
-- `DATABASE_URL`: Postgres connection string (nếu bật các tính năng DB).
+- `DATABASE_URL`: Postgres connection string (nếu bật các tính năng DB). Khuyến nghị thêm `sslmode=verify-full` để giữ semantics an toàn và tránh cảnh báo từ `pg-connection-string`.
 - `TEAM_TODO_PASSWORD`: mật khẩu cho team todo endpoint (nếu dùng).
 
 ## 11) Gợi ý cấu hình nhanh

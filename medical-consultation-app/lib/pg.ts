@@ -4,6 +4,25 @@ type AnyPgClient = { query: (text: string, params?: any[]) => Promise<any> }
 
 let pool: Pool | null = null
 
+function normalizeDatabaseUrl(connectionString: string) {
+  const raw = String(connectionString || '').trim()
+  if (!raw) return raw
+  if (!/^postgres(ql)?:\/\//i.test(raw)) return raw
+  try {
+    const u = new URL(raw)
+    const compat = String(u.searchParams.get('uselibpqcompat') || '').toLowerCase()
+    if (compat === 'true') return raw
+    const sslmode = String(u.searchParams.get('sslmode') || '').toLowerCase()
+    if (sslmode === 'prefer' || sslmode === 'require' || sslmode === 'verify-ca') {
+      u.searchParams.set('sslmode', 'verify-full')
+      return u.toString()
+    }
+    return raw
+  } catch {
+    return raw
+  }
+}
+
 export function resolveDatabaseUrl(): string {
   return resolveDatabaseConfig().url
 }
@@ -19,7 +38,7 @@ export function resolveDatabaseConfig(): { url: string; source: string } {
   ]
   for (const c of candidates) {
     const s = String(c.value || '').trim()
-    if (s) return { url: s, source: c.key }
+    if (s) return { url: normalizeDatabaseUrl(s), source: c.key }
   }
   return { url: '', source: '' }
 }

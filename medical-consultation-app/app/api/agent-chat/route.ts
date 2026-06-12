@@ -18,6 +18,12 @@ import { retryWithBackoff } from "@/lib/retry-backoff"
 import { youtubeService } from "@/lib/youtube-service"
 import { getAgentProfile } from "@/lib/agent-profiles"
 
+type FozaCircuitState = { opened_until: number; failures: number; last_error: string }
+
+const fozaCircuit: FozaCircuitState =
+  ((globalThis as any).__mcs_foza_circuit_v1 as FozaCircuitState | undefined) || { opened_until: 0, failures: 0, last_error: "" }
+;(globalThis as any).__mcs_foza_circuit_v1 = fozaCircuit
+
 const toHeaderRecord = (headers?: HeadersInit): Record<string, string> => {
   if (!headers) return {}
   if (headers instanceof Headers) {
@@ -254,6 +260,9 @@ export async function POST(req: Request) {
       (typeof body?.provider === "string" && String(body.provider).trim() ? String(body.provider).trim() : "") ||
       String(process.env.AGENT_PROVIDER || "").trim()
     const agentProvider = String(configuredAgentProvider || "").trim().toLowerCase()
+    const requestedProvider = agentProvider || "auto"
+    let rootCause: string | undefined
+    const fallbackChain: string[] = [requestedProvider]
     const detectIntentFlags = (text: string) => {
       const lower = String(text || "").toLowerCase()
       const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -570,6 +579,14 @@ export async function POST(req: Request) {
       const token = String(process.env.FOZA_TOKEN || process.env.FOZA_TOKEN_2 || "").trim()
       const modelName = String(process.env.LLM_MODEL_NAME || "").trim()
       if (token && modelName) {
+        const now = Date.now()
+        const circuitFailThreshold = toInt(process.env.FOZA_CIRCUIT_FAIL_THRESHOLD, 3)
+        const circuitOpenMs = toInt(process.env.FOZA_CIRCUIT_OPEN_MS, 10 * 60 * 1000)
+        if (fozaCircuit.opened_until > now) {
+          fallback = "foza_circuit_open"
+          rootCause = fallback
+          fallbackChain.push("skip_foza")
+        } else {
         const toInt = (v: any, def: number) => {
           const n = Number.parseInt(String(v ?? "").trim(), 10)
           return Number.isFinite(n) && n > 0 ? n : def
@@ -760,7 +777,11 @@ export async function POST(req: Request) {
           ...baseHistory,
           { role: "user", content: message },
         ]
-        const simpleModeMessages = [{ role: "user", content: String(message || "").trim() }]
+        const simpleModeMessages = [
+          { role: "system", content: jsonAgentSystem },
+          ...baseHistory,
+          { role: "user", content: String(message || "").trim() },
+        ]
 
         const parseJsonContent = (text: string) => {
           const s = String(text || "").trim()
@@ -867,6 +888,9 @@ export async function POST(req: Request) {
               const actions = sanitizeActions(parsed?.actions)
               const rawText = (typeof parsed?.response === "string" && String(parsed.response).trim()) ? String(parsed.response).trim() : (content || " ")
               const finalText = ensureAssistantText(rawText, actions)
+              fozaCircuit.failures = 0
+              fozaCircuit.opened_until = 0
+              fozaCircuit.last_error = ""
               appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
               const out = AgentResponseSchema.parse({
                 response: finalText,
@@ -877,6 +901,10 @@ export async function POST(req: Request) {
                 metadata: {
                   mode: "cloud",
                   provider: "foza",
+                  requested_provider: requestedProvider,
+                  root_cause: rootCause,
+                  fallback,
+                  fallback_chain: fallbackChain,
                   model: modelName,
                   agent_profile: agentProfile.id,
                   agent_profile_source: agentProfileSource,
@@ -896,6 +924,9 @@ export async function POST(req: Request) {
             }
 
             const finalText = ensureAssistantText(content || "Mình chưa nhận được phản hồi từ FOZA.", [])
+            fozaCircuit.failures = 0
+            fozaCircuit.opened_until = 0
+            fozaCircuit.last_error = ""
             appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
             const out = AgentResponseSchema.parse({
               response: finalText,
@@ -906,6 +937,10 @@ export async function POST(req: Request) {
               metadata: {
                 mode: "cloud",
                 provider: "foza",
+                requested_provider: requestedProvider,
+                root_cause: rootCause,
+                fallback,
+                fallback_chain: fallbackChain,
                 model: modelName,
                 agent_profile: agentProfile.id,
                 agent_profile_source: agentProfileSource,
@@ -963,6 +998,9 @@ export async function POST(req: Request) {
               const actions = sanitizeActions(parsed?.actions)
               const rawText = (typeof parsed?.response === "string" && String(parsed.response).trim()) ? String(parsed.response).trim() : (content || " ")
               const finalText = ensureAssistantText(rawText, actions)
+              fozaCircuit.failures = 0
+              fozaCircuit.opened_until = 0
+              fozaCircuit.last_error = ""
               appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
               const out = AgentResponseSchema.parse({
                 response: finalText,
@@ -973,6 +1011,10 @@ export async function POST(req: Request) {
                 metadata: {
                   mode: "cloud",
                   provider: "foza",
+                  requested_provider: requestedProvider,
+                  root_cause: rootCause,
+                  fallback,
+                  fallback_chain: fallbackChain,
                   model: modelName,
                   agent_profile: agentProfile.id,
                   agent_profile_source: agentProfileSource,
@@ -999,6 +1041,9 @@ export async function POST(req: Request) {
           }
 
           const finalText = ensureAssistantText(content || "Mình chưa nhận được JSON hợp lệ từ FOZA.", [])
+          fozaCircuit.failures = 0
+          fozaCircuit.opened_until = 0
+          fozaCircuit.last_error = ""
           appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
           const out = AgentResponseSchema.parse({
             response: finalText,
@@ -1009,6 +1054,10 @@ export async function POST(req: Request) {
             metadata: {
               mode: "cloud",
               provider: "foza",
+              requested_provider: requestedProvider,
+              root_cause: rootCause,
+              fallback,
+              fallback_chain: fallbackChain,
               model: modelName,
               agent_profile: agentProfile.id,
               agent_profile_source: agentProfileSource,
@@ -1026,11 +1075,24 @@ export async function POST(req: Request) {
           })
           return json(out)
         } catch (e: any) {
-          console.error("[agent-chat] foza_failed:", String(e?.message || e || ""))
-          fallback = "foza_failed"
+          const errMsg = String(e?.message || e || "")
+          console.error("[agent-chat] foza_failed:", errMsg)
+          fozaCircuit.failures = Math.max(0, fozaCircuit.failures) + 1
+          fozaCircuit.last_error = errMsg.slice(0, 500)
+          const isTimeout = /aborted|524|timeout/i.test(errMsg)
+          const opened = fozaCircuit.failures >= circuitFailThreshold
+          if (opened) {
+            fozaCircuit.opened_until = Date.now() + circuitOpenMs
+          }
+          fallback = opened ? "foza_circuit_opened" : (isTimeout ? "foza_timeout" : "foza_failed")
+          rootCause = rootCause || fallback
+          fallbackChain.push(fallback)
+        }
         }
       } else {
         fallback = "foza_missing_env"
+        rootCause = rootCause || fallback
+        fallbackChain.push(fallback)
       }
     }
 
@@ -1090,7 +1152,7 @@ export async function POST(req: Request) {
             delivery: { mode: deliveryMode },
             actions,
             conversation_id,
-            metadata: { mode: modeUsed, provider: "openai_like", fallback: "rule_based", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+            metadata: { mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
           })
         )
       }
@@ -1108,7 +1170,7 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions,
           conversation_id,
-          metadata: { mode: modeUsed, provider: "openai_like", model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, fallback, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+          metadata: { mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
         })
       )
     }
@@ -1126,7 +1188,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: modeUsed, provider: "gemini", fallback: "missing_gemini_key", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+        metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "missing_gemini_key", fallback_chain: fallbackChain, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
       })
       return json(out)
     }
@@ -1290,7 +1352,7 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions: [],
           conversation_id,
-          metadata: { mode: modeUsed, provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+          metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
         })
         return json(out)
       }
@@ -1307,7 +1369,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: modeUsed, provider: "gemini", access, fallback: "rule_based", gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+        metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, access, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
       })
       return json(out)
     }
@@ -1532,6 +1594,10 @@ export async function POST(req: Request) {
       metadata: { 
         mode: modeUsed, 
         provider: "gemini", 
+        requested_provider: requestedProvider,
+        root_cause: rootCause,
+        fallback,
+        fallback_chain: fallbackChain,
         access, 
         model: r.model, 
         agent_profile: agentProfile.id,
