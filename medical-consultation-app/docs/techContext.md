@@ -40,6 +40,8 @@
 - `FOZA_REQUEST_TIMEOUT_MS` (default 20000): timeout mỗi request gọi Foza.
 - `FOZA_MCP_TOOL_TIMEOUT_MS` (default 8000): timeout mỗi lần gọi `/api/mcp/call`.
 - `FOZA_AGENT_TIMEOUT_MS` (default 35000): deadline tổng cho 1 lượt `/api/agent-chat` khi dùng Foza.
+- `FOZA_CIRCUIT_FAIL_THRESHOLD` (default 3): số lỗi FOZA liên tiếp trước khi “open circuit”.
+- `FOZA_CIRCUIT_OPEN_MS` (default 600000): thời gian open circuit trước khi thử FOZA lại.
 
 ## YouTube
 

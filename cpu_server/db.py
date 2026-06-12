@@ -14,7 +14,7 @@ def get_database_url() -> str:
 
 
 def db_connect():
-    return psycopg.connect(get_database_url(), autocommit=True)
+    return psycopg.connect(get_database_url(), connect_timeout=2, autocommit=True)
 
 
 def ensure_auth_schema() -> None:

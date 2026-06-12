@@ -79,6 +79,12 @@
 - CPU server: TTS endpoints ưu tiên Supertonic local qua `CPU_TTS_PROVIDER`/`TTS_PROVIDER` + `SUPERTONIC_TTS_URL`, fallback gTTS/GPU.
 - TTS: chuẩn hoá text tiếng Việt cho ngữ cảnh y tế (mmHg, mg/dL, mmol/L, bpm, °C, liều mg/mL...) trước khi synth để đọc tự nhiên hơn.
 
+## 2026-06-12
+
+- FOZA Agent: thêm circuit breaker in-memory để tránh FOZA timeout lặp lại gây cascade fallback khó debug (`FOZA_CIRCUIT_FAIL_THRESHOLD`, `FOZA_CIRCUIT_OPEN_MS`).
+- Agent metadata: bổ sung `requested_provider`, `root_cause`, `fallback`, `fallback_chain` để làm rõ lỗi gốc khi failover FOZA/GPU/CPU/Gemini.
+- DB: chuẩn hoá `DATABASE_URL` để tự nâng `sslmode=require|prefer|verify-ca` → `sslmode=verify-full` (giữ semantics an toàn và tránh cảnh báo `pg-connection-string`).
+
 ## 2026-06-04
 
 - LLMOps production: thêm `core_lib/llmops/` (Pydantic v2 settings, JSONL logging sink, LangSmith tracing wrapper, guardrails prompt injection + anti-hallucination grounding, RAGAS evaluation runner).
