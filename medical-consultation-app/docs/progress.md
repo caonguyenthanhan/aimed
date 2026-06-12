@@ -84,6 +84,14 @@
 - FOZA Agent: thêm circuit breaker in-memory để tránh FOZA timeout lặp lại gây cascade fallback khó debug (`FOZA_CIRCUIT_FAIL_THRESHOLD`, `FOZA_CIRCUIT_OPEN_MS`).
 - Agent metadata: bổ sung `requested_provider`, `root_cause`, `fallback`, `fallback_chain` để làm rõ lỗi gốc khi failover FOZA/GPU/CPU/Gemini.
 - DB: chuẩn hoá `DATABASE_URL` để tự nâng `sslmode=require|prefer|verify-ca` → `sslmode=verify-full` (giữ semantics an toàn và tránh cảnh báo `pg-connection-string`).
+- **Agent bugfix (2026-06-12T12:36):** sửa 4 bug gốc xác nhận từ code:
+  - BUG-1: bỏ `catch {}` rỗng ở proxy CPU `/v1/agent-chat` → thêm `cpu_proxy_error` vào metadata.
+  - BUG-2: Gemini fail (non-429) → trả safety fallback y tế an toàn cho triage/medication; `gemini_error` rõ ràng trong metadata.
+  - BUG-3: `graph.evidence` không còn gọi localhost trên Vercel khi thiếu `CPU_SERVER_URL` → trả `graph_disabled_no_cpu_url` ngay lập tức.
+  - BUG-4: thêm `graph_reason/status_code/endpoint` vào mọi nhánh `llm_context`; phân loại `graph_404|graph_timeout|graph_down|graph_empty`.
+  - Provider chain: FOZA giờ được thử tự động khi `agentProvider === "auto"` nếu có `FOZA_TOKEN` + `LLM_MODEL_NAME`.
+  - UI: badge graph hiển thị reason chi tiết; context panel có diagnostic block cho `gemini_error`/`cpu_proxy_error`.
+  - Build: `npm run build` pass hoàn toàn, 0 lỗi mới.
 
 ## 2026-06-04
 

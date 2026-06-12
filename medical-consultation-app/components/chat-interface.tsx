@@ -45,6 +45,9 @@ type AgentStatus = {
   mcp_tool_names?: string[]
   graph_tool_called?: boolean
   graph_injected?: boolean
+  graph_reason?: string
+  gemini_error?: string
+  cpu_proxy_error?: string
 }
 
 type GraphStatusUI = {
@@ -947,6 +950,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           mcp_tool_names: Array.isArray((md as any)?.mcp_tool_names) ? (md as any).mcp_tool_names : undefined,
           graph_tool_called: typeof (ctx as any)?.graph_tool_called === "boolean" ? (ctx as any).graph_tool_called : undefined,
           graph_injected: typeof (ctx as any)?.graph_injected === "boolean" ? (ctx as any).graph_injected : undefined,
+          graph_reason: String((ctx as any)?.graph_reason || (md as any)?.graph_reason || "").trim() || undefined,
+          gemini_error: String((md as any)?.gemini_error || "").trim() || undefined,
+          cpu_proxy_error: String((md as any)?.cpu_proxy_error || "").trim() || undefined,
         })
       }
       if (md && (md as any)?.sos) {
@@ -2238,7 +2244,18 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                     provider: {String(agentStatus?.provider || "auto")}
                   </span>
                   <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
-                    graph: {graphStatus?.connected ? `ok${typeof graphStatus.latency_ms === "number" ? ` (${graphStatus.latency_ms}ms)` : ""}` : graphStatus ? "down" : agentStatus?.graph_injected ? "bật" : agentStatus?.graph_tool_called ? "lỗi/tắt" : "tắt"}
+                    graph: {(() => {
+                      if (graphStatus?.connected) return `ok${typeof graphStatus.latency_ms === "number" ? ` (${graphStatus.latency_ms}ms)` : ""}`
+                      const reason = (agentStatus as any)?.graph_reason || (agentStatus as any)?.llm_context?.graph_reason
+                      if (reason === "graph_disabled_no_cpu_url") return "tắt (chưa cấu hình CPU)"
+                      if (reason === "graph_404") return "lỗi 404"
+                      if (reason === "graph_timeout") return "timeout"
+                      if (reason === "graph_empty") return "không có dữ liệu"
+                      if (reason === "graph_down") return "down"
+                      if (agentStatus?.graph_injected) return "bật"
+                      if (agentStatus?.graph_tool_called) return "lỗi/tắt"
+                      return "tắt"
+                    })()}
                   </span>
                   <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
                     tools: {String(agentStatus?.mcp_tool_calls_count ?? 0)}
@@ -2490,6 +2507,13 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             <DialogDescription>Dùng để demo: evidence + prompt input</DialogDescription>
           </DialogHeader>
           <div className="max-h-[70vh] overflow-auto rounded-md border border-border bg-muted/20 p-3 text-xs">
+            {/* Diagnostic errors — shown only when present */}
+            {(agentStatus?.cpu_proxy_error || agentStatus?.gemini_error) && (
+              <div className="mb-2 rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+                {agentStatus?.cpu_proxy_error && <div><strong>cpu_proxy_error:</strong> {agentStatus.cpu_proxy_error}</div>}
+                {agentStatus?.gemini_error && <div><strong>gemini_error:</strong> {agentStatus.gemini_error}</div>}
+              </div>
+            )}
             <pre className="whitespace-pre-wrap break-words">{JSON.stringify(llmContext || {}, null, 2)}</pre>
           </div>
           <DialogFooter>
