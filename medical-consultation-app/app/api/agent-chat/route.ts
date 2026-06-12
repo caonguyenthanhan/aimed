@@ -46,6 +46,7 @@ const json = (data: any, init?: ResponseInit) =>
 
 export async function POST(req: Request) {
   const started = Date.now()
+  let cpuProxyError: string | undefined
   try {
     const proxyBody: any = await req.clone().json().catch(() => null)
     const proxyMessage = String(proxyBody?.message || proxyBody?.question || "").trim()
@@ -106,7 +107,8 @@ export async function POST(req: Request) {
               return json(raw)
             }
           }
-        } catch {
+        } catch (e: any) {
+          cpuProxyError = String(e?.message || e || "").slice(0, 200)
         } finally {
           clearTimeout(t)
         }
@@ -262,6 +264,9 @@ export async function POST(req: Request) {
     const agentProvider = String(configuredAgentProvider || "").trim().toLowerCase()
     const requestedProvider = agentProvider || "auto"
     let rootCause: string | undefined
+    let graphReason: string | undefined
+    let graphStatusCode: number | undefined
+    let graphEndpoint: string | undefined
     const fallbackChain: string[] = [requestedProvider]
     const detectIntentFlags = (text: string) => {
       const lower = String(text || "").toLowerCase()
@@ -493,8 +498,15 @@ export async function POST(req: Request) {
         graphToolCalled = true
         const out = await callMcp("graph.evidence", { query: message, limit: 80, entity_limit: 6 })
         graphEvidence = out?.result || null
+        graphEndpoint = out?.metadata?.upstream ?? undefined
+        graphStatusCode = out?.metadata?.status_code ?? undefined
         const ent = Array.isArray(graphEvidence?.entities) ? graphEvidence.entities : []
         const edges = Array.isArray(graphEvidence?.edges) ? graphEvidence.edges : []
+        if (graphEvidence?.ok === false) {
+          graphReason = (graphEvidence?.reason as string) || "graph_down"
+        } else if (!ent.length && !edges.length) {
+          graphReason = "graph_empty"
+        }
         const preview = JSON.stringify({ query: message, entities: ent.slice(0, 6), edges: edges.slice(0, 80) }, null, 2).slice(0, 9000)
         if (ent.length || edges.length) {
           personaForLLM = [
@@ -504,10 +516,11 @@ export async function POST(req: Request) {
           ].join("\n\n")
           graphInjected = true
         }
-      } catch {
+      } catch (e: any) {
         graphEvidence = null
         graphInjected = false
         graphToolCalled = false
+        graphReason = "graph_down"
       }
     }
 
@@ -574,11 +587,12 @@ export async function POST(req: Request) {
     let modeUsed: "cpu" | "gpu" | "cloud" = originalTarget
     let fallback: string | undefined
 
-    if (agentProvider === "foza") {
+    const fozaToken = String(process.env.FOZA_TOKEN || process.env.FOZA_TOKEN_2 || "").trim()
+    const fozaModelName = String(process.env.LLM_MODEL_NAME || "").trim()
+    const shouldTryFoza = agentProvider === "foza" || (agentProvider === "auto" && !!(fozaToken && fozaModelName))
+    if (shouldTryFoza) {
       const baseUrl = String(process.env.FOZA_BASE_URL || "").trim().replace(/\/$/, "") || "https://api.foza.ai/v1"
-      const token = String(process.env.FOZA_TOKEN || process.env.FOZA_TOKEN_2 || "").trim()
-      const modelName = String(process.env.LLM_MODEL_NAME || "").trim()
-      if (token && modelName) {
+      if (fozaToken && fozaModelName) {
         const now = Date.now()
         const circuitFailThreshold = toInt(process.env.FOZA_CIRCUIT_FAIL_THRESHOLD, 3)
         const circuitOpenMs = toInt(process.env.FOZA_CIRCUIT_OPEN_MS, 10 * 60 * 1000)
@@ -738,9 +752,9 @@ export async function POST(req: Request) {
           const t = setTimeout(() => controller.abort(), timeoutMs)
           const resp = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json", "User-Agent": "govgraph-foza-client/1.0", Authorization: `Bearer ${token}` },
+            headers: { "Content-Type": "application/json", Accept: "application/json", "User-Agent": "govgraph-foza-client/1.0", Authorization: `Bearer ${fozaToken}` },
             body: JSON.stringify({
-              model: modelName,
+              model: fozaModelName,
               messages: msgs,
               ...(includeTools ? { tools: toOpenAiTools(mcpToolDecl) } : {}),
               ...(useResponseFormat ? { response_format: { type: "json_object" } } : {}),
@@ -905,12 +919,12 @@ export async function POST(req: Request) {
                   root_cause: rootCause,
                   fallback,
                   fallback_chain: fallbackChain,
-                  model: modelName,
+                  model: fozaModelName,
                   agent_profile: agentProfile.id,
                   agent_profile_source: agentProfileSource,
                   duration_ms: Date.now() - started,
                   intent: intentFlags,
-                  llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: 0, mcp_tool_calls_count: 0, mcp_tool_names: [], graph_tool_called: graphToolCalled },
+                  llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: 0, mcp_tool_calls_count: 0, mcp_tool_names: [], graph_tool_called: graphToolCalled, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint },
                   json_mode: true,
                   tool_rounds: 0,
                   tool_calls_count: 0,
@@ -941,12 +955,12 @@ export async function POST(req: Request) {
                 root_cause: rootCause,
                 fallback,
                 fallback_chain: fallbackChain,
-                model: modelName,
+                model: fozaModelName,
                 agent_profile: agentProfile.id,
                 agent_profile_source: agentProfileSource,
                 duration_ms: Date.now() - started,
                 intent: intentFlags,
-                llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: 0, mcp_tool_calls_count: 0, mcp_tool_names: [], graph_tool_called: graphToolCalled },
+                llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: 0, mcp_tool_calls_count: 0, mcp_tool_names: [], graph_tool_called: graphToolCalled, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint },
                 json_mode: false,
                 tool_rounds: 0,
                 tool_calls_count: 0,
@@ -1015,12 +1029,12 @@ export async function POST(req: Request) {
                   root_cause: rootCause,
                   fallback,
                   fallback_chain: fallbackChain,
-                  model: modelName,
+                  model: fozaModelName,
                   agent_profile: agentProfile.id,
                   agent_profile_source: agentProfileSource,
                   duration_ms: Date.now() - started,
                   intent: intentFlags,
-                  llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: toolCallsCount, mcp_tool_calls_count: mcpToolCallsCount, mcp_tool_names: mcpToolNamesSeen, graph_tool_called: graphToolCalled },
+                  llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: toolCallsCount, mcp_tool_calls_count: mcpToolCallsCount, mcp_tool_names: mcpToolNamesSeen, graph_tool_called: graphToolCalled, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint },
                   json_mode: true,
                   tool_rounds: toolRounds,
                   tool_calls_count: toolCallsCount,
@@ -1058,12 +1072,12 @@ export async function POST(req: Request) {
               root_cause: rootCause,
               fallback,
               fallback_chain: fallbackChain,
-              model: modelName,
+              model: fozaModelName,
               agent_profile: agentProfile.id,
               agent_profile_source: agentProfileSource,
               duration_ms: Date.now() - started,
               intent: intentFlags,
-              llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: toolCallsCount, mcp_tool_calls_count: mcpToolCallsCount, mcp_tool_names: mcpToolNamesSeen, graph_tool_called: graphToolCalled },
+              llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: toolCallsCount, mcp_tool_calls_count: mcpToolCallsCount, mcp_tool_names: mcpToolNamesSeen, graph_tool_called: graphToolCalled, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint },
               json_mode: false,
               tool_rounds: toolRounds,
               tool_calls_count: toolCallsCount,
@@ -1084,6 +1098,8 @@ export async function POST(req: Request) {
           if (opened) {
             fozaCircuit.opened_until = Date.now() + circuitOpenMs
           }
+          if (!rootCause) rootCause = `foza_error:${fozaCircuit.last_error.slice(0, 80)}`
+          fallbackChain.push(`foza_fail:${fozaCircuit.last_error.slice(0, 60)}`)
           fallback = opened ? "foza_circuit_opened" : (isTimeout ? "foza_timeout" : "foza_failed")
           rootCause = rootCause || fallback
           fallbackChain.push(fallback)
@@ -1152,7 +1168,7 @@ export async function POST(req: Request) {
             delivery: { mode: deliveryMode },
             actions,
             conversation_id,
-            metadata: { mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+            metadata: { mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, cpu_proxy_error: cpuProxyError, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
           })
         )
       }
@@ -1170,7 +1186,7 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions,
           conversation_id,
-          metadata: { mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+          metadata: { mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
         })
       )
     }
@@ -1188,7 +1204,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "missing_gemini_key", fallback_chain: fallbackChain, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+        metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "missing_gemini_key", fallback_chain: fallbackChain, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
       })
       return json(out)
     }
@@ -1352,13 +1368,16 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions: [],
           conversation_id,
-          metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+          metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
         })
         return json(out)
       }
 
       const actions = normalizeActions(ruleBasedActionsGuess())
-      const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent (Gemini). Bạn thử lại giúp mình.", actions)
+      const safetyFallbackContent = intentFlags?.triage || intentFlags?.medication
+        ? "Mình hiện không kết nối được với AI. Trong lúc chờ, bạn nên: theo dõi triệu chứng và ghi lại mức độ; nếu sốt cao trên 39°C, khó thở, đau ngực, hoặc triệu chứng nặng hơn nhanh → gọi 115 hoặc đến cơ sở y tế gần nhất ngay. Lưu ý: thông tin này chỉ mang tính tham khảo, không thay thế tư vấn bác sĩ."
+        : "Mình gặp sự cố khi gọi agent (Gemini). Bạn thử lại giúp mình."
+      const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : safetyFallbackContent, actions)
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
@@ -1369,7 +1388,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, access, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
+        metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, access, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, cpu_proxy_error: cpuProxyError, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
       })
       return json(out)
     }
@@ -1607,7 +1626,7 @@ export async function POST(req: Request) {
         hasInvestigation: !!suggestedInvestigation,
         tool_calls_count: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.length : 0,
         tool_call_names: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.map((c: any) => String(c?.name || "").trim()).filter(Boolean).slice(0, 20) : [],
-        llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_tool_called: graphToolCalled, tool_calls_count: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.length : 0 },
+        llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_tool_called: graphToolCalled, tool_calls_count: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.length : 0, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint },
       },
     })
     appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "gemini", duration_ms: Date.now() - started })

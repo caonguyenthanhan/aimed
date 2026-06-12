@@ -232,7 +232,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (name === "graph.status") {
-      const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "")
+      const cpuBaseRaw = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "").trim().replace(/\/$/, "")
+      const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
+      if (!cpuBaseRaw && isProd) {
+        return NextResponse.json({
+          result: { ok: false, connected: false, reason: "graph_disabled_no_cpu_url" },
+          metadata: { tool: name, upstream: null, reason: "graph_disabled_no_cpu_url" },
+        })
+      }
+      const cpuBase = cpuBaseRaw || "http://127.0.0.1:8000"
       const url = `${cpuBase}/v1/graph/status`
       const apiKey = (process.env.GRAPH_API_KEY || "").trim()
       const out = await fetchJsonWithRetry(
@@ -258,7 +266,15 @@ export async function POST(req: NextRequest) {
       const entity_limit = Number.isFinite(entityLimitRaw) ? Math.max(1, Math.min(20, entityLimitRaw)) : 5
       const rel_types = Array.isArray(args.rel_types) ? args.rel_types.map((x: any) => String(x).trim()).filter(Boolean) : undefined
 
-      const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "http://127.0.0.1:8000").trim().replace(/\/$/, "")
+      const cpuBaseRaw = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "").trim().replace(/\/$/, "")
+      const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
+      if (!cpuBaseRaw && isProd) {
+        return NextResponse.json({
+          result: { ok: false, query: q, entities: [], edges: [], reason: "graph_disabled_no_cpu_url" },
+          metadata: { tool: name, upstream: null, reason: "graph_disabled_no_cpu_url", status_code: 0 },
+        })
+      }
+      const cpuBase = cpuBaseRaw || "http://127.0.0.1:8000"
       const url = `${cpuBase}/v1/graph/evidence`
       const apiKey = (process.env.GRAPH_API_KEY || "").trim()
       const body = JSON.stringify({ query: q, limit, entity_limit, ...(rel_types?.length ? { rel_types } : {}) })
@@ -272,9 +288,12 @@ export async function POST(req: NextRequest) {
         { tool: name, attempts: 3 }
       )
       if (!out.ok) {
+        const graphReason = out.status === 404 ? "graph_404"
+          : (out.status === 0 || String(out.json || "").includes("abort") || String(out.json || "").includes("timeout")) ? "graph_timeout"
+          : "graph_down"
         return NextResponse.json({
-          result: { ok: false, query: q, entities: [], edges: [], error: out.json || (out.status ? `HTTP ${out.status}` : "Upstream error") },
-          metadata: { tool: name, upstream: url, attempts: out.attempts, elapsed_ms: out.elapsed_ms },
+          result: { ok: false, query: q, entities: [], edges: [], reason: graphReason, error: out.json || (out.status ? `HTTP ${out.status}` : "Upstream error") },
+          metadata: { tool: name, upstream: url, attempts: out.attempts, elapsed_ms: out.elapsed_ms, reason: graphReason, status_code: out.status ?? 0 },
         })
       }
       return NextResponse.json({ result: out.json, metadata: { tool: name, upstream: url, attempts: out.attempts, elapsed_ms: out.elapsed_ms } })

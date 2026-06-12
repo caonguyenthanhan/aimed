@@ -31,6 +31,7 @@
 - CPU server đã scaffold LangGraph agent và expose endpoint `/v1/agent-chat` (orchestrator=langgraph) trả `{response, actions, metadata}` để chuẩn bị thay thế hoàn toàn `/api/agent-chat` trên Vercel.
 - CPU server FOZA timeout dùng `FOZA_REQUEST_TIMEOUT_MS` (ms; tự quy đổi sang giây) và reuse HTTP session để giảm overhead kết nối.
 - Agent FOZA (Next.js `/api/agent-chat`): thêm circuit breaker in-memory để tránh FOZA timeout lặp lại gây cascade fallback khó hiểu (`FOZA_CIRCUIT_FAIL_THRESHOLD`, `FOZA_CIRCUIT_OPEN_MS`).
+- **Agent bugfix 2026-06-12:** provider chain chuẩn hóa FOZA→Gemini→CPU→GPU; FOZA tự động thử khi `auto` + có env. Graph degrade gracefully trên Vercel (không gọi localhost). `metadata` mọi nhánh có `cpu_proxy_error`, `gemini_error`, `graph_reason/status_code/endpoint`. UI badge graph hiển thị reason chi tiết; context panel có diagnostic block.
 - Agent metadata: luôn trả `requested_provider`, `root_cause`, `fallback`, `fallback_chain` để debug nhanh khi FOZA/GPU/CPU/Gemini failover.
 - Khi test bằng PowerShell, các endpoint chat trả `Content-Type: application/json; charset=utf-8` để tránh lỗi mojibake tiếng Việt.
 - SSOT runtime files (`data/runtime-mode.json`, `data/server-registry.json`) được tự tạo khi thiếu để tránh lệch mode (lần chạy đầu không cần gọi /api/runtime/mode trước).
