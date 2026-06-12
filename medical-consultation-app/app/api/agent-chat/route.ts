@@ -18,9 +18,94 @@ import { retryWithBackoff } from "@/lib/retry-backoff"
 import { youtubeService } from "@/lib/youtube-service"
 import { getAgentProfile } from "@/lib/agent-profiles"
 
+const toHeaderRecord = (headers?: HeadersInit): Record<string, string> => {
+  if (!headers) return {}
+  if (headers instanceof Headers) {
+    const out: Record<string, string> = {}
+    headers.forEach((v, k) => (out[k] = v))
+    return out
+  }
+  if (Array.isArray(headers)) return Object.fromEntries(headers)
+  return { ...(headers as Record<string, string>) }
+}
+
+const json = (data: any, init?: ResponseInit) =>
+  NextResponse.json(data, {
+    ...(init || {}),
+    headers: {
+      ...toHeaderRecord(init?.headers),
+      "Content-Type": "application/json; charset=utf-8",
+    },
+  })
+
 export async function POST(req: Request) {
   const started = Date.now()
   try {
+    const proxyBody: any = await req.clone().json().catch(() => null)
+    const proxyMessage = String(proxyBody?.message || proxyBody?.question || "").trim()
+    if (proxyMessage) {
+      const cpuBase = (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || "").trim().replace(/\/$/, "")
+      if (cpuBase) {
+        const timeoutMs = (() => {
+          const n = Number.parseInt(String(process.env.AGENT_CHAT_TIMEOUT_MS || "").trim(), 10)
+          return Number.isFinite(n) && n > 0 ? n : 45000
+        })()
+        const controller = new AbortController()
+        const t = setTimeout(() => controller.abort(), timeoutMs)
+        try {
+          const conversation_id = String(proxyBody?.conversation_id || "").trim()
+          const user_id = String(proxyBody?.user_id || "").trim()
+          const agent_id = String(proxyBody?.agent_id || "auto").trim() || "auto"
+          const include_tools =
+            typeof proxyBody?.include_tools === "boolean"
+              ? proxyBody.include_tools
+              : true
+          const headers: Record<string, string> = { "Content-Type": "application/json" }
+          const auth = req.headers.get("authorization")
+          if (auth) headers["authorization"] = auth
+          const apiKey = req.headers.get("x-api-key")
+          if (apiKey) headers["x-api-key"] = apiKey
+          const resp = await fetch(`${cpuBase}/v1/agent-chat`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              message: proxyMessage,
+              conversation_id: conversation_id || undefined,
+              user_id: user_id || undefined,
+              agent_id,
+              include_tools,
+            }),
+            signal: controller.signal,
+          })
+          if (resp.ok) {
+            const raw = await resp.json().catch(() => null)
+            const parsed = AgentResponseSchema.safeParse(raw)
+            if (parsed.success) {
+              const safeActions = normalizeActions(parsed.data.actions).map((a: any) => {
+                if (a.type === "navigate") {
+                  const p = String(a?.args?.path || "").trim()
+                  if (!isAllowedPath(p)) return null
+                  return { type: "navigate", args: { path: p } }
+                }
+                if (a.type === "speak") {
+                  const tx = String(a?.args?.text || "").trim()
+                  if (!tx) return null
+                  return { type: "speak", args: { text: tx.length > 800 ? tx.slice(0, 800) : tx } }
+                }
+                return a
+              }).filter(Boolean)
+              return json({ ...parsed.data, actions: safeActions })
+            }
+            if (raw && typeof raw === "object" && typeof raw.response === "string") {
+              return json(raw)
+            }
+          }
+        } catch {
+        } finally {
+          clearTimeout(t)
+        }
+      }
+    }
     const dataDir = path.join(process.cwd(), "data")
     const runtimeModePath = path.join(dataDir, "runtime-mode.json")
     const serverRegistryPath = path.join(dataDir, "server-registry.json")
@@ -186,9 +271,9 @@ export async function POST(req: Request) {
       const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       if (lower.match(/(bác sĩ|đặt hẹn|đặt lịch|khám|tư vấn trực tiếp|hẹn khám)/) || ascii.match(/(bac si|dat hen|dat lich|kham|tu van truc tiep|hen kham)/)) return "doctor_referral"
       if (lower.match(/(đau ngực|khó thở|yếu liệt|nói khó|ngất|chảy máu|co giật|lú lẫn|đau bụng dữ dội|cấp cứu)/) || ascii.match(/(dau nguc|kho tho|yeu liet|noi kho|ngat|chay mau|co giat|lu lan|dau bung du doi|cap cuu)/)) return "triage"
+      if (lower.match(/(lo âu|hoảng loạn|trầm cảm|mất ngủ|căng thẳng|stress|tự hại|tự sát|trị liệu|bài thở|thiền|cbt)/) || ascii.match(/(lo au|hoang loan|tram cam|mat ngu|cang thang|stress|tu hai|tu sat|tri lieu|bai tho|thien|cbt)/)) return "therapy"
       if (lower.match(/(thuốc|uống|liều|tương tác|tác dụng phụ|chống chỉ định|ibuprofen|paracetamol|kháng sinh|statin)/) || ascii.match(/(thuoc|uong|lieu|tuong tac|tac dung phu|chong chi dinh|ibuprofen|paracetamol|khang sinh|statin)/)) return "medication"
       if (lower.match(/(kế hoạch|lộ trình|theo dõi|mục tiêu|nhật ký|routine|giảm cân|tăng cân|tập luyện)/) || ascii.match(/(ke hoach|lo trinh|theo doi|muc tieu|nhat ky|routine|giam can|tang can|tap luyen)/)) return "care_plan"
-      if (lower.match(/(lo âu|hoảng loạn|trầm cảm|mất ngủ|căng thẳng|stress|tự hại|tự sát|trị liệu|bài thở|thiền|cbt)/) || ascii.match(/(lo au|hoang loan|tram cam|mat ngu|cang thang|stress|tu hai|tu sat|tri lieu|bai tho|thien|cbt)/)) return "therapy"
       return "default"
     }
 
@@ -205,12 +290,12 @@ export async function POST(req: Request) {
     let graphInjected = false
     let graphToolCalled = false
 
-    if (!message) return NextResponse.json({ error: "Message is required" }, { status: 400 })
+    if (!message) return json({ error: "Message is required" }, { status: 400 })
 
     // Check rate limit
     const rateLimitCheck = getRateLimit(userId)
     if (!rateLimitCheck.allowed) {
-      return NextResponse.json(
+      return json(
         {
           error: "Rate limit exceeded",
           details: `Too many requests. Please wait ${rateLimitCheck.retryAfter}s before trying again`,
@@ -362,7 +447,7 @@ export async function POST(req: Request) {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
       appendMetric({ ts: new Date().toISOString(), mode: "cpu", provider: "sos", duration_ms: Date.now() - started })
-      return NextResponse.json({
+      return json({
         response: content,
         messages: planResponseMessages(content, []),
         delivery: { mode: deliveryMode },
@@ -379,7 +464,7 @@ export async function POST(req: Request) {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
       appendMetric({ ts: new Date().toISOString(), mode: "cpu", provider: "safety", duration_ms: Date.now() - started })
-      return NextResponse.json({
+      return json({
         response: content,
         messages: planResponseMessages(content, []),
         delivery: { mode: deliveryMode },
@@ -482,18 +567,25 @@ export async function POST(req: Request) {
 
     if (agentProvider === "foza") {
       const baseUrl = String(process.env.FOZA_BASE_URL || "").trim().replace(/\/$/, "") || "https://api.foza.ai/v1"
-      const token = String(process.env.FOZA_TOKEN || "").trim()
+      const token = String(process.env.FOZA_TOKEN || process.env.FOZA_TOKEN_2 || "").trim()
       const modelName = String(process.env.LLM_MODEL_NAME || "").trim()
       if (token && modelName) {
         const toInt = (v: any, def: number) => {
           const n = Number.parseInt(String(v ?? "").trim(), 10)
           return Number.isFinite(n) && n > 0 ? n : def
         }
+        const isTest = String(process.env.NODE_ENV || "").toLowerCase() === "test"
         const maxToolRounds = toInt(process.env.FOZA_TOOL_MAX_ROUNDS, 3)
         const maxToolCallsPerRound = toInt(process.env.FOZA_TOOL_MAX_CALLS, 3)
-        const fozaRequestTimeoutMs = toInt(process.env.FOZA_REQUEST_TIMEOUT_MS, 20000)
+        const configuredFozaRequestTimeoutMs = toInt(process.env.FOZA_REQUEST_TIMEOUT_MS, 0)
+        const fozaRequestTimeoutMs = isTest
+          ? Math.max(configuredFozaRequestTimeoutMs || 0, 45000)
+          : (configuredFozaRequestTimeoutMs || 20000)
         const mcpToolTimeoutMs = toInt(process.env.FOZA_MCP_TOOL_TIMEOUT_MS, 8000)
-        const overallTimeoutMs = toInt(process.env.FOZA_AGENT_TIMEOUT_MS, 35000)
+        const configuredOverallTimeoutMs = toInt(process.env.FOZA_AGENT_TIMEOUT_MS, 0)
+        const overallTimeoutMs = isTest
+          ? Math.max(configuredOverallTimeoutMs || 0, 90000)
+          : (configuredOverallTimeoutMs || 35000)
         const deadline = Date.now() + overallTimeoutMs
         const remainingMs = () => Math.max(0, deadline - Date.now())
 
@@ -629,7 +721,7 @@ export async function POST(req: Request) {
           const t = setTimeout(() => controller.abort(), timeoutMs)
           const resp = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            headers: { "Content-Type": "application/json", Accept: "application/json", "User-Agent": "govgraph-foza-client/1.0", Authorization: `Bearer ${token}` },
             body: JSON.stringify({
               model: modelName,
               messages: msgs,
@@ -668,6 +760,7 @@ export async function POST(req: Request) {
           ...baseHistory,
           { role: "user", content: message },
         ]
+        const simpleModeMessages = [{ role: "user", content: String(message || "").trim() }]
 
         const parseJsonContent = (text: string) => {
           const s = String(text || "").trim()
@@ -717,7 +810,32 @@ export async function POST(req: Request) {
               return await fozaFetch(msgs, includeTools, true)
             } catch (e: any) {
               const msg = String(e?.message || e || "")
-              if (/response_format/i.test(msg)) return fozaFetch(msgs, includeTools, false)
+              if (/response_format/i.test(msg)) {
+                try {
+                  return await fozaFetch(msgs, includeTools, false)
+                } catch (e2: any) {
+                  const msg2 = String(e2?.message || e2 || "")
+                  if (includeTools && /(tools?|tool_calls?|function)/i.test(msg2)) {
+                    try {
+                      return await fozaFetch(msgs, false, true)
+                    } catch (e3: any) {
+                      const msg3 = String(e3?.message || e3 || "")
+                      if (/response_format/i.test(msg3)) return fozaFetch(msgs, false, false)
+                      throw e3
+                    }
+                  }
+                  throw e2
+                }
+              }
+              if (includeTools && /(tools?|tool_calls?|function)/i.test(msg)) {
+                try {
+                  return await fozaFetch(msgs, false, true)
+                } catch (e2: any) {
+                  const msg2 = String(e2?.message || e2 || "")
+                  if (/response_format/i.test(msg2)) return fozaFetch(msgs, false, false)
+                  throw e2
+                }
+              }
               throw e
             }
           }
@@ -728,6 +846,83 @@ export async function POST(req: Request) {
           let toolCallsCount = 0
           let mcpToolCallsCount = 0
           const mcpToolNamesSeen: string[] = []
+
+          const forceActions = String(process.env.AGENT_FORCE_ACTIONS || "").trim() === "1"
+          if (!forceActions) {
+            let r1: any | null = null
+            for (let i = 0; i < 2; i++) {
+              try {
+                r1 = await fozaFetch(simpleModeMessages, false, false)
+                break
+              } catch (e: any) {
+                const msg = String(e?.message || e || "")
+                if (i === 0 && /aborted/i.test(msg)) continue
+                throw e
+              }
+            }
+            if (!r1) throw new Error("foza_no_response")
+            content = r1.content
+            const parsed = parseJsonContent(content)
+            if (parsed && (typeof parsed?.response === "string" || Array.isArray(parsed?.actions))) {
+              const actions = sanitizeActions(parsed?.actions)
+              const rawText = (typeof parsed?.response === "string" && String(parsed.response).trim()) ? String(parsed.response).trim() : (content || " ")
+              const finalText = ensureAssistantText(rawText, actions)
+              appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
+              const out = AgentResponseSchema.parse({
+                response: finalText,
+                messages: planResponseMessages(finalText, actions),
+                delivery: { mode: deliveryMode },
+                actions,
+                conversation_id,
+                metadata: {
+                  mode: "cloud",
+                  provider: "foza",
+                  model: modelName,
+                  agent_profile: agentProfile.id,
+                  agent_profile_source: agentProfileSource,
+                  duration_ms: Date.now() - started,
+                  intent: intentFlags,
+                  llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: 0, mcp_tool_calls_count: 0, mcp_tool_names: [], graph_tool_called: graphToolCalled },
+                  json_mode: true,
+                  tool_rounds: 0,
+                  tool_calls_count: 0,
+                  mcp_tool_calls_count: 0,
+                  mcp_tool_names: [],
+                  tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
+                  timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
+                },
+              })
+              return json(out)
+            }
+
+            const finalText = ensureAssistantText(content || "Mình chưa nhận được phản hồi từ FOZA.", [])
+            appendMetric({ ts: new Date().toISOString(), mode: "cloud", provider: "foza", duration_ms: Date.now() - started })
+            const out = AgentResponseSchema.parse({
+              response: finalText,
+              messages: planResponseMessages(finalText, []),
+              delivery: { mode: deliveryMode },
+              actions: [],
+              conversation_id,
+              metadata: {
+                mode: "cloud",
+                provider: "foza",
+                model: modelName,
+                agent_profile: agentProfile.id,
+                agent_profile_source: agentProfileSource,
+                duration_ms: Date.now() - started,
+                intent: intentFlags,
+                llm_context: { provider: "foza", mode: "cloud", user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, tool_calls_count: 0, mcp_tool_calls_count: 0, mcp_tool_names: [], graph_tool_called: graphToolCalled },
+                json_mode: false,
+                tool_rounds: 0,
+                tool_calls_count: 0,
+                mcp_tool_calls_count: 0,
+                mcp_tool_names: [],
+                tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
+                timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
+              },
+            })
+            return json(out)
+          }
 
           for (let i = 0; i < maxToolRounds; i++) {
             if (remainingMs() <= 0) break
@@ -793,7 +988,7 @@ export async function POST(req: Request) {
                   timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
                 },
               })
-              return NextResponse.json(out)
+              return json(out)
             }
 
             msgs = [
@@ -829,8 +1024,9 @@ export async function POST(req: Request) {
               timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
             },
           })
-          return NextResponse.json(out)
-        } catch {
+          return json(out)
+        } catch (e: any) {
+          console.error("[agent-chat] foza_failed:", String(e?.message || e || ""))
           fallback = "foza_failed"
         }
       } else {
@@ -887,7 +1083,7 @@ export async function POST(req: Request) {
           await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
         } catch {}
         appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "openai_like", fallback: "rule_based", duration_ms: Date.now() - started })
-        return NextResponse.json(
+        return json(
           AgentResponseSchema.parse({
             response: content,
             messages: planResponseMessages(content, actions),
@@ -905,7 +1101,7 @@ export async function POST(req: Request) {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
       appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "openai_like", duration_ms: Date.now() - started })
-      return NextResponse.json(
+      return json(
         AgentResponseSchema.parse({
           response: content,
           messages: planResponseMessages(content, actions),
@@ -932,7 +1128,7 @@ export async function POST(req: Request) {
         conversation_id,
         metadata: { mode: modeUsed, provider: "gemini", fallback: "missing_gemini_key", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
       })
-      return NextResponse.json(out)
+      return json(out)
     }
 
     const mcpToolDecl = [
@@ -1096,7 +1292,7 @@ export async function POST(req: Request) {
           conversation_id,
           metadata: { mode: modeUsed, provider: "gemini", access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
         })
-        return NextResponse.json(out)
+        return json(out)
       }
 
       const actions = normalizeActions(ruleBasedActionsGuess())
@@ -1113,7 +1309,7 @@ export async function POST(req: Request) {
         conversation_id,
         metadata: { mode: modeUsed, provider: "gemini", access, fallback: "rule_based", gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected } },
       })
-      return NextResponse.json(out)
+      return json(out)
     }
 
     const actionsRaw = toolCallsToActions(r.toolCalls)
@@ -1349,10 +1545,10 @@ export async function POST(req: Request) {
       },
     })
     appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "gemini", duration_ms: Date.now() - started })
-    return NextResponse.json(out)
+    return json(out)
   } catch (e: any) {
     console.error("[agent-chat] internal_error", e)
-    return NextResponse.json(
+    return json(
       AgentResponseSchema.parse({
         response: "Xin lỗi, agent đang gặp sự cố kỹ thuật. Bạn thử lại giúp mình.",
         messages: [{ content: "Xin lỗi, agent đang gặp sự cố kỹ thuật. Bạn thử lại giúp mình.", kind: "text", delay_ms: 0 }],

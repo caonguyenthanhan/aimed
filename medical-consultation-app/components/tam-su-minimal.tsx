@@ -721,7 +721,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
             </Drawer>
           ) : null}
 
-          <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden h-full">
             <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto">
               <div className="min-w-0 flex-1">
                 {conversationId && renamingId === conversationId ? (

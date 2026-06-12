@@ -90,5 +90,29 @@ Bạn có thể theo dõi video chạy tương tác tự động xác thực cá
 ## 5. Trạng thái Tệp tin Cục bộ
 
 Các tệp thay đổi cục bộ của bạn hoàn toàn không bị ảnh hưởng và vẫn được bảo tồn:
-- [route.ts](file:///d:/desktop/tlcn/medical%20consulting system/medical-consultation-app/app/api/appointments/route.ts)
-- [activeContext.md](file:///d:/desktop/tlcn/medical%20consulting system/medical-consultation-app/docs/activeContext.md)
+- [route.ts](file:///d:/desktop/tlcn/medical%20consulting%20system/medical-consultation-app/app/api/appointments/route.ts)
+- [activeContext.md](file:///d:/desktop/tlcn/medical%20consulting%20system/medical-consultation-app/docs/activeContext.md)
+
+---
+
+## 6. Minh chứng Chạy Test tự động (Runtime Evidence for Case A/B/C)
+
+Để cung cấp minh chứng chạy thực tế (runtime evidence) độc lập cho **Case B** và **Case C** mà không phụ thuộc cấu hình thủ công trên Vercel, chúng tôi đã xây dựng và chạy bộ test tự động bằng **Vitest** trực tiếp trong dự án tại `app/api/backend/[...path]/route.test.ts`.
+
+### Kết quả chạy lệnh `npx vitest run app/api/backend`:
+
+```bash
+ RUN  v4.1.2 D:/desktop/tlcn/medical consulting system/medical-consultation-app
+
+ ✓ app/api/backend/[...path]/route.test.ts (3 tests) 38ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  15:44:06
+   Duration  815ms (transform 84ms, setup 0ms, import 116ms, tests 38ms, environment 0ms)
+```
+
+### Chi tiết các ca kiểm thử tự động đã vượt qua (Passed):
+1. **Case A (Demo Mode with Stub Fallback):** Xác nhận khi `MCS_DEPLOY_MODE` được đặt là `'demo'` (hoặc để mặc định) và không có CPU server, request gọi `/api/backend/v1/user` trả về trạng thái `200 OK` chứa đúng nội dung dữ liệu stub profile.
+2. **Case B (Prod Mode with Unconfigured Server):** Xác nhận khi `MCS_DEPLOY_MODE` được đặt thành `'prod'` và không cấu hình CPU server, API trả về trạng thái **503 Service Unavailable** đi kèm thông báo hướng dẫn cụ thể thay vì dùng stub.
+3. **Case C (Live Proxy Forwarding):** Giả lập (mock) một CPU server đang chạy. Khi có config `CPU_SERVER_URL` trong môi trường Prod, API Gateway chuyển tiếp (proxy) thành công request trực tiếp tới server và trả lại dữ liệu thật chính xác.

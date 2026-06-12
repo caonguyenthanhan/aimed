@@ -1636,6 +1636,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       
       if (resp.ok) {
         const data = await resp.json()
+        if (data?.skipped || data?.success === false) {
+          throw new Error(String(data?.reason || 'skipped'))
+        }
         const serverItems = Array.isArray(data?.conversations) ? data.conversations : []
         const sorted = serverItems.slice().sort((a: any, b: any) => (a.last_active > b.last_active ? -1 : 1))
         setConversations(sorted)
@@ -1922,6 +1925,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
       }
       
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`conv_messages_${conversationId}`, JSON.stringify(serial))
+      }
+
       if (authToken) {
         const effectiveUserId = userId || authToken
         if (!effectiveUserId) return
@@ -1936,12 +1943,19 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             messages: serial,
             title: title || `Chat ${new Date().toLocaleDateString('vi-VN')}`
           })
-        }).catch(err => console.debug('[v0] Failed to sync to database:', err))
-      } else {
-        // Not logged in: save to localStorage only
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(`conv_messages_${conversationId}`, JSON.stringify(serial))
-        }
+        })
+          .then(async (r) => {
+            if (!r.ok) throw new Error(`http_${r.status}`)
+            const data = await r.json().catch(() => null)
+            if (data?.skipped || data?.success === false) {
+              throw new Error(String(data?.reason || 'skipped'))
+            }
+            setServerUnavailable(false)
+          })
+          .catch((err) => {
+            console.debug('[v0] Failed to sync to database:', err)
+            setServerUnavailable(true)
+          })
       }
       
       // Always update sidebar
@@ -2183,7 +2197,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </DrawerContent>
         </Drawer>
       )}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden h-full">
         {!showSidebar && !isMobile && (
           <div className="absolute top-20 left-3 z-20">
             <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">

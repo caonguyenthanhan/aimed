@@ -25,7 +25,8 @@
 **LLM (tuỳ chọn theo mode)**
 - FOZA:
   - `FOZA_BASE_URL`
-  - `FOZA_TOKEN`
+  - `FOZA_TOKEN` (khuyến nghị)
+  - `FOZA_TOKEN_2` (tuỳ chọn, credential dự phòng)
   - `LLM_MODEL_NAME`
 - Gemini:
   - `GEMINI_API_KEY`
@@ -66,6 +67,12 @@
 
 **Yêu cầu**
 - CPU server phải chạy và public được (ngrok/vps) nếu deploy Vercel cần gọi ra internet.
+
+**LangGraph (orchestrator CPU)**
+- `LG_MAX_TOOL_CALLS` (mặc định `3`, tối đa `6`)
+- `LG_WEB_TIMEOUT_S` (mặc định `10`)
+- `LG_YOUTUBE_TIMEOUT_S` (mặc định `10`)
+- `LG_GRAPH_TIMEOUT_S` (mặc định `12`)
 
 **Graph backend (nếu bật graph)**
 - CPU server cần cấu hình kết nối graph DB (Neo4j/Memgraph gateway) và nhận `GRAPH_API_KEY`.

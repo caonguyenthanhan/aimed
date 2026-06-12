@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { getPgPool, resolveDatabaseConfig } from "@/lib/pg"
 import { getAuthedUser } from "@/lib/auth-server"
 import { normalizeAppointment, newAppointmentId } from "@/lib/appointments"
@@ -26,7 +26,7 @@ async function ensureSchema() {
   `)
   for (const d of TEST_ACCOUNTS.doctors) {
     const base = defaultPublicProfile({ displayName: d.fullName })
-    const publicJson = normalizePublicProfile({ ...base, displayName: d.fullName, title: "BÃ¡c sÄ©", specialties: [d.specialty], bio: "" })
+    const publicJson = normalizePublicProfile({ ...base, displayName: d.fullName, title: "Bác sĩ", specialties: [d.specialty], bio: "" })
     await pool.query(
       `
       INSERT INTO doctor_profiles (doctor_id, public_json, private_json, updated_at)
