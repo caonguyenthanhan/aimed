@@ -42,7 +42,7 @@ export default async function LocaleLayout({
   const { locale } = await params
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 sm:pt-18 md:pt-20 pb-24 sm:pb-20 md:pb-0 min-h-screen flex flex-col antialiased`}>
+      <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 sm:pt-18 md:pt-20 min-h-screen flex flex-col antialiased`}>
         <LanguageProvider>
           <SiteHeader />
           <div className="flex-1 flex">
