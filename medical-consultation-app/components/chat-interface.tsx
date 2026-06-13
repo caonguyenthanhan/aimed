@@ -181,7 +181,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     return [
       "Mình là trợ lý y tế AI. Mình sẽ hỏi thêm thông tin cần thiết, nhắc dấu hiệu nguy hiểm và gợi ý bước tiếp theo (tra cứu, sàng lọc, bác sĩ, kế hoạch…).",
       runtimePreview ? `Trạng thái: ${runtimePreview}` : "",
-      "Bạn cho mình bi���t: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?",
+      "Bạn cho mình bi�����t: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?",
     ].filter(Boolean).join("\n")
   }
 
@@ -980,7 +980,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       
       const deliverList = parsedTexts.length > 0
         ? parsedTexts.map((content, i) => ({ content, delay_ms: i === 0 ? 0 : 450 }))
-        : [{ content: aiResponse || "Không nhận được phản hồi từ máy trả lời", delay_ms: 0 }]
+        : [{ content: aiResponse || "Không nhận được phản hồi từ máy tr�� lời", delay_ms: 0 }]
 
       let liveTextToDeliver = aiResponse || deliverList.map((x) => x.content).join("\n\n")
       const convForIntro = String(ensuredId || conversationId || "").trim()
@@ -2205,7 +2205,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       )}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden h-full">
         {!showSidebar && !isMobile && (
-          <div className="absolute top-20 left-3 z-20">
+          <div className="absolute top-20 left-3 z-20" suppressHydrationWarning={true}>
             <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
