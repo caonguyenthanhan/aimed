@@ -18,6 +18,9 @@ import { retryWithBackoff } from "@/lib/retry-backoff"
 import { youtubeService } from "@/lib/youtube-service"
 import { getAgentProfile } from "@/lib/agent-profiles"
 
+// Allow up to 60s for Vercel serverless — FOZA via ngrok can take 40-45s
+export const maxDuration = 60
+
 type FozaCircuitState = { opened_until: number; failures: number; last_error: string }
 
 const fozaCircuit: FozaCircuitState =
