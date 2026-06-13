@@ -181,7 +181,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     return [
       "Mình là trợ lý y tế AI. Mình sẽ hỏi thêm thông tin cần thiết, nhắc dấu hiệu nguy hiểm và gợi ý bước tiếp theo (tra cứu, sàng lọc, bác sĩ, kế hoạch…).",
       runtimePreview ? `Trạng thái: ${runtimePreview}` : "",
-      "Bạn cho mình biết: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?",
+      "Bạn cho mình bi���t: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?",
     ].filter(Boolean).join("\n")
   }
 
@@ -1993,7 +1993,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       suppressHydrationWarning
       style={{
         height: isMobile
-          ? "calc(100dvh - 4rem - 6rem)"
+          ? "calc(100dvh - 4rem)"
           : "calc(100dvh - 5rem)",
       }}
     >
