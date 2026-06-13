@@ -1993,8 +1993,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       suppressHydrationWarning
       style={{
         height: isMobile
-          ? "calc(100dvh - 4rem)"
-          : "calc(100dvh - 5rem)",
+          ? "100%"
+          : "100%",
       }}
     >
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
