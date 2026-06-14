@@ -43,3 +43,8 @@
   - `/api/runtime/mode` is the bootstrap endpoint: it reads runtime mode, probes DB and graph, then returns `system_state`.
   - Chat routes enrich every response with `metadata.system_state`; client merges that object and stops inferring status from localStorage + ad-hoc polling.
   - Internal demo auth is normalized through `INTERNAL_DEMO_PASS` only; UI should never hardcode a fallback pass.
+- Runtime quick-switch pattern (2026-06-14):
+  - Header runtime toggle is now modeled as 3 explicit quick states only: `GPU`, `Gemini`, `Foza`.
+  - Each quick state maps 1:1 to backend payload: `GPU -> { target: "gpu", provider: "server" }`, `Gemini -> { target: "gpu", provider: "gemini" }`, `Foza -> { target: "gpu", provider: "foza" }`.
+  - Vercel bootstrap must not infer provider solely from env when user has already switched mode; `/api/runtime/mode` first tries CPU backend `/v1/runtime/mode` and only falls back to env when no persisted upstream state exists.
+  - Any UI reading `llm_provider` must normalize through `normalizeRuntimeProvider()`; no local component may whitelist only `gemini|server`, otherwise `foza` silently degrades to `server`.

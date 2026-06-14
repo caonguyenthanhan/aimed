@@ -1170,7 +1170,7 @@ def _ensure_state_file():
     os.makedirs(DATA_DIR, exist_ok=True)
     if not os.path.exists(STATE_FILE):
         with open(STATE_FILE, "w", encoding="utf-8") as f:
-            json.dump({"global": {"target": "cpu", "model": "flash", "updated_at": datetime.datetime.utcnow().isoformat()}, "users": {}}, f, ensure_ascii=False)
+            json.dump({"global": {"target": "cpu", "provider": "server", "model": "flash", "updated_at": datetime.datetime.utcnow().isoformat()}, "users": {}}, f, ensure_ascii=False)
 
 @app.get("/v1/runtime/mode")
 async def get_runtime_mode():
@@ -1190,9 +1190,12 @@ async def set_runtime_mode(req: Request):
         _ensure_runtime_files()
         body = await req.json()
         target = "gpu" if str(body.get("target", "")).lower() == "gpu" else "cpu"
+        provider = str(body.get("provider", "") or "server").strip().lower()
+        if provider not in ("server", "gemini", "foza"):
+            provider = "server"
         gpu_url = body.get("gpu_url") if target == "gpu" else None
         now = datetime.datetime.utcnow().isoformat()
-        payload = {"target": target, "updated_at": now}
+        payload = {"target": target, "provider": provider, "updated_at": now}
         if gpu_url:
             payload["gpu_url"] = str(gpu_url)
         pdir = _front_data_dir()
@@ -1201,7 +1204,7 @@ async def set_runtime_mode(req: Request):
         with open(mode_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
         with open(events_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps({"type": "mode_change", "target": target, "gpu_url": gpu_url, "ts": now}) + "\n")
+            f.write(json.dumps({"type": "mode_change", "target": target, "provider": provider, "gpu_url": gpu_url, "ts": now}) + "\n")
         return {"ok": True, "mode": payload}
     except Exception as e:
         return {"error": str(e)}
@@ -1229,6 +1232,7 @@ async def set_runtime_state(req: Request):
         body = await req.json()
         now = datetime.datetime.utcnow().isoformat()
         target = body.get("target")
+        provider = str(body.get("provider", "") or "").strip().lower()
         gpu_url = body.get("gpu_url")
         model = body.get("model")
         user_id = get_current_user(req)
@@ -1243,6 +1247,8 @@ async def set_runtime_state(req: Request):
                 cur["gpu_url"] = str(gpu_url)
             if target == "cpu":
                 cur.pop("gpu_url", None)
+        if provider in ("server", "gemini", "foza"):
+            cur["provider"] = provider
         if model in ("flash", "pro"):
             cur["model"] = model
         cur["updated_at"] = now
@@ -1255,6 +1261,8 @@ async def set_runtime_state(req: Request):
                     u["gpu_url"] = str(gpu_url)
                 if target == "cpu":
                     u.pop("gpu_url", None)
+            if provider in ("server", "gemini", "foza"):
+                u["provider"] = provider
             if model in ("flash", "pro"):
                 u["model"] = model
             u["updated_at"] = now
@@ -1267,7 +1275,7 @@ async def set_runtime_state(req: Request):
             events_path = os.path.join(pdir, "runtime-events.jsonl")
             evt = {"ts": now}
             if target in ("cpu", "gpu"):
-                evt.update({"type": "mode_change", "target": target, "gpu_url": gpu_url})
+                evt.update({"type": "mode_change", "target": target, "provider": provider if provider in ("server", "gemini", "foza") else None, "gpu_url": gpu_url})
             if model in ("flash", "pro"):
                 evt.update({"type": "model_change", "model": model})
             if "type" in evt:

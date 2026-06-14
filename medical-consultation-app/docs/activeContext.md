@@ -67,6 +67,11 @@
   - `/api/mcp/call` không còn fallback sang localhost khi thiếu `CPU_SERVER_URL`; route trả `graph_disabled_no_cpu_url` an toàn cho UI thay vì đâm vào URL cứng.
   - `graph.status` và `graph.evidence` được strict-typed ở gateway với fetch timeout rõ ràng, phân loại `graph_404 | graph_timeout | graph_down`, và luôn trả metadata chẩn đoán (`reason/status_code/upstream/error_kind`) cho Context Viewer.
   - `cpu_server/server.py` chuẩn hóa response Pydantic v2 cho graph endpoints với contract `graph_connected/status_code/reason/latency` đồng thời giữ alias cũ `connected/latency_ms/elapsed_ms/ok` để không gãy UI hiện có.
+- **Runtime quick-switch sync fix (2026-06-14):**
+  - Header `compute-toggle.tsx` không còn tách mơ hồ `mode/provider`; UI chuyển sang 3 lựa chọn rõ ràng `GPU | Gemini | Foza` để người dùng nhìn gì thì backend chạy đúng đó.
+  - Các UI phụ (`friend-chat-interface.tsx`, `health-lookup.tsx`, `tam-su-minimal.tsx`, `app/speech-chat/page.tsx`) đã bỏ whitelist cũ `gemini|server` và chuẩn hoá đọc `llm_provider` qua `normalizeRuntimeProvider`, nên không còn làm `foza` rơi ngầm về `server`.
+  - `/api/runtime/mode` trên Vercel ưu tiên đọc lại trạng thái đã lưu từ CPU backend `/v1/runtime/mode` thay vì tự suy luận chỉ từ env; nhờ đó refresh trang vẫn giữ đúng provider/mode đã chọn.
+  - `cpu_server/server.py` lưu thêm `provider` vào `/v1/runtime/mode` và `/v1/runtime/state`, để SSOT runtime đồng nhất giữa header UI, chat routes và backend public.
 
 ## P3 — Hoàn thành (2026-06-10)
 

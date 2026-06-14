@@ -113,6 +113,9 @@
 - Chat UI: `chat-interface.tsx` poll `/api/runtime/mode`, context dialog luôn mở được kể cả graph fail và hiển thị `graph_reason` + `fallback_chain`, popup API/pass không còn tự chặn khi `demo_mode` đã hợp lệ.
 - Header toggle: `compute-toggle.tsx` đọc `system_state` từ backend thay cho local heuristics.
 - Verification: VS Code diagnostics sạch trên toàn bộ file đã sửa. `npm exec tsc -- --noEmit` vẫn fail do lỗi nền sẵn có ngoài scope hiện tại (test typings, missing ambient types cho `pg`/`uuid`/`@sentry/nextjs`, và vài lỗi lib cũ chưa liên quan).
+- Runtime quick-switch sync fix: header đổi sang 3 lựa chọn rõ ràng `GPU | Gemini | Foza`; các component phụ không còn làm `foza` rơi ngầm về `server` khi đọc `llm_provider`.
+- Vercel/backend sync: `/api/runtime/mode` ưu tiên đọc persisted mode từ CPU backend `/v1/runtime/mode`; `cpu_server/server.py` lưu thêm `provider` trong runtime mode/state để refresh UI không lệch với backend branch đang dùng.
+- Verification: VS Code diagnostics sạch cho `compute-toggle.tsx`, `app/api/runtime/mode/route.ts`, `friend-chat-interface.tsx`, `health-lookup.tsx`, `tam-su-minimal.tsx`, `app/speech-chat/page.tsx`; `python -m py_compile cpu_server/server.py` pass.
 
 ## 2026-06-04
 

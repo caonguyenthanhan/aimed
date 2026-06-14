@@ -17,6 +17,31 @@ export default function ComputeToggle() {
   const [summary, setSummary] = useState<{cpu?: number, gpu?: number}>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>('')
+  const provider = normalizeRuntimeProvider(systemState.provider)
+
+  const quickModes = [
+    {
+      id: 'gpu',
+      label: 'GPU',
+      provider: 'server' as const,
+      target: 'gpu' as const,
+      title: 'GPU: chạy qua server GPU/Colab đã đăng ký',
+    },
+    {
+      id: 'gemini',
+      label: 'Gemini',
+      provider: 'gemini' as const,
+      target: 'gpu' as const,
+      title: 'Gemini: dùng Gemini API trên cloud',
+    },
+    {
+      id: 'foza',
+      label: 'Foza',
+      provider: 'foza' as const,
+      target: 'gpu' as const,
+      title: 'Foza: dùng OpenAI-compatible API trên cloud',
+    },
+  ]
 
   const load = async () => {
     try {
@@ -61,50 +86,42 @@ export default function ComputeToggle() {
     }
   }, [])
 
-  const switchMode = async () => {
-    setError('')
-    setBusy(true)
-    try {
-      const provider = systemState.provider
-      const mode = systemState.mode
-      const nextProvider = provider === 'gemini' && mode === 'cpu' ? 'server' : provider
-      if (mode === 'cpu') {
-        const latest = await fetch('/api/servers/latest').then(r => r.json())
-        const url = latest?.url || ''
-        if (!url) throw new Error('Không tìm thấy server GPU')
-        const chk = await fetch('/api/servers/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, timeoutMs: 2000 }) }).then(r => r.json())
-        if (!chk?.ok) throw new Error('Server GPU không phản hồi')
-        await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'gpu', gpu_url: url, provider: nextProvider }) })
-        try {
-          const auth = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
-          await fetch('/api/backend/v1/runtime/state', { method: 'POST', headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'gpu', gpu_url: url }) })
-        } catch {}
-      } else {
-        await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cpu', provider: nextProvider }) })
-        try {
-          const auth = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
-          await fetch('/api/backend/v1/runtime/state', { method: 'POST', headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cpu' }) })
-        } catch {}
-      }
-      await load()
-    } catch (e: any) {
-      setError(e?.message || 'Lỗi chuyển chế độ')
-    } finally {
-      setBusy(false)
-    }
+  const resolveGpuUrl = async () => {
+    if (gpuUrl) return gpuUrl
+    const latest = await fetch('/api/servers/latest').then(r => r.json())
+    const url = String(latest?.url || '').trim()
+    if (!url) throw new Error('Không tìm thấy server GPU')
+    const chk = await fetch('/api/servers/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, timeoutMs: 2000 }),
+    }).then(r => r.json())
+    if (!chk?.ok) throw new Error('Server GPU không phản hồi')
+    return url
   }
 
-  const switchProvider = async () => {
+  const applyQuickMode = async (nextModeId: 'gpu' | 'gemini' | 'foza') => {
     setError('')
     setBusy(true)
     try {
-      const provider = systemState.provider
-      const mode = systemState.mode
-      const nextProvider = provider === 'server' ? 'gemini' : (provider === 'gemini' ? 'foza' : 'server')
-      const nextTarget = nextProvider === 'server' ? mode : 'gpu'
-      const payload = { target: nextTarget, provider: nextProvider, ...(nextTarget === 'gpu' && gpuUrl ? { gpu_url: gpuUrl } : {}) }
+      const selected = quickModes.find((item) => item.id === nextModeId)
+      if (!selected) throw new Error('Chế độ không hợp lệ')
+      const nextGpuUrl = selected.id === 'gpu' ? await resolveGpuUrl() : gpuUrl
+      const payload = {
+        target: selected.target,
+        provider: selected.provider,
+        ...(nextGpuUrl ? { gpu_url: nextGpuUrl } : {}),
+      }
       await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-      setStoredProvider(nextProvider)
+      setStoredProvider(selected.provider)
+      try {
+        const auth = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
+        await fetch('/api/backend/v1/runtime/state', {
+          method: 'POST',
+          headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } catch {}
       await load()
     } catch (e: any) {
       setError(e?.message || 'Lỗi chuyển chế độ')
@@ -114,23 +131,29 @@ export default function ComputeToggle() {
   }
 
   const mode = normalizeRuntimeTarget(systemState.mode, 'cpu')
-  const provider = normalizeRuntimeProvider(systemState.provider)
-  const label = provider === 'gemini' ? 'API' : (provider === 'foza' ? 'FOZA' : (mode === 'cpu' ? 'CPU' : 'GPU'))
-  const tooltip = provider === 'gemini'
-    ? 'API: dùng Gemini (cần GEMINI_API_KEY), phù hợp test nhanh trên Vercel'
-    : (provider === 'foza'
-      ? 'FOZA: OpenAI-compatible API (cần FOZA_TOKEN), phù hợp làm provider cloud'
-      : (mode === 'cpu' ? 'CPU: chạy mô hình GGUF nội bộ, ổn định hơn nhưng chậm hơn' : 'GPU: chạy trên Colab/Ngrok, nhanh hơn nhưng phụ thuộc kết nối'))
+  const activeQuickMode = provider === 'gemini' ? 'gemini' : (provider === 'foza' ? 'foza' : 'gpu')
   const perf = `${summary.cpu ? `CPU~${summary.cpu}ms` : ''}${summary.gpu ? ` • GPU~${summary.gpu}ms` : ''}`
 
   return (
     <div className="flex items-center gap-2">
-      <button title={tooltip} onClick={switchMode} disabled={busy} className={`px-3 py-1.5 rounded-md text-sm ${mode === 'gpu' ? 'bg-accent text-white' : 'bg-primary text-primary-foreground'}`}>
-        {busy ? 'Đang chuyển...' : label}
-      </button>
-      <button title="Chuyển nhà cung cấp (Server/Gemini)" onClick={switchProvider} disabled={busy} className="px-2 py-1.5 rounded-md text-sm bg-slate-100 text-slate-700 hover:bg-slate-200">
-        {provider === 'gemini' ? 'Gemini' : (provider === 'foza' ? 'Foza' : 'Server')}
-      </button>
+      <div className="inline-flex items-center rounded-md border border-slate-200 bg-white/70 p-1 dark:border-slate-800 dark:bg-slate-950/60">
+        {quickModes.map((item) => {
+          const active = item.id === activeQuickMode && mode === 'gpu'
+          return (
+            <button
+              key={item.id}
+              title={item.title}
+              onClick={() => applyQuickMode(item.id as 'gpu' | 'gemini' | 'foza')}
+              disabled={busy}
+              className={`rounded px-2.5 py-1 text-sm transition ${active ? 'bg-primary text-primary-foreground' : 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'}`}
+            >
+              {busy && active ? 'Đang chuyển...' : item.label}
+            </button>
+          )
+        })}
+      </div>
+      {mode === 'cpu' ? <div className="text-xs text-amber-600">Đang ở CPU cũ, bấm một trong 3 chế độ để đồng bộ lại.</div> : null}
+      {perf ? <div className="text-xs text-slate-500">{perf}</div> : null}
       {error && <div className="text-xs text-red-600">{error}</div>}
     </div>
   )

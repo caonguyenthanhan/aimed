@@ -11,6 +11,7 @@ import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { PageAiInsight } from "@/components/page-ai-insight"
 import { InlineEmbed } from "@/components/inline-embed"
 import { ChatMusicRecommendations } from "@/components/music/chat-music-recommendations"
+import { normalizeRuntimeProvider } from "@/lib/runtime-sync"
 
 type Message = {
   id: string
@@ -423,7 +424,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
       const provider = (() => {
         try {
           const p = typeof window !== "undefined" ? localStorage.getItem("llm_provider") : null
-          return p === "gemini" || p === "server" ? p : "server"
+          return normalizeRuntimeProvider(p)
         } catch {
           return "server"
         }

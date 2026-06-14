@@ -4,6 +4,7 @@ import { Send, Bot, User, Plus, RefreshCcw, ChevronLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
+import { normalizeRuntimeProvider } from "@/lib/runtime-sync"
 
 const GREETINGS: string[] = [
   "Ở đây rồi, cứ nói những gì bạn muốn. Tôi nghe.",
@@ -353,7 +354,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
       let provider: string = 'server'
       try {
         const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
-        if (p === 'gemini' || p === 'server') provider = p
+        provider = normalizeRuntimeProvider(p)
       } catch {}
       const payload = {
         model: selectedModel,

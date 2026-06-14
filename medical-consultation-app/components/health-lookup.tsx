@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { PageAiInsight } from "@/components/page-ai-insight"
+import { normalizeRuntimeProvider } from "@/lib/runtime-sync"
 
 type KnowledgeEntity = {
   id: string
@@ -189,7 +190,7 @@ export function HealthLookup() {
       let provider: string = 'server'
       try {
         const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
-        if (p === 'gemini' || p === 'server') provider = p
+        provider = normalizeRuntimeProvider(p)
       } catch {}
       const resp = await fetch('/api/health-lookup', {
         method: 'POST',

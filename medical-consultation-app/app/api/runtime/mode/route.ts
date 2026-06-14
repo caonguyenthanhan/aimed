@@ -29,6 +29,10 @@ const modePath = path.join(dataDir, 'runtime-mode.json')
 const eventsPath = path.join(dataDir, 'runtime-events.jsonl')
 const configuredProvider = () => normalizeRuntimeProvider(process.env.AGENT_PROVIDER || process.env.LLM_PROVIDER || 'server')
 const cpuBase = () => (process.env.CPU_SERVER_URL || process.env.BACKEND_URL || '').trim().replace(/\/$/, '')
+const isCloudProvider = (provider: unknown) => {
+  const normalized = normalizeRuntimeProvider(provider)
+  return normalized === 'gemini' || normalized === 'foza'
+}
 
 function ensure() {
   if (process.env.VERCEL) return
@@ -118,9 +122,40 @@ const probeGraph = async () => {
   }
 }
 
+const readBackendRuntimeMode = async () => {
+  const base = cpuBase()
+  if (!base) return null
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 3000)
+  try {
+    const resp = await fetch(`${base}/v1/runtime/mode`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+      signal: controller.signal,
+    })
+    const payload = await resp.json().catch(() => null)
+    if (!resp.ok || !payload || typeof payload !== 'object') return null
+    const provider = normalizeRuntimeProvider((payload as any)?.provider || configuredProvider())
+    const fallbackTarget = isCloudProvider(provider) ? 'gpu' : 'cpu'
+    return {
+      target: normalizeRuntimeTarget((payload as any)?.target, fallbackTarget),
+      provider,
+      gpu_url: typeof (payload as any)?.gpu_url === 'string' && (payload as any).gpu_url.trim()
+        ? String((payload as any).gpu_url).trim()
+        : undefined,
+      updated_at: typeof (payload as any)?.updated_at === 'string' ? (payload as any).updated_at : undefined,
+    }
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 const buildRuntimePayload = async (payload?: Record<string, any>) => {
   const provider = normalizeRuntimeProvider(payload?.provider || configuredProvider())
-  const target = normalizeRuntimeTarget(payload?.target, provider === 'gemini' || provider === 'foza' ? 'gpu' : 'cpu')
+  const target = normalizeRuntimeTarget(payload?.target, isCloudProvider(provider) ? 'gpu' : 'cpu')
   const gpu_url = typeof payload?.gpu_url === 'string' && payload.gpu_url.trim() ? payload.gpu_url.trim() : undefined
   const updated_at = typeof payload?.updated_at === 'string' && payload.updated_at.trim()
     ? payload.updated_at
@@ -149,6 +184,8 @@ export async function GET() {
   try {
     ensure()
     if (process.env.VERCEL) {
+      const backendMode = await readBackendRuntimeMode()
+      if (backendMode) return json(await buildRuntimePayload(backendMode))
       const gpuBase = (process.env.GPU_SERVER_URL || '').trim().replace(/\/$/, '')
       const localCpuBase = cpuBase()
       if (gpuBase) return json(await buildRuntimePayload({ target: 'gpu', gpu_url: gpuBase, provider: configuredProvider() }))
@@ -168,7 +205,7 @@ export async function POST(req: NextRequest) {
     ensure()
     const body = await req.json()
     const provider = normalizeRuntimeProvider(body?.provider || configuredProvider())
-    const target = body?.target === 'gpu' ? 'gpu' : normalizeRuntimeTarget(body?.target, provider === 'gemini' || provider === 'foza' ? 'gpu' : 'cpu')
+    const target = body?.target === 'gpu' ? 'gpu' : normalizeRuntimeTarget(body?.target, isCloudProvider(provider) ? 'gpu' : 'cpu')
     const gpu_url = target === 'gpu' && typeof body?.gpu_url === 'string' ? body.gpu_url : undefined
     const now = new Date().toISOString()
     const payload: any = { target, gpu_url, provider, updated_at: now }

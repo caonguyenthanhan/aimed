@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Mic, Volume2, Pause, Play, Square, ArrowLeft, MessageCircle, Camera, Upload, X, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import { normalizeRuntimeProvider } from '@/lib/runtime-sync'
 
 interface Message {
   id: string
@@ -133,7 +134,7 @@ export default function SpeechChatPage() {
       formData.append('use_optimized', 'true')
       try {
         const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
-        formData.append('provider', (p === 'gemini' || p === 'server') ? p : 'server')
+        formData.append('provider', normalizeRuntimeProvider(p))
       } catch {
         formData.append('provider', 'server')
       }
