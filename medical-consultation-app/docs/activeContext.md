@@ -72,6 +72,15 @@
   - Các UI phụ (`friend-chat-interface.tsx`, `health-lookup.tsx`, `tam-su-minimal.tsx`, `app/speech-chat/page.tsx`) đã bỏ whitelist cũ `gemini|server` và chuẩn hoá đọc `llm_provider` qua `normalizeRuntimeProvider`, nên không còn làm `foza` rơi ngầm về `server`.
   - `/api/runtime/mode` trên Vercel ưu tiên đọc lại trạng thái đã lưu từ CPU backend `/v1/runtime/mode` thay vì tự suy luận chỉ từ env; nhờ đó refresh trang vẫn giữ đúng provider/mode đã chọn.
   - `cpu_server/server.py` lưu thêm `provider` vào `/v1/runtime/mode` và `/v1/runtime/state`, để SSOT runtime đồng nhất giữa header UI, chat routes và backend public.
+- **Local DB restore (2026-06-14):**
+  - Dựng lại `postgres-platform/` với `docker-compose.yml` + `init.sql` tối thiểu cho 2 bảng `conversations` và `conversation_messages`.
+  - Local Next.js hiện dùng `medical-consultation-app/.env.local` trỏ về `postgresql://postgres:postgres@127.0.0.1:5432/aimed?sslmode=disable`.
+  - Local test stack xanh: `aimed-postgres` healthy trên `127.0.0.1:5432`, `memgraph-mage` trên `127.0.0.1:7687`, `memgraph-lab` trên `127.0.0.1:3000`, web local trên `127.0.0.1:3001`.
+  - Smoke test pass cho `/api/db/ping`, `/api/conversations/save`, `/api/conversations/list`, `/api/conversations/load`; browser local cũng xác nhận same-origin fetch vào các route DB trả dữ liệu thật từ Postgres local.
+- **LangGraph triage prompt fix (2026-06-14):**
+  - Root cause của fallback `langgraph_failed` trên local `/api/agent-chat` là `cpu_server/langgraph_agent/triage_router.py` dùng `ChatPromptTemplate` với JSON schema literal chưa escape `{}`.
+  - Vì LangChain mặc định format prompt theo kiểu `f-string`, prompt semantic router nổ lỗi `Invalid format specifier in f-string template. Nested replacement fields are not allowed.` trước khi gọi FOZA.
+  - Đã escape schema braces thành `{{` `}}`, restart CPU server local, và xác minh lại bằng smoke + browser: câu `Tôi bị đau đầu, có phải cảm cúm không?` giờ trả follow-up triage bình thường thay vì fallback lỗi.
 
 ## P3 — Hoàn thành (2026-06-10)
 

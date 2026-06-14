@@ -88,6 +88,62 @@ Priority: **FOZA → Gemini → CPU(openai_like) → GPU**
 - Anti-pattern banned: local whitelists like `p === "gemini" || p === "server"`.
 - Reason: that pattern silently downgrades `foza` to `server`, causing UI and actual runtime branch to diverge.
 
+## Local Postgres Demo (2026-06-14)
+
+### Stack Layout
+- Local chat persistence DB lives in `postgres-platform/`.
+- Compose target:
+  - container: `aimed-postgres`
+  - db: `aimed`
+  - user/pass: `postgres/postgres`
+  - port: `5432`
+- When `memgraph-lab` is on `3000`, frontend local test must use `3001`.
+
+### Minimum Schema
+- Required tables for `/api/conversations/*`:
+  - `conversations(id, user_id, title, created_at, last_active)`
+  - `conversation_messages(id, conv_id, role, content, created_at)`
+- Required indexes:
+  - `idx_conversations_user_last_active`
+  - `idx_conversation_messages_conv_created`
+
+### Env Contract
+- Local Next.js reads DB connection from `.env.local`.
+- Canonical local URL:
+  - `postgresql://postgres:postgres@127.0.0.1:5432/aimed?sslmode=disable`
+- Keep `DATABASE_URL`, `POSTGRES_URL`, and `POSTGRES_URL_NO_SSL` aligned to the same local URL during local DB tests.
+
+### Verification Path
+- Shell smoke:
+  - `GET /api/db/ping`
+  - `POST /api/conversations/save`
+  - `GET /api/conversations/list`
+  - `GET /api/conversations/load`
+- Browser verification must repeat the same calls from the local web origin to confirm the app uses the same DB config as the shell.
+
+## LangGraph Prompt Safety (2026-06-14)
+
+### Triage Router Prompt
+- File: `cpu_server/langgraph_agent/triage_router.py`
+- `ChatPromptTemplate.from_messages(...)` uses LangChain template formatting semantics.
+- Any literal JSON schema example embedded in a prompt message must escape braces:
+  - `{{` instead of `{`
+  - `}}` instead of `}`
+
+### Failure Mode
+- If raw JSON braces are left unescaped inside the prompt template, semantic-router render can fail before the LLM call with:
+  - `Invalid format specifier in f-string template. Nested replacement fields are not allowed.`
+- Observable effect in app:
+  - `/api/agent-chat` falls back to `langgraph_failed`
+  - UI shows `Xin lỗi, hiện agent đang gặp sự cố khi chạy LangGraph. Bạn thử lại giúp mình nhé.`
+
+### Verification Rule
+- After changing LangGraph CPU code, restart the local CPU server on `127.0.0.1:8000`; Next.js hot reload alone is not enough.
+- Minimal regression path:
+  - run `python -m pytest cpu_server/tests/test_langgraph_triage.py -q`
+  - run local smoke on `/api/agent-chat`
+  - verify in browser with a fresh conversation, not an old cached failed thread
+
 ## SystemState + Internal Demo Pass (2026-06-14)
 
 ### Internal Demo Pass

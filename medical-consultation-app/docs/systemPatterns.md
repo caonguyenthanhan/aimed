@@ -48,3 +48,12 @@
   - Each quick state maps 1:1 to backend payload: `GPU -> { target: "gpu", provider: "server" }`, `Gemini -> { target: "gpu", provider: "gemini" }`, `Foza -> { target: "gpu", provider: "foza" }`.
   - Vercel bootstrap must not infer provider solely from env when user has already switched mode; `/api/runtime/mode` first tries CPU backend `/v1/runtime/mode` and only falls back to env when no persisted upstream state exists.
   - Any UI reading `llm_provider` must normalize through `normalizeRuntimeProvider()`; no local component may whitelist only `gemini|server`, otherwise `foza` silently degrades to `server`.
+- Local Postgres pattern (2026-06-14):
+  - Local DB baseline lives in `postgres-platform/` and is intentionally minimal: one `docker-compose.yml` plus one `init.sql`.
+  - Minimum schema for chat persistence is only `conversations` and `conversation_messages`; build local demo around the exact SQL shape required by `lib/db-queries.ts`, not around production-only tables.
+  - Local Next.js should prefer `DATABASE_URL` or `POSTGRES_URL_NO_SSL` pointing to `127.0.0.1:5432/aimed?sslmode=disable`.
+  - Web test port must avoid conflicts with Memgraph Lab on `3000`; use frontend `3001` when `memgraph-lab` is running locally.
+- LangChain prompt schema pattern (2026-06-14):
+  - Any `ChatPromptTemplate` or `PromptTemplate` message that embeds literal JSON examples must escape braces as `{{` and `}}`.
+  - Do not paste raw schema blocks with `{` `}` into LangChain template strings unless those braces are actual variables.
+  - Regression coverage should call the router/template path directly to ensure prompt rendering reaches the LLM caller without template-format exceptions.

@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 
 from cpu_server.langgraph_agent import graph, runtime
-from cpu_server.langgraph_agent.triage_router import SemanticRouterDecision, TriageTraceStep
+from cpu_server.langgraph_agent.triage_router import (
+    SemanticRouterDecision,
+    TriageTraceStep,
+    run_semantic_triage_router,
+)
 
 
 def _install_test_doubles(
@@ -118,3 +122,51 @@ def test_chest_pain_routes_to_115_immediately(monkeypatch):
     assert result["actions"]
     assert result["actions"][0]["type"] == "ask_navigation"
     assert result["actions"][0]["args"]["feature"] == "bac-si"
+
+
+def test_semantic_router_prompt_escapes_literal_json_schema():
+    observed = {"called": False, "messages": []}
+
+    def fake_llm(messages, timeout_s=25.0):
+        observed["called"] = True
+        observed["messages"] = messages
+        return (
+            json.dumps(
+                {
+                    "agent_profile": "triage",
+                    "symptoms_collected": ["đau đầu"],
+                    "risk_level": "low",
+                    "ready_for_cta": False,
+                    "next_step": "follow_up",
+                    "follow_up_questions": [
+                        "Bạn đau đầu từ khi nào?",
+                        "Bạn có sốt, cứng gáy hoặc nhìn mờ không?",
+                    ],
+                    "cta_reason": "",
+                    "user_response_hint": "Hỏi thêm về red flags.",
+                    "trace": [
+                        {
+                            "observation": "Chưa có red-flag rõ ràng.",
+                            "implication": "Cần follow-up ngắn trước khi CTA.",
+                        }
+                    ],
+                    "router_source": "semantic_router_lcel",
+                },
+                ensure_ascii=False,
+            ),
+            {"model": "fake"},
+        )
+
+    decision = run_semantic_triage_router(
+        user_text="Tôi bị đau đầu, có phải cảm cúm không?",
+        tool_results={"graph.evidence": {"ok": True, "entities": [], "edges": []}},
+        requested_agent_id="auto",
+        llm_caller=fake_llm,
+        timeout_s=5.0,
+    )
+
+    assert observed["called"] is True
+    assert any("router_source" in str(msg.get("content") or "") for msg in observed["messages"])
+    assert decision.router_source == "semantic_router_lcel"
+    assert decision.agent_profile == "triage"
+    assert decision.ready_for_cta is False

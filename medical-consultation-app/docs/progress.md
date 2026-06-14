@@ -116,6 +116,12 @@
 - Runtime quick-switch sync fix: header đổi sang 3 lựa chọn rõ ràng `GPU | Gemini | Foza`; các component phụ không còn làm `foza` rơi ngầm về `server` khi đọc `llm_provider`.
 - Vercel/backend sync: `/api/runtime/mode` ưu tiên đọc persisted mode từ CPU backend `/v1/runtime/mode`; `cpu_server/server.py` lưu thêm `provider` trong runtime mode/state để refresh UI không lệch với backend branch đang dùng.
 - Verification: VS Code diagnostics sạch cho `compute-toggle.tsx`, `app/api/runtime/mode/route.ts`, `friend-chat-interface.tsx`, `health-lookup.tsx`, `tam-su-minimal.tsx`, `app/speech-chat/page.tsx`; `python -m py_compile cpu_server/server.py` pass.
+- Local DB restore: dựng lại `postgres-platform/docker-compose.yml` + `postgres-platform/init.sql`, khởi động `aimed-postgres`, và xác nhận hai bảng `conversations`/`conversation_messages` có mặt trong DB `aimed`.
+- Local env wiring: `medical-consultation-app/.env.local` được trỏ về `postgresql://postgres:postgres@127.0.0.1:5432/aimed?sslmode=disable` để `DATABASE_URL`/`POSTGRES_URL`/`POSTGRES_URL_NO_SSL` dùng cùng một source local.
+- Verification: local frontend chạy tại `http://127.0.0.1:3001`, smoke script pass cho `/api/db/ping`, `/api/conversations/save`, `/api/conversations/list`, `/api/conversations/load`, và browser fetch same-origin cũng pass với dữ liệu thật từ Postgres local.
+- LangGraph local fix: sửa `cpu_server/langgraph_agent/triage_router.py` để escape JSON schema literal trong `ChatPromptTemplate` (`{{`/`}}` thay cho raw braces), loại bỏ lỗi `Invalid format specifier in f-string template. Nested replacement fields are not allowed.`
+- Regression: thêm test ở `cpu_server/tests/test_langgraph_triage.py` để bảo đảm semantic router render prompt thành công và gọi được fake LLM caller.
+- Verification: sau khi restart CPU server local, smoke `/api/agent-chat` không còn trả fallback `langgraph_failed`; browser local với prompt `Tôi bị đau đầu, có phải cảm cúm không?` trả follow-up triage bình thường.
 
 ## 2026-06-04
 
