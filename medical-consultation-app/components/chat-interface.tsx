@@ -1957,8 +1957,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       suppressHydrationWarning
       style={{
         height: isMobile
-          ? "calc(100dvh - 4rem - 6rem)"
-          : "calc(100dvh - 5rem)",
+          ? "100%"
+          : "100%",
       }}
     >
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
@@ -2169,15 +2169,15 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       )}
       <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden h-full">
         {!showSidebar && !isMobile && (
-          <div className="absolute top-20 left-3 z-20">
+          <div className="absolute top-20 left-3 z-20" suppressHydrationWarning={true}>
             <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
         )}
-        <div className="mx-auto flex h-full w-full max-w-5xl min-w-0 flex-col">
+        <div className="mx-auto flex w-full max-w-5xl min-w-0 flex-col flex-1 min-h-0">
       {!disclaimerDismissed && (
-            <div className="mx-3 mb-2 sm:mx-4">
+            <div className="mx-3 my-2 sm:mx-4 flex-shrink-0">
               <div className="mx-auto flex w-full max-w-3xl items-center justify-between rounded-2xl border border-amber-200/50 bg-amber-50/80 px-3 py-2 dark:border-amber-800/50 dark:bg-amber-950/30">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
@@ -2194,7 +2194,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           )}
 
           {agentMode && (
-            <div className="mx-3 mb-2 sm:mx-4">
+            <div className="mx-3 mb-2 sm:mx-4 flex-shrink-0">
               <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border bg-card/70 px-3 py-2 backdrop-blur-sm">
                 <div className="text-xs font-semibold text-foreground">Trợ lý AI (Agent)</div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
@@ -2390,7 +2390,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         )}
 
         {/* Special Messages (Embeds, Music Players, Navigation Prompts) */}
-            <div className="mx-auto w-full max-w-3xl px-3 pb-4 sm:px-6 sm:pb-6">
+            <div className="mx-auto w-full max-w-3xl px-3 pb-2 sm:px-6 sm:pb-3">
         {specialMessages.map((specialMsg) => (
           <ChatSpecialMessage 
             key={specialMsg.id} 
@@ -2420,9 +2420,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         )}
         <div ref={messagesEndRef} />
       </div>
-          </div>
+      </div>
 
-      <div ref={composerWrapperRef} className="shrink-0 border-t border-border/60 bg-background/85 backdrop-blur-xl">
+      <div ref={composerWrapperRef} className="flex-shrink-0 border-t border-border/60 bg-background/85 backdrop-blur-xl">
         <UnifiedComposer
           value={input}
           onValueChange={setInput}
