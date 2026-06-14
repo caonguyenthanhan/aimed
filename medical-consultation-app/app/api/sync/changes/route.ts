@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const userUUID = tokenToUUID(userId)
     const sinceTime = new Date(since || 0)
 
-    const changes = []
+    const changes: Array<{ type: string; timestamp: number; data: unknown }> = []
 
     // Get new conversations since last sync
     const newConvs = await client.query(`

@@ -60,25 +60,19 @@ export function ChatEmbedContainer({
   }
 
   const renderEmbed = () => {
-    const props = {
-      context: context as Record<string, unknown>,
-      onComplete: handleComplete,
-      onNavigate: handleNavigate,
-    }
-
     switch (feature) {
       case "sang-loc":
-        return <EmbedSangLoc {...props} />
+        return <EmbedSangLoc context={context as Record<string, unknown>} onComplete={handleComplete} onNavigate={handleNavigate} />
       case "tri-lieu":
-        return <EmbedTriLieu {...props} />
+        return <EmbedTriLieu context={context as Record<string, unknown>} onComplete={() => handleComplete(undefined)} onNavigate={handleNavigate} />
       case "tra-cuu":
-        return <EmbedTraCuu {...props} />
+        return <EmbedTraCuu context={context as Record<string, unknown>} onComplete={handleComplete} onNavigate={handleNavigate} />
       case "bac-si":
-        return <EmbedBacSi {...props} />
+        return <EmbedBacSi context={context as Record<string, unknown>} onComplete={handleComplete} onNavigate={handleNavigate} />
       case "ke-hoach":
-        return <EmbedKeHoach {...props} />
+        return <EmbedKeHoach context={context as Record<string, unknown>} onComplete={handleComplete} onNavigate={handleNavigate} />
       case "thong-ke":
-        return <EmbedThongKe {...props} />
+        return <EmbedThongKe context={context as Record<string, unknown>} onComplete={() => handleComplete(undefined)} onNavigate={handleNavigate} />
       default:
         return (
           <div className="p-4 text-sm text-muted-foreground">

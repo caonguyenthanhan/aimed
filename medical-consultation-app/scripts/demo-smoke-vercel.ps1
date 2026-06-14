@@ -30,11 +30,30 @@ function Assert-True {
   if (-not $Cond) { throw $Msg }
 }
 
+function Get-GpuSkipSummary {
+  $deployMode = [string]($env:MCS_DEPLOY_MODE)
+  $demoMode = [string]($env:DEMO_MODE)
+  $gpuEnabled = [string]($env:GPU_INFRA_ENABLED)
+  $marker = [string]($env:GPU_SKIP_PENDING_INFRA_MARKER)
+  if (-not $marker.Trim()) { $marker = "[GPU skipped - pending infrastructure]" }
+  $isDemo = $false
+  if ($deployMode.Trim().ToLower() -eq "demo") { $isDemo = $true }
+  if ($demoMode.Trim().ToLower() -eq "demo") { $isDemo = $true }
+  if (@("1","true","yes","on") -contains $demoMode.Trim().ToLower()) { $isDemo = $true }
+  if ($isDemo) { return "$marker (demo_mode)" }
+  if (-not $gpuEnabled.Trim() -or (@("1","true","yes","on") -notcontains $gpuEnabled.Trim().ToLower())) {
+    return "$marker (pending infrastructure)"
+  }
+  return ""
+}
+
 $vercel = $VercelUrl.Trim().TrimEnd("/")
 $cpuPub = $CpuPublicUrl.Trim().TrimEnd("/")
+$gpuSummary = Get-GpuSkipSummary
 
 Write-Host ("Vercel: " + $vercel)
 if ($cpuPub) { Write-Host ("CPU public: " + $cpuPub) }
+if ($gpuSummary) { Write-Host ("GPU: " + $gpuSummary) }
 
 if ($cpuPub) {
   try {

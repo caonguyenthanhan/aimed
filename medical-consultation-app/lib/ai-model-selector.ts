@@ -1,5 +1,3 @@
-import { generateText, streamText } from "ai"
-
 export type AIModel = "grok" | "gemini-flash" | "gemini-pro" | "groq" | "claude"
 
 interface ModelConfig {

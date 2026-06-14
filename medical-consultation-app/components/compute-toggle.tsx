@@ -1,10 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import {
+  buildSystemState,
+  emptySystemState,
+  RUNTIME_MODE_EVENT,
+  normalizeRuntimeProvider,
+  normalizeRuntimeTarget,
+  setStoredProvider,
+  type SystemState,
+} from "@/lib/runtime-sync"
 
 export default function ComputeToggle() {
-  const [mode, setMode] = useState<'cpu'|'gpu'>('cpu')
-  const [provider, setProvider] = useState<'server'|'gemini'|'foza'>('server')
+  const [systemState, setSystemState] = useState<SystemState>(emptySystemState())
   const [gpuUrl, setGpuUrl] = useState<string>('')
   const [summary, setSummary] = useState<{cpu?: number, gpu?: number}>({})
   const [busy, setBusy] = useState(false)
@@ -12,28 +20,15 @@ export default function ComputeToggle() {
 
   const load = async () => {
     try {
-      try {
-        const p = typeof window !== 'undefined' ? localStorage.getItem('llm_provider') : null
-        if (p === 'gemini') {
-          setProvider('gemini')
-          setMode('gpu')
-        } else if (p === 'foza') {
-          setProvider('foza')
-        } else if (p === 'server') {
-          setProvider('server')
-        }
-      } catch {}
-      let auth: string | null = null
-      if (typeof window !== 'undefined') auth = localStorage.getItem('authToken')
-      let m: any = null
-      try {
-        const url = '/api/backend/v1/runtime/state'
-        const resp = await fetch(url, { headers: auth ? { 'Authorization': `Bearer ${auth}` } : undefined })
-        if (resp.ok) m = await resp.json()
-      } catch {}
-      if (!m) m = await fetch('/api/runtime/mode').then(r => r.json())
-      if (m?.target) setMode(m.target)
+      const m = await fetch('/api/runtime/mode', { cache: 'no-store' }).then(r => r.json())
+      const nextState = buildSystemState((m as any)?.system_state || {
+        provider: m?.provider,
+        mode: m?.target,
+      })
+      setSystemState(nextState)
+      setStoredProvider(nextState.provider)
       if (m?.gpu_url) setGpuUrl(m.gpu_url)
+      else setGpuUrl('')
       const s = await fetch('/api/runtime/metrics').then(r => r.json())
       setSummary(s?.summary || {})
     } catch {}
@@ -44,38 +39,24 @@ export default function ComputeToggle() {
     const handler = (e: any) => {
       try {
         const detail = e?.detail || {}
-        if (detail?.provider === 'gemini') {
-          setProvider('gemini')
-          setMode('gpu')
-          try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'gemini') } catch {}
-          return
-        }
-        if (detail?.provider === 'foza') {
-          setProvider('foza')
-          try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'foza') } catch {}
-          return
-        }
-        if (detail?.provider === 'server') {
-          setProvider('server')
-          try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'server') } catch {}
-        }
-        if (detail?.target === 'gpu') {
-          setMode('gpu')
-          if (typeof detail?.gpu_url === 'string') setGpuUrl(detail.gpu_url)
-          fetch('/api/runtime/metrics').then(r => r.json()).then(s => setSummary(s?.summary || {})).catch(() => {})
-        } else if (detail?.target === 'cpu') {
-          setMode('cpu')
-          setGpuUrl('')
-          fetch('/api/runtime/metrics').then(r => r.json()).then(s => setSummary(s?.summary || {})).catch(() => {})
-        }
+        const nextState = buildSystemState((detail as any)?.system_state || {
+          provider: detail?.provider,
+          mode: detail?.target,
+          demo_mode: detail?.demo_mode,
+        })
+        setSystemState(nextState)
+        setStoredProvider(nextState.provider)
+        if (typeof detail?.gpu_url === 'string') setGpuUrl(detail.gpu_url)
+        if (nextState.mode === 'cpu') setGpuUrl('')
+        fetch('/api/runtime/metrics').then(r => r.json()).then(s => setSummary(s?.summary || {})).catch(() => {})
       } catch {}
     }
     if (typeof window !== 'undefined') {
-      window.addEventListener('runtime_mode_changed', handler as any)
+      window.addEventListener(RUNTIME_MODE_EVENT, handler as any)
     }
     return () => {
       if (typeof window !== 'undefined') {
-        window.removeEventListener('runtime_mode_changed', handler as any)
+        window.removeEventListener(RUNTIME_MODE_EVENT, handler as any)
       }
     }
   }, [])
@@ -84,26 +65,22 @@ export default function ComputeToggle() {
     setError('')
     setBusy(true)
     try {
-      if (provider === 'gemini') {
-        setProvider('server')
-        try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'server') } catch {}
-      }
+      const provider = systemState.provider
+      const mode = systemState.mode
+      const nextProvider = provider === 'gemini' && mode === 'cpu' ? 'server' : provider
       if (mode === 'cpu') {
         const latest = await fetch('/api/servers/latest').then(r => r.json())
         const url = latest?.url || ''
         if (!url) throw new Error('Không tìm thấy server GPU')
         const chk = await fetch('/api/servers/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, timeoutMs: 2000 }) }).then(r => r.json())
         if (!chk?.ok) throw new Error('Server GPU không phản hồi')
-        await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'gpu', gpu_url: url }) })
-        setMode('gpu')
-        setGpuUrl(url)
+        await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'gpu', gpu_url: url, provider: nextProvider }) })
         try {
           const auth = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
           await fetch('/api/backend/v1/runtime/state', { method: 'POST', headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'gpu', gpu_url: url }) })
         } catch {}
       } else {
-        await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cpu' }) })
-        setMode('cpu')
+        await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cpu', provider: nextProvider }) })
         try {
           const auth = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
           await fetch('/api/backend/v1/runtime/state', { method: 'POST', headers: auth ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${auth}` } : { 'Content-Type': 'application/json' }, body: JSON.stringify({ target: 'cpu' }) })
@@ -121,32 +98,13 @@ export default function ComputeToggle() {
     setError('')
     setBusy(true)
     try {
-      if (provider === 'server') {
-        setProvider('gemini')
-        setMode('gpu')
-        try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'gemini') } catch {}
-        try {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('runtime_mode_changed', { detail: { target: 'gpu', provider: 'gemini' } }))
-          }
-        } catch {}
-      } else if (provider === 'gemini') {
-        setProvider('foza')
-        try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'foza') } catch {}
-        try {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('runtime_mode_changed', { detail: { target: mode, provider: 'foza' } }))
-          }
-        } catch {}
-      } else {
-        setProvider('server')
-        try { if (typeof window !== 'undefined') localStorage.setItem('llm_provider', 'server') } catch {}
-        try {
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('runtime_mode_changed', { detail: { target: mode, provider: 'server' } }))
-          }
-        } catch {}
-      }
+      const provider = systemState.provider
+      const mode = systemState.mode
+      const nextProvider = provider === 'server' ? 'gemini' : (provider === 'gemini' ? 'foza' : 'server')
+      const nextTarget = nextProvider === 'server' ? mode : 'gpu'
+      const payload = { target: nextTarget, provider: nextProvider, ...(nextTarget === 'gpu' && gpuUrl ? { gpu_url: gpuUrl } : {}) }
+      await fetch('/api/runtime/mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      setStoredProvider(nextProvider)
       await load()
     } catch (e: any) {
       setError(e?.message || 'Lỗi chuyển chế độ')
@@ -155,6 +113,8 @@ export default function ComputeToggle() {
     }
   }
 
+  const mode = normalizeRuntimeTarget(systemState.mode, 'cpu')
+  const provider = normalizeRuntimeProvider(systemState.provider)
   const label = provider === 'gemini' ? 'API' : (provider === 'foza' ? 'FOZA' : (mode === 'cpu' ? 'CPU' : 'GPU'))
   const tooltip = provider === 'gemini'
     ? 'API: dùng Gemini (cần GEMINI_API_KEY), phù hợp test nhanh trên Vercel'

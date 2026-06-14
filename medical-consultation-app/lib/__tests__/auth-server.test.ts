@@ -9,6 +9,7 @@ vi.mock("../jwt", () => ({
 
 import { verifyJWT } from "../jwt"
 const mockVerifyJWT = vi.mocked(verifyJWT)
+const env = process.env as Record<string, string | undefined>
 
 function makeReq(authHeader?: string): NextRequest {
   const headers: Record<string, string> = {}
@@ -19,8 +20,8 @@ function makeReq(authHeader?: string): NextRequest {
 describe("auth-server", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.NODE_ENV = "test"
-    process.env.JWT_SECRET = "test-secret-at-least-32-chars-long!!"
+    env.NODE_ENV = "test"
+    env.JWT_SECRET = "test-secret-at-least-32-chars-long!!"
   })
 
   describe("getAuthedUser", () => {
@@ -40,7 +41,7 @@ describe("auth-server", () => {
     })
 
     it("resolves test_token_ in non-production env", async () => {
-      process.env.NODE_ENV = "test"
+      env.NODE_ENV = "test"
       const result = await getAuthedUser(makeReq("Bearer test_token_doctor_001"))
       expect(result).not.toBeNull()
       expect(result?.user_id).toBe("doctor_001")
@@ -48,19 +49,19 @@ describe("auth-server", () => {
     })
 
     it("returns null for unknown test_token_ id", async () => {
-      process.env.NODE_ENV = "test"
+      env.NODE_ENV = "test"
       const result = await getAuthedUser(makeReq("Bearer test_token_nonexistent_id"))
       expect(result).toBeNull()
     })
 
     it("returns null for test_token_ in production env", async () => {
-      process.env.NODE_ENV = "production"
+      env.NODE_ENV = "production"
       // JWT verify will fail for test_token_, so it goes to CPU fallback which also fails
       mockVerifyJWT.mockResolvedValueOnce(null)
       // fetch will fail (no CPU server in test)
       const result = await getAuthedUser(makeReq("Bearer test_token_doctor_001"))
       expect(result).toBeNull()
-      process.env.NODE_ENV = "test"
+      env.NODE_ENV = "test"
     })
 
     it("resolves valid JWT payload", async () => {

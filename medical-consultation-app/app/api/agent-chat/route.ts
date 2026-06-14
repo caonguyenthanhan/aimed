@@ -17,6 +17,7 @@ import { getRateLimit } from "@/lib/rate-limiter"
 import { retryWithBackoff } from "@/lib/retry-backoff"
 import { youtubeService } from "@/lib/youtube-service"
 import { getAgentProfile } from "@/lib/agent-profiles"
+import { buildSystemState, hasInternalDemoPass, isInternalDemoPass, normalizeRuntimeProvider, normalizeRuntimeTarget } from "@/lib/runtime-sync"
 
 // Allow up to 60s for Vercel serverless — FOZA via ngrok can take 40-45s
 export const maxDuration = 60
@@ -47,9 +48,38 @@ const json = (data: any, init?: ResponseInit) =>
     },
   })
 
+const withSystemState = (metadata: Record<string, any>) => {
+  const provider = normalizeRuntimeProvider(metadata?.provider)
+  const mode = normalizeRuntimeTarget(metadata?.mode, provider === "gemini" || provider === "foza" ? "gpu" : "cpu")
+  const llmContext = metadata?.llm_context && typeof metadata.llm_context === "object" ? metadata.llm_context : {}
+  return {
+    ...metadata,
+    system_state: buildSystemState({
+      provider,
+      mode,
+      graph_connected: typeof metadata?.graph_connected === "boolean"
+        ? metadata.graph_connected
+        : Boolean(llmContext?.graph_connected ?? llmContext?.graph_injected),
+      graph_injected: Boolean(llmContext?.graph_injected),
+      graph_reason: typeof llmContext?.graph_reason === "string" ? llmContext.graph_reason : null,
+      db_ok: null,
+      fallback: typeof metadata?.fallback === "string" ? metadata.fallback : null,
+      error: typeof metadata?.error === "string"
+        ? metadata.error
+        : (typeof metadata?.root_cause === "string" ? metadata.root_cause : (typeof metadata?.gemini_error === "string" ? metadata.gemini_error : (typeof metadata?.cpu_proxy_error === "string" ? metadata.cpu_proxy_error : null))),
+      demo_mode: Boolean(metadata?.demo_mode),
+      fallback_chain: Array.isArray(metadata?.fallback_chain) ? metadata.fallback_chain : [],
+      graph_endpoint: typeof llmContext?.graph_endpoint === "string" ? llmContext.graph_endpoint : null,
+      graph_status_code: typeof llmContext?.graph_status_code === "number" ? llmContext.graph_status_code : null,
+      internal_pass_matched: Boolean(metadata?.demo_mode),
+    }),
+  }
+}
+
 export async function POST(req: Request) {
   const started = Date.now()
   let cpuProxyError: string | undefined
+  let agentProfileIdForError = "default"
   try {
     const proxyBody: any = await req.clone().json().catch(() => null)
     const proxyMessage = String(proxyBody?.message || proxyBody?.question || "").trim()
@@ -300,6 +330,7 @@ export async function POST(req: Request) {
     const agentProfileId = !requestedAgentId || requestedAgentId.toLowerCase() === "auto"
       ? inferAgentProfileId(message)
       : requestedAgentId
+    agentProfileIdForError = agentProfileId
     const agentProfile = getAgentProfile(agentProfileId)
     const persona = `AGENT_PROFILE:${agentProfile.id}\n${agentProfile.persona}`
     let personaForLLM = persona
@@ -320,6 +351,95 @@ export async function POST(req: Request) {
         },
         { status: 429, headers: { "Retry-After": String(rateLimitCheck.retryAfter || 60) } }
       )
+    }
+
+    type GatewayTriageMeta = {
+      active: boolean
+      ready_for_cta: boolean | null
+      risk_level: string | null
+      follow_up_questions: string[]
+    }
+
+    const normalizeQuestionList = (value: unknown) => {
+      if (!Array.isArray(value)) return []
+      return value
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+        .slice(0, 6)
+    }
+
+    const readGatewayTriageMeta = (metadata?: any): GatewayTriageMeta => {
+      const rawMetadata = metadata && typeof metadata === "object" ? metadata : {}
+      const rawTriage = rawMetadata?.triage && typeof rawMetadata.triage === "object" ? rawMetadata.triage : {}
+      const metadataProfile = String(rawMetadata?.agent_profile || rawMetadata?.agent_profile_id || "").trim().toLowerCase()
+      const riskLevel = String(rawTriage?.risk_level || rawMetadata?.risk_level || "").trim().toLowerCase() || null
+      const followUpQuestions = normalizeQuestionList(
+        rawTriage?.triage_follow_up_questions ?? rawTriage?.follow_up_questions ?? rawMetadata?.triage_follow_up_questions
+      )
+      return {
+        active: metadataProfile === "triage" || agentProfile.id === "triage",
+        ready_for_cta: typeof rawTriage?.ready_for_cta === "boolean" ? rawTriage.ready_for_cta : null,
+        risk_level: riskLevel,
+        follow_up_questions: followUpQuestions,
+      }
+    }
+
+    const isEmergencyTriage = (triageMeta?: GatewayTriageMeta) =>
+      Boolean(triageMeta?.active && triageMeta.risk_level === "emergency")
+
+    const shouldHoldTriageCta = (triageMeta?: GatewayTriageMeta) =>
+      Boolean(triageMeta?.active && !isEmergencyTriage(triageMeta) && triageMeta.ready_for_cta !== true)
+
+    const buildTriageFollowUpPrompt = (triageMeta?: GatewayTriageMeta) => {
+      const questions = triageMeta?.follow_up_questions || []
+      if (questions.length) {
+        return [
+          "Để đánh giá an toàn hơn, bạn cho mình biết thêm:",
+          ...questions.map((question) => `- ${question}`),
+        ].join("\n")
+      }
+      return "Để đánh giá an toàn hơn, bạn cho mình biết thêm: triệu chứng chính, bắt đầu từ khi nào, mức độ hiện tại, sốt/khó thở/đau ngực có hay không, bệnh nền và thuốc đang dùng?"
+    }
+
+    const buildTriageMetadata = (triageMeta?: GatewayTriageMeta) => {
+      if (!triageMeta?.active) return undefined
+      return {
+        ready_for_cta: triageMeta.ready_for_cta,
+        risk_level: triageMeta.risk_level,
+        triage_follow_up_questions: triageMeta.follow_up_questions,
+      }
+    }
+
+    const isDoctorNavigationAction = (action: any) => {
+      const type = String(action?.type || "").trim()
+      if (!type) return false
+      const feature = String(action?.args?.feature || "").trim().toLowerCase()
+      const pathValue = String(action?.args?.path || "").trim().toLowerCase()
+      const reason = String(action?.args?.reason || action?.args?.text || "").trim().toLowerCase()
+      if (type === "ask_navigation" && feature === "bac-si") return true
+      if (type === "navigate" && pathValue.startsWith("/bac-si")) return true
+      return reason.includes("115") || reason.includes("bác sĩ") || reason.includes("đặt lịch")
+    }
+
+    const applyTriageActionGuard = (inputActions: any[], triageMeta?: GatewayTriageMeta) => {
+      const actions = Array.isArray(inputActions) ? [...inputActions] : []
+      if (!triageMeta?.active) return actions
+      if (isEmergencyTriage(triageMeta)) {
+        const hasEmergencyAction = actions.some((action) => isDoctorNavigationAction(action))
+        if (hasEmergencyAction) return actions
+        return [
+          ...actions,
+          {
+            type: "ask_navigation",
+            args: {
+              feature: "bac-si",
+              reason: "Đây có thể là tình huống khẩn cấp. Hãy gọi 115 ngay hoặc đến cơ sở y tế gần nhất. Bạn muốn mở mục Bác sĩ để xem hướng dẫn tiếp theo không?",
+            },
+          },
+        ]
+      }
+      if (!shouldHoldTriageCta(triageMeta)) return actions
+      return actions.filter((action) => !isDoctorNavigationAction(action))
     }
 
     const planResponseMessages = (content: string, actions: any[]) => {
@@ -409,7 +529,7 @@ export async function POST(req: Request) {
       return msgs.length ? msgs : [{ content: String(content || "").trim() || " ", kind: "text", delay_ms: 0 }]
     }
 
-    const ensureAssistantText = (raw: string, actions: any[]) => {
+    const ensureAssistantText = (raw: string, actions: any[], triageMeta?: GatewayTriageMeta) => {
       const t = String(raw || "").trim()
       if (t && t !== " " && t.length >= 20) return t
       const wantDoctor = intentFlags.doctor || agentProfile.id === "doctor_referral"
@@ -417,23 +537,30 @@ export async function POST(req: Request) {
       const wantPlan = intentFlags.plan
       const wantTherapy = intentFlags.therapy
       const wantTriage = intentFlags.triage
+      const holdTriageCta = shouldHoldTriageCta(triageMeta)
+      const emergencyTriage = isEmergencyTriage(triageMeta)
       const hints: string[] = []
-      if (wantTriage) hints.push("Mức ưu tiên: an toàn trước (triage).")
-      if (wantDoctor) hints.push("Nếu bạn muốn gặp bác sĩ, mình có thể gợi ý mở mục Bác sĩ/Đặt hẹn.")
+      if (wantTriage || triageMeta?.active) hints.push(emergencyTriage ? "Mức ưu tiên: khẩn cấp." : "Mức ưu tiên: an toàn trước (triage).")
+      if (wantDoctor && !holdTriageCta) hints.push("Nếu bạn muốn gặp bác sĩ, mình có thể gợi ý mở mục Bác sĩ/Đặt hẹn.")
       if (wantLookup) hints.push("Nếu cần tra cứu thuốc/bệnh, mình có thể gợi ý mở Tra cứu để kiểm chứng.")
       if (wantPlan) hints.push("Nếu bạn muốn theo dõi/kế hoạch, mình có thể gợi ý mở Kế hoạch.")
       if (wantTherapy) hints.push("Nếu bạn cần bài tập thư giãn, mình có thể gợi ý mở Trị liệu.")
-      const followUp = "Bạn cho mình biết thêm: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?"
+      const followUp = holdTriageCta
+        ? buildTriageFollowUpPrompt(triageMeta)
+        : "Bạn cho mình biết thêm: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?"
       const actionLine = Array.isArray(actions) && actions.length ? "Mình cũng đã chuẩn bị nút/hành động phù hợp ở dưới." : ""
       return [hints.join(" "), actionLine, followUp].filter(Boolean).join("\n")
     }
 
-    const ruleBasedActionsGuess = () => {
+    const buildGatewayFallbackActions = (triageMeta?: GatewayTriageMeta) => {
       const lower = message.toLowerCase()
       const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      if (isEmergencyTriage(triageMeta)) {
+        return applyTriageActionGuard([{ type: "ask_navigation", args: { feature: "bac-si", reason: "Đây có thể là tình huống khẩn cấp. Hãy gọi 115 ngay hoặc đến cơ sở y tế gần nhất." } }], triageMeta)
+      }
+      if (triageMeta?.active) return []
       if (agentProfile.id === "medication") return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Mở tra cứu để xem thông tin thuốc/tương tác chính xác hơn." } }]
       if (agentProfile.id === "care_plan") return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
-      if (agentProfile.id === "triage") return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Mở bác sĩ/đặt lịch để được đánh giá trực tiếp nếu bạn có dấu hiệu cần khám sớm." } }]
       if (agentProfile.id === "therapy") return [{ type: "ask_navigation", args: { feature: "tri-lieu", reason: "Mở trị liệu để xem bài tập thở/grounding và kỹ thuật giảm căng thẳng." } }]
       if (agentProfile.id === "doctor_referral") return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Mở bác sĩ để xem hồ sơ và đặt hẹn." } }]
       if (lower.match(/(bác sĩ|đặt hẹn|đặt lịch|khám|tư vấn trực tiếp|hẹn khám)/) || ascii.match(/(bac si|dat hen|dat lich|kham|tu van truc tiep|hen kham)/)) {
@@ -447,9 +574,6 @@ export async function POST(req: Request) {
       }
       if (lower.match(/(kế hoạch|lộ trình|theo dõi|mục tiêu|nhật ký|routine)/) || ascii.match(/(ke hoach|lo trinh|theo doi|muc tieu|nhat ky|routine)/)) {
         return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
-      }
-      if (lower.match(/(đau ngực|khó thở|yếu liệt|nói khó|ngất|chảy máu|co giật|lú lẫn|đau bụng dữ dội)/) || ascii.match(/(dau nguc|kho tho|yeu liet|noi kho|ngat|chay mau|co giat|lu lan|dau bung du doi)/)) {
-        return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Có dấu hiệu nguy hiểm. Bạn muốn mình hướng dẫn bước an toàn tiếp theo và mở bác sĩ/đặt lịch không?" } }]
       }
       if (lower.match(/(lo âu|hoảng loạn|trầm cảm|mất ngủ|căng thẳng|stress|tự hại|tự sát)/) || ascii.match(/(lo au|hoang loan|tram cam|mat ngu|cang thang|stress|tu hai|tu sat)/)) {
         return [{ type: "ask_navigation", args: { feature: "sang-loc", reason: "Mở sàng lọc để đánh giá mức độ và chọn hướng hỗ trợ phù hợp." } }]
@@ -470,7 +594,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions: [],
         conversation_id,
-        metadata: { mode: "cpu", sos: true, hotlines: sos.hotlines, reasons: sos.reasons, situation: "sos", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags },
+        metadata: withSystemState({ mode: "cpu", provider: "server", sos: true, hotlines: sos.hotlines, reasons: sos.reasons, situation: "sos", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags }),
       })
     }
 
@@ -487,7 +611,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions: [],
         conversation_id,
-        metadata: { mode: "cpu", blocked: true, hits: safetyHits, situation: "safety", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags },
+        metadata: withSystemState({ mode: "cpu", provider: "server", blocked: true, hits: safetyHits, situation: "safety", agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags }),
       })
     }
 
@@ -581,8 +705,7 @@ export async function POST(req: Request) {
       return { content, actions, model: out.model, parsedJson: !!json }
     }
 
-    const expectedPass = String(process.env.AGENT_KEY_PASS || "").trim()
-    const passOk = expectedPass && accessPass && accessPass === expectedPass
+    const passOk = hasInternalDemoPass() ? isInternalDemoPass(accessPass) : false
     const systemKey = String(process.env.GEMINI_API_KEY || "").trim()
     const access = passOk ? "pass" : (accessPass ? "user_key" : "system_key")
     const keyToUse = passOk ? systemKey : (accessPass || systemKey)
@@ -915,7 +1038,7 @@ export async function POST(req: Request) {
                 delivery: { mode: deliveryMode },
                 actions,
                 conversation_id,
-                metadata: {
+                metadata: withSystemState({
                   mode: "cloud",
                   provider: "foza",
                   requested_provider: requestedProvider,
@@ -923,6 +1046,7 @@ export async function POST(req: Request) {
                   fallback,
                   fallback_chain: fallbackChain,
                   model: fozaModelName,
+                  demo_mode: passOk,
                   agent_profile: agentProfile.id,
                   agent_profile_source: agentProfileSource,
                   duration_ms: Date.now() - started,
@@ -935,7 +1059,7 @@ export async function POST(req: Request) {
                   mcp_tool_names: [],
                   tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
                   timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
-                },
+                }),
               })
               return json(out)
             }
@@ -951,7 +1075,7 @@ export async function POST(req: Request) {
               delivery: { mode: deliveryMode },
               actions: [],
               conversation_id,
-              metadata: {
+              metadata: withSystemState({
                 mode: "cloud",
                 provider: "foza",
                 requested_provider: requestedProvider,
@@ -959,6 +1083,7 @@ export async function POST(req: Request) {
                 fallback,
                 fallback_chain: fallbackChain,
                 model: fozaModelName,
+                demo_mode: passOk,
                 agent_profile: agentProfile.id,
                 agent_profile_source: agentProfileSource,
                 duration_ms: Date.now() - started,
@@ -971,7 +1096,7 @@ export async function POST(req: Request) {
                 mcp_tool_names: [],
                 tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
                 timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
-              },
+              }),
             })
             return json(out)
           }
@@ -1025,7 +1150,7 @@ export async function POST(req: Request) {
                 delivery: { mode: deliveryMode },
                 actions,
                 conversation_id,
-                metadata: {
+                metadata: withSystemState({
                   mode: "cloud",
                   provider: "foza",
                   requested_provider: requestedProvider,
@@ -1033,6 +1158,7 @@ export async function POST(req: Request) {
                   fallback,
                   fallback_chain: fallbackChain,
                   model: fozaModelName,
+                  demo_mode: passOk,
                   agent_profile: agentProfile.id,
                   agent_profile_source: agentProfileSource,
                   duration_ms: Date.now() - started,
@@ -1045,7 +1171,7 @@ export async function POST(req: Request) {
                   mcp_tool_names: mcpToolNamesSeen,
                   tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
                   timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
-                },
+                }),
               })
               return json(out)
             }
@@ -1068,7 +1194,7 @@ export async function POST(req: Request) {
             delivery: { mode: deliveryMode },
             actions: [],
             conversation_id,
-            metadata: {
+            metadata: withSystemState({
               mode: "cloud",
               provider: "foza",
               requested_provider: requestedProvider,
@@ -1076,6 +1202,7 @@ export async function POST(req: Request) {
               fallback,
               fallback_chain: fallbackChain,
               model: fozaModelName,
+              demo_mode: passOk,
               agent_profile: agentProfile.id,
               agent_profile_source: agentProfileSource,
               duration_ms: Date.now() - started,
@@ -1088,7 +1215,7 @@ export async function POST(req: Request) {
               mcp_tool_names: mcpToolNamesSeen,
               tool_budget: { max_rounds: maxToolRounds, max_calls: maxToolCallsPerRound },
               timeouts: { overall_ms: overallTimeoutMs, foza_ms: fozaRequestTimeoutMs, mcp_ms: mcpToolTimeoutMs },
-            },
+            }),
           })
           return json(out)
         } catch (e: any) {
@@ -1158,8 +1285,12 @@ export async function POST(req: Request) {
 
     if (providerUsed === "openai_like") {
       if (!openaiLikeOut) {
-        const actions = normalizeActions(ruleBasedActionsGuess())
-        const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : "Mình gặp sự cố khi gọi agent. Bạn thử lại giúp mình.", actions)
+        const triageMeta = readGatewayTriageMeta()
+        const actions = normalizeActions(applyTriageActionGuard(buildGatewayFallbackActions(triageMeta), triageMeta))
+        const baseContent = shouldHoldTriageCta(triageMeta)
+          ? "Mình chưa thể hoàn tất phân luồng lúc này, nhưng vẫn có thể hỏi thêm để đánh giá an toàn hơn."
+          : "Mình gặp sự cố khi gọi agent. Bạn thử lại giúp mình."
+        const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : baseContent, actions, triageMeta)
         try {
           await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
         } catch {}
@@ -1171,13 +1302,14 @@ export async function POST(req: Request) {
             delivery: { mode: deliveryMode },
             actions,
             conversation_id,
-            metadata: { mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, cpu_proxy_error: cpuProxyError, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
+            metadata: withSystemState({ mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, demo_mode: passOk, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, cpu_proxy_error: cpuProxyError, triage: buildTriageMetadata(triageMeta), llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } }),
           })
         )
       }
 
-      const content = ensureAssistantText(openaiLikeOut.content, openaiLikeOut.actions)
-      const actions = openaiLikeOut.actions
+      const triageMeta = readGatewayTriageMeta()
+      const actions = applyTriageActionGuard(openaiLikeOut.actions, triageMeta)
+      const content = ensureAssistantText(openaiLikeOut.content, actions, triageMeta)
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
@@ -1189,14 +1321,18 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions,
           conversation_id,
-          metadata: { mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
+          metadata: withSystemState({ mode: modeUsed, provider: "openai_like", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, model: openaiLikeOut.model, parsed_json: openaiLikeOut.parsedJson, demo_mode: passOk, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, triage: buildTriageMetadata(triageMeta), llm_context: { provider: "openai_like", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } }),
         })
       )
     }
 
     if (!keyToUse) {
-      const actions = normalizeActions(ruleBasedActionsGuess())
-      const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : "Thiếu cấu hình Gemini nên agent không thể chạy.", actions)
+      const triageMeta = readGatewayTriageMeta()
+      const actions = normalizeActions(applyTriageActionGuard(buildGatewayFallbackActions(triageMeta), triageMeta))
+      const baseContent = shouldHoldTriageCta(triageMeta)
+        ? "Mình chưa thể hoàn tất phân luồng lúc này, nhưng vẫn có thể hỏi thêm để đánh giá an toàn hơn."
+        : "Thiếu cấu hình Gemini nên agent không thể chạy."
+      const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : baseContent, actions, triageMeta)
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
@@ -1207,7 +1343,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "missing_gemini_key", fallback_chain: fallbackChain, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
+        metadata: withSystemState({ mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "missing_gemini_key", fallback_chain: fallbackChain, demo_mode: passOk, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, triage: buildTriageMetadata(triageMeta), llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } }),
       })
       return json(out)
     }
@@ -1371,16 +1507,19 @@ export async function POST(req: Request) {
           delivery: { mode: deliveryMode },
           actions: [],
           conversation_id,
-          metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
+          metadata: withSystemState({ mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback, fallback_chain: fallbackChain, access, rate_limited: true, retry_after_sec: retryAfter ?? undefined, gemini_error: geminiErr, demo_mode: passOk, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } }),
         })
         return json(out)
       }
 
-      const actions = normalizeActions(ruleBasedActionsGuess())
-      const safetyFallbackContent = intentFlags?.triage || intentFlags?.medication
-        ? "Mình hiện không kết nối được với AI. Trong lúc chờ, bạn nên: theo dõi triệu chứng và ghi lại mức độ; nếu sốt cao trên 39°C, khó thở, đau ngực, hoặc triệu chứng nặng hơn nhanh → gọi 115 hoặc đến cơ sở y tế gần nhất ngay. Lưu ý: thông tin này chỉ mang tính tham khảo, không thay thế tư vấn bác sĩ."
-        : "Mình gặp sự cố khi gọi agent (Gemini). Bạn thử lại giúp mình."
-      const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : safetyFallbackContent, actions)
+      const triageMeta = readGatewayTriageMeta()
+      const actions = normalizeActions(applyTriageActionGuard(buildGatewayFallbackActions(triageMeta), triageMeta))
+      const safetyFallbackContent = shouldHoldTriageCta(triageMeta)
+        ? "Mình chưa thể hoàn tất phân luồng lúc này, nhưng vẫn có thể hỏi thêm để đánh giá an toàn hơn."
+        : (intentFlags?.triage || intentFlags?.medication
+          ? "Mình hiện không kết nối được với AI. Trong lúc chờ, bạn nên: theo dõi triệu chứng và ghi lại mức độ; nếu sốt cao trên 39°C, khó thở, đau ngực, hoặc triệu chứng nặng hơn nhanh → gọi 115 hoặc đến cơ sở y tế gần nhất ngay. Lưu ý: thông tin này chỉ mang tính tham khảo, không thay thế tư vấn bác sĩ."
+          : "Mình gặp sự cố khi gọi agent (Gemini). Bạn thử lại giúp mình.")
+      const content = ensureAssistantText(actions.length ? "Được, mình sẽ mở trang phù hợp." : safetyFallbackContent, actions, triageMeta)
       try {
         await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: content })
       } catch {}
@@ -1391,7 +1530,7 @@ export async function POST(req: Request) {
         delivery: { mode: deliveryMode },
         actions,
         conversation_id,
-        metadata: { mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, access, gemini_error: geminiErr, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, cpu_proxy_error: cpuProxyError, llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } },
+        metadata: withSystemState({ mode: modeUsed, provider: "gemini", requested_provider: requestedProvider, root_cause: rootCause, fallback: "rule_based", fallback_chain: fallbackChain, access, gemini_error: geminiErr, demo_mode: passOk, agent_profile: agentProfile.id, duration_ms: Date.now() - started, intent: intentFlags, cpu_proxy_error: cpuProxyError, triage: buildTriageMetadata(triageMeta), llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint } }),
       })
       return json(out)
     }
@@ -1507,6 +1646,7 @@ export async function POST(req: Request) {
     
     const forceActionsEnabled = String(process.env.AGENT_FORCE_ACTIONS || "").trim() === "1"
     const forcedActions = forceActionsEnabled ? intelligentActionForcing() : []
+    const directTriageMeta = readGatewayTriageMeta()
     const profileForcing = () => {
       const combined = [...actionsRaw, ...textActions, ...forcedActions].filter((a: any) => a?.type)
       const hasPrimary = combined.some((a: any) =>
@@ -1518,7 +1658,7 @@ export async function POST(req: Request) {
         return [{ type: "ask_navigation", args: { feature: "tri-lieu", reason: "Đang bật chế độ Tâm lý trị liệu. Bạn muốn mở module Trị liệu để xem bài tập gợi ý không?" } }]
       }
       if (agentProfile.id === "triage") {
-        return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Đang bật chế độ Triage + Red flags. Bạn muốn mở module Bác sĩ để được hướng dẫn đúng tuyến không?" } }]
+        return applyTriageActionGuard([], directTriageMeta)
       }
       if (agentProfile.id === "medication") {
         return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Đang bật chế độ Thuốc & Tương tác. Bạn muốn mở module Tra cứu để xem thông tin thuốc/bệnh không?" } }]
@@ -1558,6 +1698,7 @@ export async function POST(req: Request) {
         return null
       })
       .filter(Boolean) as any
+    actions = applyTriageActionGuard(actions, directTriageMeta)
 
     const hydrateYouTubeEnabled = String(process.env.AGENT_HYDRATE_YOUTUBE || "").trim() !== "0"
     if (hydrateYouTubeEnabled) {
@@ -1601,7 +1742,7 @@ export async function POST(req: Request) {
     const fullContent = suggestedInvestigation 
       ? `${content}\n\n❓ ${suggestedInvestigation}`
       : content
-    const finalContent = appendMedicalDisclaimer(ensureAssistantText(fullContent, actions))
+    const finalContent = appendMedicalDisclaimer(ensureAssistantText(fullContent, actions, directTriageMeta))
 
     try {
       await persistChatTurn({ sessionId: conversation_id, kind: category === "friend" ? "friend" : "consultation", userText: message, assistantText: finalContent })
@@ -1613,24 +1754,26 @@ export async function POST(req: Request) {
       delivery: { mode: deliveryMode },
       actions,
       conversation_id,
-      metadata: { 
+      metadata: withSystemState({ 
         mode: modeUsed, 
         provider: "gemini", 
         requested_provider: requestedProvider,
         root_cause: rootCause,
         fallback,
         fallback_chain: fallbackChain,
-        access, 
+        access,
+        demo_mode: passOk,
         model: r.model, 
         agent_profile: agentProfile.id,
         agent_profile_source: agentProfileSource,
         duration_ms: Date.now() - started, 
         intent: intentFlags,
+        triage: buildTriageMetadata(directTriageMeta),
         hasInvestigation: !!suggestedInvestigation,
         tool_calls_count: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.length : 0,
         tool_call_names: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.map((c: any) => String(c?.name || "").trim()).filter(Boolean).slice(0, 20) : [],
         llm_context: { provider: "gemini", mode: modeUsed, user_message: message, persona: personaForLLM, graph: graphEvidence, graph_injected: graphInjected, graph_tool_called: graphToolCalled, tool_calls_count: Array.isArray((r as any)?.toolCalls) ? (r as any).toolCalls.length : 0, graph_reason: graphReason, graph_status_code: graphStatusCode, graph_endpoint: graphEndpoint },
-      },
+      }),
     })
     appendMetric({ ts: new Date().toISOString(), mode: modeUsed, provider: "gemini", duration_ms: Date.now() - started })
     return json(out)
@@ -1642,7 +1785,7 @@ export async function POST(req: Request) {
         messages: [{ content: "Xin lỗi, agent đang gặp sự cố kỹ thuật. Bạn thử lại giúp mình.", kind: "text", delay_ms: 0 }],
         delivery: { mode: "chunked" },
         actions: [],
-        metadata: { mode: "cpu", provider: "agent", error: "internal_error", agent_profile: agentProfile.id, duration_ms: Date.now() - started },
+        metadata: withSystemState({ mode: "cpu", provider: "agent", error: "internal_error", agent_profile: agentProfileIdForError, duration_ms: Date.now() - started }),
       }),
       { status: 200 }
     )

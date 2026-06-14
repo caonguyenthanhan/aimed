@@ -6,9 +6,30 @@ param(
     [bool]$RunNextDev = $true
 )
 
+function Get-GpuSkipSummary {
+    $deployMode = [string]($env:MCS_DEPLOY_MODE)
+    $demoMode = [string]($env:DEMO_MODE)
+    $gpuEnabled = [string]($env:GPU_INFRA_ENABLED)
+    $marker = [string]($env:GPU_SKIP_PENDING_INFRA_MARKER)
+    if (-not $marker.Trim()) { $marker = "[GPU skipped - pending infrastructure]" }
+    $isDemo = $false
+    if ($deployMode.Trim().ToLower() -eq "demo") { $isDemo = $true }
+    if ($demoMode.Trim().ToLower() -eq "demo") { $isDemo = $true }
+    if (@("1","true","yes","on") -contains $demoMode.Trim().ToLower()) { $isDemo = $true }
+    if ($isDemo) { return "$marker (demo_mode)" }
+    if (-not $gpuEnabled.Trim() -or (@("1","true","yes","on") -notcontains $gpuEnabled.Trim().ToLower())) {
+        return "$marker (pending infrastructure)"
+    }
+    return ""
+}
+
 Write-Host "`n==================================" -ForegroundColor Cyan
 Write-Host "   TEST LOCAL SYSTEM" -ForegroundColor Cyan
 Write-Host "==================================`n" -ForegroundColor Cyan
+$gpuSummary = Get-GpuSkipSummary
+if ($gpuSummary) {
+    Write-Host ("GPU: " + $gpuSummary + "`n") -ForegroundColor Yellow
+}
 
 # 1. Test CPU health
 Write-Host "1. Testing CPU server health..." -ForegroundColor Yellow

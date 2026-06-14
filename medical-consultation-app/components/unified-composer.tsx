@@ -168,7 +168,7 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
             </button>
             {props.showTools && (
               <div className="flex items-center gap-1">
-                <input ref={props.fileInputRef} type="file" accept="image/*" className="hidden" onChange={props.onImageChange} />
+                <input ref={props.fileInputRef as RefObject<HTMLInputElement>} type="file" accept="image/*" className="hidden" onChange={props.onImageChange} />
                 <button
                   onClick={() => props.fileInputRef.current?.click()}
                   className="px-2.5 py-1.5 rounded-lg bg-secondary hover:bg-accent hover:text-accent-foreground text-muted-foreground text-xs font-medium transition-all"
@@ -176,7 +176,7 @@ export function UnifiedComposer(props: UnifiedComposerProps) {
                   Ảnh
                 </button>
                 <input
-                  ref={props.docInputRef}
+                  ref={props.docInputRef as RefObject<HTMLInputElement>}
                   type="file"
                   accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   className="hidden"

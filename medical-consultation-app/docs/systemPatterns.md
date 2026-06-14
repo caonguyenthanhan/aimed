@@ -20,7 +20,8 @@
 - Graph Gateway (truth context): CPU server cung cấp `/v1/graph/evidence` để trả evidence subgraph dạng JSON; launcher tự bật Memgraph docker compose. Có thể khóa bằng `GRAPH_API_KEY` (header `x-api-key`/Bearer).
 - Graph evidence injection: `/api/agent-chat` tự gọi `graph.evidence` (qua `/api/mcp/call`) và inject evidence vào `persona` để grounding. API trả `metadata.llm_context` để UI hiển thị “context gửi cho LLM”.
 - Graph reliability: `/api/mcp/call` áp dụng timeout + retry/backoff cho `graph.status` và `graph.evidence`; CPU server tự reset/reconnect neo4j driver khi mất kết nối để giảm "lúc có lúc không".
-- Graph degrade policy (2026-06-12): nếu `CPU_SERVER_URL` rỗng trên production (VERCEL=1) → `/api/mcp/call` trả `graph_disabled_no_cpu_url` ngay, không gọi localhost. Status code mapping: `404→graph_404`, timeout→`graph_timeout`, khác→`graph_down`, kết quả rỗng→`graph_empty`. Mọi nhánh `llm_context` có `graph_reason/status_code/endpoint`.
+- Graph degrade policy (2026-06-14): `/api/mcp/call` chỉ đọc `CPU_SERVER_URL` từ env, không hardcode CPU fallback URL. Nếu thiếu env thì `graph.status`/`graph.evidence` trả `graph_disabled_no_cpu_url` ngay với payload an toàn cho UI. Mapping lỗi fetch/upstream: `404→graph_404`, abort/timeout/deadline→`graph_timeout`, còn lại→`graph_down`, evidence rỗng→`graph_empty`. Mọi nhánh `metadata` mang `reason/status_code/upstream/error_kind`.
+- Graph contract pattern (2026-06-14): CPU graph endpoints trả schema Pydantic v2 ổn định gồm `graph_connected`, `status_code`, `reason`, `latency`, đồng thời giữ alias cũ (`connected`, `latency_ms`, `elapsed_ms`, `ok`) để frontend polling hiện tại không phải đổi contract.
 - Provider chain priority (2026-06-12): **FOZA→Gemini→CPU→GPU**. FOZA tự kích hoạt khi `agentProvider=auto` nếu có `FOZA_TOKEN`+`LLM_MODEL_NAME`. FOZA fail → ghi `root_cause=foza_error:<msg>` + push `foza_fail:<msg>` vào `fallback_chain`. Gemini fail non-429 với intent triage/medication → trả safety content tĩnh (gọi 115, red flags).
 - Agent observability (2026-06-12): `metadata` mọi nhánh có `cpu_proxy_error`, `gemini_error`, `graph_reason/status_code/endpoint`. UI badge graph map reason→nhãn người đọc; context panel hiển thị diagnostic block lỗi.
 - Graph observability: UI poll `graph.status` khi bật Agent mode và hiển thị indicator (connected/latency) để demo và chẩn đoán nhanh.
@@ -32,3 +33,13 @@
 - LangGraph CPU orchestrator: CPU server cung cấp `/v1/agent-chat` chạy LangGraph (state machine + tool orchestration) và trả cùng contract `{response, actions, metadata}` để UI tái sử dụng; hướng triển khai “thay thế hoàn toàn” là Next.js `/api/agent-chat` proxy 100% sang CPU server, giữ fallback khi CPU server down.
 - LangGraph latency pattern: tool calls chạy song song (thread pool), tool results có cache TTL theo env (`LG_*_CACHE_TTL_S`) để giảm latency lặp; FOZA timeout dùng `FOZA_REQUEST_TIMEOUT_MS` và quy đổi ms → giây ở CPU server.
 - Production LLMOps pattern: cấu hình tập trung trong `configs/llmops.yaml` (env-driven), module `core_lib/llmops/` cung cấp JSONL logging + LangSmith tracing + guardrails; LangGraph nodes được bọc observer để log state transitions/latency, và policy grounding đảm bảo “không có context → fallback/search hoặc hỏi thêm”, không đoán.
+- Demo runtime sync pattern (2026-06-13):
+  - Shared helper `lib/runtime-sync.ts` giữ 3 invariant: demo pass fallback, provider normalization, runtime event name.
+  - Backend remains source-of-truth for actual provider/mode per response via `metadata`; frontend mirrors that truth by persisting provider and dispatching `runtime_mode_changed`.
+  - `/api/runtime/mode` includes `provider` so compute-related widgets can bootstrap from backend state before the first chat response.
+  - Demo boot follows readiness-first startup: launcher starts CPU/graph/ngrok, waits for `/health`, then exposes ngrok URL and opens frontend on a free local port.
+- SystemState pattern (2026-06-14):
+  - Shared `SystemState` contract lives in `lib/runtime-sync.ts` and is the single backend-driven state for runtime badges, graph status, DB status, fallback state, and internal demo mode.
+  - `/api/runtime/mode` is the bootstrap endpoint: it reads runtime mode, probes DB and graph, then returns `system_state`.
+  - Chat routes enrich every response with `metadata.system_state`; client merges that object and stops inferring status from localStorage + ad-hoc polling.
+  - Internal demo auth is normalized through `INTERNAL_DEMO_PASS` only; UI should never hardcode a fallback pass.

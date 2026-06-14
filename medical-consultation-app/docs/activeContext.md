@@ -51,6 +51,22 @@
   - Shared module: `core_lib/llmops/` (Pydantic v2 settings, JSONL logging, LangSmith tracing, guardrails, RAGAS evaluation).
   - LangGraph agent đã bật guardrails anti-hallucination: nếu context không đủ cho profile rủi ro (triage/thuốc) thì fallback tool-search hoặc hỏi thêm thông tin thay vì đoán.
   - Pytest suite `tests/eval/` hỗ trợ RAGAS metrics (faithfulness, answer_relevance, context_precision, context_recall) cho cả blackbox HTTP và in-process.
+- **P0 demo runtime sync (2026-06-13):**
+  - Có helper dùng chung `lib/runtime-sync.ts` để gom demo pass mặc định `1234567`, chuẩn hoá provider/mode, và phát event `runtime_mode_changed`.
+  - `/api/agent-chat`, `/api/llm-chat`, `/api/live/access` cùng đọc pass nội bộ từ `INTERNAL_DEMO_PASS -> AGENT_KEY_PASS -> 1234567`.
+  - `chat-interface.tsx` tự sync provider/mode từ backend metadata về UI state; `compute-toggle.tsx` đọc cùng event/storage để bớt lệch badge.
+  - Sidebar conversations khi backend DB/list lỗi nhưng local cache còn dữ liệu sẽ hiển thị degrade state "Đang dùng local cache" thay vì báo lỗi cứng.
+  - `start_demo_ngrok.bat` được nâng cấp thành 1-click demo starter: bật CPU/graph/ngrok, chờ `/health`, in `CPU_SERVER_URL`, rồi mở frontend ở cổng trống.
+- **SystemState + pass normalization (2026-06-14):**
+  - `lib/runtime-sync.ts` có interface `SystemState` và resolver `INTERNAL_DEMO_PASS` dùng chung.
+  - `/api/runtime/mode` trả `system_state` sau khi probe DB + graph để UI bootstrap từ backend truth.
+  - `/api/agent-chat`, `/api/llm-chat`, `/api/live/access` trả `metadata.system_state` hoặc `system_state` để FE không còn tự suy luận graph/db/demo mode từ nhiều nguồn.
+  - `chat-interface.tsx` poll `/api/runtime/mode`, mở context dialog ngay cả khi graph fail, và bỏ popup gate khi `demo_mode + internal_pass_matched` đã đúng.
+  - `compute-toggle.tsx` đọc `system_state` từ backend thay vì lấy provider/mode chủ yếu từ localStorage.
+- **Graph contract hotfix (2026-06-14):**
+  - `/api/mcp/call` không còn fallback sang localhost khi thiếu `CPU_SERVER_URL`; route trả `graph_disabled_no_cpu_url` an toàn cho UI thay vì đâm vào URL cứng.
+  - `graph.status` và `graph.evidence` được strict-typed ở gateway với fetch timeout rõ ràng, phân loại `graph_404 | graph_timeout | graph_down`, và luôn trả metadata chẩn đoán (`reason/status_code/upstream/error_kind`) cho Context Viewer.
+  - `cpu_server/server.py` chuẩn hóa response Pydantic v2 cho graph endpoints với contract `graph_connected/status_code/reason/latency` đồng thời giữ alias cũ `connected/latency_ms/elapsed_ms/ok` để không gãy UI hiện có.
 
 ## P3 — Hoàn thành (2026-06-10)
 

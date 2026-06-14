@@ -93,6 +93,27 @@
   - UI: badge graph hiển thị reason chi tiết; context panel có diagnostic block cho `gemini_error`/`cpu_proxy_error`.
   - Build: `npm run build` pass hoàn toàn, 0 lỗi mới.
 
+## 2026-06-13
+
+- P0 demo starter: nâng cấp `start_demo_ngrok.bat` thành entry 1-click, chờ CPU `/health`, đọc ngrok public URL, rồi mở frontend trên cổng trống.
+- CPU launcher: `run_cpu_server_ngrok.py` chờ health trước khi báo ready và in graph status summary để debug demo nhanh hơn.
+- Runtime/UI sync: thêm `lib/runtime-sync.ts`; `chat-interface.tsx` sync provider/mode từ backend metadata sang event bus/storage, `compute-toggle.tsx` đọc cùng nguồn truth.
+- Internal demo pass: thống nhất resolver `INTERNAL_DEMO_PASS -> AGENT_KEY_PASS -> 1234567` cho `/api/agent-chat`, `/api/llm-chat`, `/api/live/access`.
+- UI degrade: sidebar conversations đổi từ lỗi cứng sang trạng thái "Đang dùng local cache" khi DB/list backend lỗi nhưng local history vẫn dùng được.
+- Verification: VS Code diagnostics sạch cho các file TS/TSX vừa sửa; `python -m py_compile cpu_server/launcher/run_cpu_server_ngrok.py` pass.
+
+## 2026-06-14
+
+- Hotfix graph contract: `cpu_server/server.py` chuẩn hóa `/v1/graph/status` và `/v1/graph/evidence` theo Pydantic v2 với `graph_connected/status_code/reason/latency`, đồng thời giữ alias cũ để UI không gãy.
+- Next.js gateway: `app/api/mcp/call/route.ts` bỏ fallback localhost, chỉ đọc `CPU_SERVER_URL`, thêm strict typing cho graph payloads và phân loại rõ `graph_404 | graph_timeout | graph_down`.
+- Degrade path: graph failure luôn trả JSON chẩn đoán cho UI/Context Viewer (`reason/status_code/upstream/error_kind`), không làm app crash khi Vercel gọi vào ngrok 404 hoặc timeout.
+- Verification: VS Code diagnostics sạch; `python -m py_compile cpu_server/server.py` pass; `npm exec eslint app/api/mcp/call/route.ts` pass (chỉ còn warning `MODULE_TYPELESS_PACKAGE_JSON` từ Node, không phải lỗi lint).
+- UI/runtime auth sync: thêm `SystemState` vào `lib/runtime-sync.ts`, chuẩn hoá resolver `INTERNAL_DEMO_PASS` cho `/api/agent-chat`, `/api/llm-chat`, `/api/live/access`.
+- Runtime bootstrap: `/api/runtime/mode` giờ probe DB + graph và trả `system_state` để UI khởi tạo từ backend truth.
+- Chat UI: `chat-interface.tsx` poll `/api/runtime/mode`, context dialog luôn mở được kể cả graph fail và hiển thị `graph_reason` + `fallback_chain`, popup API/pass không còn tự chặn khi `demo_mode` đã hợp lệ.
+- Header toggle: `compute-toggle.tsx` đọc `system_state` từ backend thay cho local heuristics.
+- Verification: VS Code diagnostics sạch trên toàn bộ file đã sửa. `npm exec tsc -- --noEmit` vẫn fail do lỗi nền sẵn có ngoài scope hiện tại (test typings, missing ambient types cho `pg`/`uuid`/`@sentry/nextjs`, và vài lỗi lib cũ chưa liên quan).
+
 ## 2026-06-04
 
 - LLMOps production: thêm `core_lib/llmops/` (Pydantic v2 settings, JSONL logging sink, LangSmith tracing wrapper, guardrails prompt injection + anti-hallucination grounding, RAGAS evaluation runner).

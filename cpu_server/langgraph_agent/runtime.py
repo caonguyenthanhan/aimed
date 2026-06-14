@@ -42,9 +42,34 @@ def invoke_agent(
         "started_at": datetime.datetime.utcnow().isoformat(),
     }
     out = g.invoke(state)
+    md = out.get("metadata") or {}
+    tool_results = out.get("tool_results") or {}
+    graph_result = tool_results.get("graph.evidence") or {}
+    entities = graph_result.get("entities") or []
+    edges = graph_result.get("edges") or []
+    graph_injected = bool(entities or edges)
+    graph_reason = None if graph_injected else ("graph_empty" if graph_result.get("ok") else "graph_down")
+    triage_state = {
+        "symptoms_collected": out.get("symptoms_collected") or [],
+        "risk_level": str(out.get("risk_level") or "unknown"),
+        "ready_for_cta": bool(out.get("ready_for_cta")),
+        "follow_up_questions": out.get("triage_follow_up_questions") or [],
+        "semantic_router_trace": out.get("semantic_router_trace") or [],
+    }
+    md["llm_context"] = {
+        "provider": md.get("provider", "foza"),
+        "mode": "cpu",
+        "user_message": message,
+        "graph": graph_result,
+        "graph_injected": graph_injected,
+        "graph_reason": graph_reason,
+        "graph_endpoint": "cpu:/v1/graph/evidence",
+        "tool_calls_count": len(tool_results),
+        "triage": triage_state,
+    }
     return {
         "response": str(out.get("response") or ""),
         "actions": out.get("actions") or [],
-        "metadata": out.get("metadata") or {},
+        "metadata": md,
         "conversation_id": conversation_id,
     }

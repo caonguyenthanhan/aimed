@@ -226,8 +226,16 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
     rel_types_param = rel_types_clean if rel_types_clean else None
     t0 = time.time()
     try:
+        import unicodedata as _ud
+        def _strip_vi(s2: str) -> str:
+            return _ud.normalize("NFD", s2.lower()).encode("ascii", "ignore").decode("ascii")
+
+        q_ascii = _strip_vi(q)
+        keywords = [w for w in q_ascii.split() if len(w) >= 3][:4]
+
         with driver.session() as s:
             def _query_entities(collection: Optional[str]) -> List[dict]:
+                # Try exact CONTAINS first
                 rows = list(
                     s.run(
                         """
@@ -242,7 +250,38 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
                         collection=collection,
                     )
                 )
-                return [r.data() for r in rows]
+                if rows:
+                    return [r.data() for r in rows]
+                # Fallback: ASCII-stripped keyword search
+                if not keywords:
+                    return []
+                kw_results: List[dict] = []
+                seen_ids: set = set()
+                for kw in keywords:
+                    kw_rows = list(
+                        s.run(
+                            """
+                            MATCH (e:Entity)
+                            WHERE ($collection IS NULL OR e.collection = $collection)
+                            RETURN id(e) AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
+                            LIMIT 300
+                            """,
+                            collection=collection,
+                        )
+                    )
+                    for r in kw_rows:
+                        rid = r.get("id")
+                        if rid in seen_ids:
+                            continue
+                        name_ascii = _strip_vi(str(r.get("name") or ""))
+                        if kw in name_ascii:
+                            seen_ids.add(rid)
+                            kw_results.append(r.data())
+                        if len(kw_results) >= ent_lim:
+                            break
+                    if len(kw_results) >= ent_lim:
+                        break
+                return kw_results[:ent_lim]
 
             ent_rows = _query_entities("demo")
             if not ent_rows:

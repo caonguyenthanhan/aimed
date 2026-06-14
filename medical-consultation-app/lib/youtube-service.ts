@@ -12,6 +12,50 @@ export interface YouTubeVideoMetadata {
   viewCount?: number
 }
 
+interface YouTubeSearchItem {
+  id?: {
+    videoId?: string
+  }
+  snippet?: {
+    title?: string
+    description?: string
+    channelTitle?: string
+    publishedAt?: string
+    thumbnails?: {
+      high?: { url?: string }
+      default?: { url?: string }
+    }
+  }
+}
+
+interface YouTubeDetailsItem {
+  id?: string
+  contentDetails?: {
+    duration?: string
+  }
+  statistics?: {
+    viewCount?: string
+  }
+  snippet?: {
+    title?: string
+    description?: string
+    channelTitle?: string
+    publishedAt?: string
+    thumbnails?: {
+      high?: { url?: string }
+      default?: { url?: string }
+    }
+  }
+}
+
+interface YouTubeSearchResponse {
+  items?: YouTubeSearchItem[]
+}
+
+interface YouTubeDetailsResponse {
+  items?: YouTubeDetailsItem[]
+}
+
 /**
  * YouTube Service - Handles video search and recommendations
  * Wrapper for YouTube API with stub implementation
@@ -89,32 +133,46 @@ export class YouTubeService {
         throw new Error(`YouTube API error: ${response.statusText}`)
       }
 
-      const data = await response.json()
+      const data = (await response.json()) as YouTubeSearchResponse
 
       // Get video details for duration info
-      const videoIds = data.items.map((item: any) => item.id.videoId).join(',')
+      const items = Array.isArray(data.items) ? data.items : []
+      const videoIds = items
+        .map((item) => String(item.id?.videoId || "").trim())
+        .filter(Boolean)
+        .join(',')
+      if (!videoIds) {
+        const out = this.generateStubResults(q, n)
+        YouTubeService.setCached(cacheKey, out, 60_000)
+        return out
+      }
       const detailsResponse = await fetch(
         `${this.baseUrl}/videos?key=${this.apiKey}&part=contentDetails,statistics&id=${videoIds}`
       )
 
-      const detailsData = await detailsResponse.json()
-      const detailsMap = new Map(
-        detailsData.items.map((item: any) => [item.id, item])
+      const detailsData = (await detailsResponse.json()) as YouTubeDetailsResponse
+      const detailItems = Array.isArray(detailsData.items) ? detailsData.items : []
+      const detailsMap = new Map<string, YouTubeDetailsItem>(
+        detailItems
+          .map((item) => [String(item.id || "").trim(), item] as const)
+          .filter(([id]) => Boolean(id))
       )
 
-      const out = data.items.map((item: any) => {
-        const details = detailsMap.get(item.id.videoId)
+      const out = items.map((item) => {
+        const videoId = String(item.id?.videoId || "").trim()
+        const snippet = item.snippet
+        const details = detailsMap.get(videoId)
         return {
-          videoId: item.id.videoId,
-          title: item.snippet.title,
-          description: item.snippet.description,
-          channelTitle: item.snippet.channelTitle,
-          publishedAt: item.snippet.publishedAt,
-          thumbnailUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
-          duration: this.parseDuration(details?.contentDetails?.duration),
+          videoId,
+          title: String(snippet?.title || ''),
+          description: String(snippet?.description || ''),
+          channelTitle: String(snippet?.channelTitle || ''),
+          publishedAt: String(snippet?.publishedAt || ''),
+          thumbnailUrl: String(snippet?.thumbnails?.high?.url || snippet?.thumbnails?.default?.url || ''),
+          duration: this.parseDuration(String(details?.contentDetails?.duration || '')),
           viewCount: parseInt(details?.statistics?.viewCount || '0', 10)
         }
-      })
+      }).filter((item) => item.videoId)
       YouTubeService.setCached(cacheKey, out, 5 * 60_000)
       return out
     } catch (error) {
@@ -154,24 +212,26 @@ export class YouTubeService {
         throw new Error(`YouTube API error: ${response.statusText}`)
       }
 
-      const data = await response.json()
+      const data = (await response.json()) as YouTubeDetailsResponse
 
-      if (data.items.length === 0) {
+      const items = Array.isArray(data.items) ? data.items : []
+      if (items.length === 0) {
         YouTubeService.setCached(cacheKey, null, 60_000)
         return null
       }
 
-      const item = data.items[0]
+      const item = items[0]
+      const snippet = item?.snippet
 
       const out = {
-        videoId: item.id,
-        title: item.snippet.title,
-        description: item.snippet.description,
-        channelTitle: item.snippet.channelTitle,
-        publishedAt: item.snippet.publishedAt,
-        thumbnailUrl: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
-        duration: this.parseDuration(item.contentDetails.duration),
-        viewCount: parseInt(item.statistics.viewCount || '0', 10)
+        videoId: String(item?.id || ''),
+        title: String(snippet?.title || ''),
+        description: String(snippet?.description || ''),
+        channelTitle: String(snippet?.channelTitle || ''),
+        publishedAt: String(snippet?.publishedAt || ''),
+        thumbnailUrl: String(snippet?.thumbnails?.high?.url || snippet?.thumbnails?.default?.url || ''),
+        duration: this.parseDuration(String(item?.contentDetails?.duration || '')),
+        viewCount: parseInt(String(item?.statistics?.viewCount || '0'), 10)
       }
       YouTubeService.setCached(cacheKey, out, 30 * 60_000)
       return out

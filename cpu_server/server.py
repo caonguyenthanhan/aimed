@@ -5,8 +5,8 @@ from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
 from contextlib import asynccontextmanager
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, ConfigDict
+from typing import Any, Dict, List, Optional, Tuple
 import os
 import json
 import re
@@ -103,6 +103,85 @@ _load_dotenv_file(os.path.join(os.path.dirname(__file__), ".env"))
 _load_dotenv_file(os.path.join(REPO_ROOT, ".env.local"))
 _load_dotenv_file(os.path.join(REPO_ROOT, "medical-consultation-app", ".env.local"))
 _load_dotenv_file(os.path.join(REPO_ROOT, "medical-consultation-app", ".env"))
+
+
+def _is_truthy(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return text in ("1", "true", "yes", "on")
+
+
+def _safe_int_env(name: str, default: int, minimum: int = 1) -> int:
+    raw = str(os.environ.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        parsed = int(float(raw))
+    except Exception:
+        return default
+    if parsed < minimum:
+        return default
+    return parsed
+
+
+def _foza_request_timeout_ms() -> int:
+    return _safe_int_env("FOZA_REQUEST_TIMEOUT_MS", 45000, minimum=1000)
+
+
+os.environ["FOZA_REQUEST_TIMEOUT_MS"] = str(_foza_request_timeout_ms())
+
+
+_GPU_SKIP_MARKER = "[GPU skipped - pending infrastructure]"
+_GPU_SKIP_LOGGED_REASONS: set[str] = set()
+
+
+def _gpu_skip_marker() -> str:
+    marker = str(os.environ.get("GPU_SKIP_PENDING_INFRA_MARKER") or "").strip()
+    return marker or _GPU_SKIP_MARKER
+
+
+def _is_demo_mode() -> bool:
+    deploy_mode = str(os.environ.get("MCS_DEPLOY_MODE") or "").strip().lower()
+    demo_mode = str(os.environ.get("DEMO_MODE") or "").strip().lower()
+    return deploy_mode == "demo" or demo_mode == "demo" or _is_truthy(demo_mode)
+
+
+def _gpu_infra_enabled() -> bool:
+    raw = os.environ.get("GPU_INFRA_ENABLED")
+    if raw is None or str(raw).strip() == "":
+        return False
+    return _is_truthy(raw)
+
+
+def _gpu_skip_state() -> Tuple[bool, str]:
+    if _is_demo_mode():
+        return True, "demo_mode"
+    if not _gpu_infra_enabled():
+        return True, "missing_gpu_flag"
+    return False, ""
+
+
+def _gpu_skip_summary() -> str:
+    skip, reason = _gpu_skip_state()
+    if not skip:
+        return "GPU active"
+    suffix = "demo_mode" if reason == "demo_mode" else "pending infrastructure"
+    return f"{_gpu_skip_marker()} ({suffix})"
+
+
+def _gpu_skip_payload() -> Dict[str, Any]:
+    skip, reason = _gpu_skip_state()
+    return {
+        "skipped": skip,
+        "reason": reason or None,
+        "summary": _gpu_skip_summary(),
+    }
+
+
+def _log_gpu_skip_once(reason: str) -> None:
+    if not reason or reason in _GPU_SKIP_LOGGED_REASONS:
+        return
+    _GPU_SKIP_LOGGED_REASONS.add(reason)
+    print(_gpu_skip_summary())
 
 try:
     from .db import (
@@ -212,6 +291,10 @@ def _front_data_dir():
     return os.path.join(REPO_ROOT, "medical-consultation-app", "data")
 
 def _get_proxy_base():
+    skip_gpu, reason = _gpu_skip_state()
+    if skip_gpu:
+        _log_gpu_skip_once(reason)
+        return ""
     try:
         p_mode = os.path.join(_front_data_dir(), "runtime-mode.json")
         if os.path.exists(p_mode):
@@ -236,10 +319,14 @@ def _get_proxy_base():
                 return cand[0].get("url", LLAMA_SERVER_URL)
     except Exception:
         pass
-    default_gpu = os.environ.get("DEFAULT_GPU_URL", "https://elissa-villous-scourgingly.ngrok-free.dev")
+    default_gpu = os.environ.get("DEFAULT_GPU_URL", "").strip()
     return default_gpu or LLAMA_SERVER_URL
 
 def _get_tools_proxy_base() -> str:
+    skip_gpu, reason = _gpu_skip_state()
+    if skip_gpu:
+        _log_gpu_skip_once(reason)
+        return ""
     env_tools = os.environ.get("GPU_TOOLS_URL", "").strip()
     if env_tools:
         return env_tools
@@ -250,6 +337,10 @@ def _get_tools_proxy_base() -> str:
 
 _LB_INDEX = 0
 def _choose_gpu_url(round_robin: bool = False) -> str:
+    skip_gpu, reason = _gpu_skip_state()
+    if skip_gpu:
+        _log_gpu_skip_once(reason)
+        return ""
     if not round_robin:
         return _get_proxy_base()
     try:
@@ -271,6 +362,10 @@ def _choose_gpu_url(round_robin: bool = False) -> str:
         return _get_proxy_base()
 
 def _current_target():
+    skip_gpu, reason = _gpu_skip_state()
+    if skip_gpu:
+        _log_gpu_skip_once(reason)
+        return "cpu"
     try:
         pdir = _front_data_dir()
         mode_path = os.path.join(pdir, "runtime-mode.json")
@@ -515,6 +610,36 @@ class GraphEvidenceRequest(BaseModel):
     entity_limit: Optional[int] = 5
     rel_types: Optional[List[str]] = None
 
+
+class GraphStatusResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    ok: bool
+    connected: bool
+    graph_connected: bool
+    status_code: int
+    reason: str
+    latency: int
+    latency_ms: int
+    checked_at: str
+    nodes: Optional[int] = None
+    error: Optional[str] = None
+
+
+class GraphEvidenceResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    ok: bool
+    query: str
+    entities: List[Dict[str, Any]]
+    edges: List[Dict[str, Any]]
+    graph_connected: bool
+    status_code: int
+    reason: str
+    latency: int
+    elapsed_ms: int
+    error: Optional[str] = None
+
 # Load model once at startup
 llm_pro: Optional[Llama] = None
 llm_flash: Optional[Llama] = None
@@ -558,6 +683,74 @@ def _get_graph_driver():
     except Exception:
         _GRAPH_DRIVER = None
         return _GRAPH_DRIVER
+
+
+def _graph_checked_at() -> str:
+    return datetime.datetime.utcnow().isoformat()
+
+
+def _graph_latency_ms(started_at: float) -> int:
+    return int((time.time() - started_at) * 1000)
+
+
+def _map_graph_exception(exc: Optional[Exception]) -> Tuple[int, str, str]:
+    if exc is None:
+        return 503, "graph_down", "Graph not available"
+    error_text = (str(exc) or exc.__class__.__name__ or "Graph error").strip()
+    haystack = f"{exc.__class__.__name__} {error_text}".lower()
+    if "404" in haystack or "not found" in haystack:
+        return 404, "graph_404", error_text
+    if "timeout" in haystack or "timed out" in haystack or "deadline" in haystack or "cancelled" in haystack or "canceled" in haystack:
+        return 504, "graph_timeout", error_text
+    return 503, "graph_down", error_text
+
+
+def _build_graph_status_response(
+    started_at: float,
+    graph_connected: bool,
+    status_code: int,
+    reason: str,
+    nodes: Optional[int] = None,
+    error: Optional[str] = None,
+) -> GraphStatusResponse:
+    latency = _graph_latency_ms(started_at)
+    return GraphStatusResponse(
+        ok=graph_connected,
+        connected=graph_connected,
+        graph_connected=graph_connected,
+        status_code=status_code,
+        reason=reason,
+        latency=latency,
+        latency_ms=latency,
+        checked_at=_graph_checked_at(),
+        nodes=nodes,
+        error=error,
+    )
+
+
+def _build_graph_evidence_response(
+    started_at: float,
+    query: str,
+    graph_connected: bool,
+    status_code: int,
+    reason: str,
+    entities: Optional[List[Dict[str, Any]]] = None,
+    edges: Optional[List[Dict[str, Any]]] = None,
+    error: Optional[str] = None,
+) -> GraphEvidenceResponse:
+    latency = _graph_latency_ms(started_at)
+    return GraphEvidenceResponse(
+        ok=graph_connected,
+        query=query,
+        entities=entities or [],
+        edges=edges or [],
+        graph_connected=graph_connected,
+        status_code=status_code,
+        reason=reason,
+        latency=latency,
+        elapsed_ms=latency,
+        error=error,
+    )
 
 def _hash_password(password: str, salt: str) -> str:
     import hashlib
@@ -928,13 +1121,18 @@ def ensure_vlm_model() -> bool:
 
 @app.get("/health")
 async def health():
+    gpu_skipped, gpu_skip_reason = _gpu_skip_state()
     return {
         "status": "ok", 
         "text_model_loaded": (llm_pro is not None) or (llm_flash is not None), 
         "pro_loaded": llm_pro is not None,
         "flash_loaded": llm_flash is not None,
         "vlm_model_loaded": vlm_llm is not None,
-        "proxy_target": LLAMA_SERVER_URL
+        "proxy_target": LLAMA_SERVER_URL,
+        "foza_request_timeout_ms": _foza_request_timeout_ms(),
+        "gpu_skipped": gpu_skipped,
+        "gpu_skip_reason": gpu_skip_reason or None,
+        "gpu_summary": _gpu_skip_summary(),
     }
 
 @app.get("/v1/models")
@@ -1594,6 +1792,12 @@ async def stt_stream(file: UploadFile = File(...)):
 
 @app.get("/gpu/metrics")
 async def gpu_metrics():
+    skip_gpu, reason = _gpu_skip_state()
+    if skip_gpu:
+        _log_gpu_skip_once(reason)
+        payload = _gpu_skip_payload()
+        payload["foza_request_timeout_ms"] = _foza_request_timeout_ms()
+        return payload
     base = _get_tools_proxy_base() or _get_proxy_base()
     headers = {"ngrok-skip-browser-warning": "true"}
     auth = os.environ.get("LLAMA_SERVER_AUTH", "").strip()
@@ -2965,32 +3169,34 @@ async def knowledge_search(req: KnowledgeSearchRequest, request: Request):
     return {"entities": entities, "relations": relations, "interventions": interventions}
 
 
-@app.get("/v1/graph/status")
+@app.get("/v1/graph/status", response_model=GraphStatusResponse)
 async def graph_status():
     t0 = time.time()
     driver = _get_graph_driver()
     if driver is None:
-        return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
+        return _build_graph_status_response(t0, False, 503, "graph_down", error="Graph not available")
     try:
         with driver.session() as s:
             c = s.run("MATCH (n) RETURN count(n) AS c").single()
             nodes = int(c.get("c")) if c and c.get("c") is not None else 0
-        return {"ok": True, "connected": True, "nodes": nodes, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
-    except Exception:
+        return _build_graph_status_response(t0, True, 200, "graph_ok", nodes=nodes)
+    except Exception as e:
         _reset_graph_driver()
         driver = _get_graph_driver()
         if driver is None:
-            return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
+            status_code, reason, error = _map_graph_exception(e)
+            return _build_graph_status_response(t0, False, status_code, reason, error=error)
         try:
             with driver.session() as s:
                 c = s.run("MATCH (n) RETURN count(n) AS c").single()
                 nodes = int(c.get("c")) if c and c.get("c") is not None else 0
-            return {"ok": True, "connected": True, "nodes": nodes, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
-        except Exception:
-            return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
+            return _build_graph_status_response(t0, True, 200, "graph_ok", nodes=nodes)
+        except Exception as e2:
+            status_code, reason, error = _map_graph_exception(e2 if str(e2) else e)
+            return _build_graph_status_response(t0, False, status_code, reason, error=error)
 
 
-@app.post("/v1/graph/evidence")
+@app.post("/v1/graph/evidence", response_model=GraphEvidenceResponse)
 async def graph_evidence(req: GraphEvidenceRequest, request: Request):
     api_key = (os.environ.get("GRAPH_API_KEY") or "").strip()
     if api_key:
@@ -3000,13 +3206,14 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
         if hdr != api_key:
             raise HTTPException(status_code=401, detail="Unauthorized")
 
+    t0 = time.time()
     q = (req.query or "").strip()
     if not q:
-        return {"ok": True, "query": q, "entities": [], "edges": []}
+        return _build_graph_evidence_response(t0, q, True, 200, "graph_ok", entities=[], edges=[])
 
     driver = _get_graph_driver()
     if driver is None:
-        raise HTTPException(status_code=503, detail="Graph not available")
+        return _build_graph_evidence_response(t0, q, False, 503, "graph_down", error="Graph not available")
 
     lim = int(req.limit or 60)
     if lim < 1:
@@ -3023,10 +3230,19 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
     rel_types = [str(x).strip() for x in (req.rel_types or []) if str(x).strip()]
     rel_types_param = rel_types if rel_types else None
 
-    t0 = time.time()
     try:
         with driver.session() as s:
+            import unicodedata as _ud
+            def _strip_vi(s2: str) -> str:
+                # Normalize Vietnamese diacritics to ASCII for fuzzy match
+                return _ud.normalize("NFD", s2.lower()).encode("ascii", "ignore").decode("ascii")
+
+            q_ascii = _strip_vi(q)
+            # Split into keywords, filter short ones
+            keywords = [w for w in q_ascii.split() if len(w) >= 3][:4]
+
             def _query_entities(collection: Optional[str]) -> List[dict]:
+                # Try exact CONTAINS first
                 rows = list(
                     s.run(
                         """
@@ -3041,7 +3257,38 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
                         collection=collection,
                     )
                 )
-                return [r.data() for r in rows]
+                if rows:
+                    return [r.data() for r in rows]
+                # Fallback: search by ASCII-stripped keywords against ASCII-stripped names
+                if not keywords:
+                    return []
+                kw_results: List[dict] = []
+                seen_ids: set = set()
+                for kw in keywords:
+                    kw_rows = list(
+                        s.run(
+                            """
+                            MATCH (e:Entity)
+                            WHERE ($collection IS NULL OR e.collection = $collection)
+                            RETURN id(e) AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
+                            LIMIT 200
+                            """,
+                            collection=collection,
+                        )
+                    )
+                    for r in kw_rows:
+                        rid = r.get("id")
+                        if rid in seen_ids:
+                            continue
+                        name_ascii = _strip_vi(str(r.get("name") or ""))
+                        if kw in name_ascii:
+                            seen_ids.add(rid)
+                            kw_results.append(r.data())
+                        if len(kw_results) >= ent_lim:
+                            break
+                    if len(kw_results) >= ent_lim:
+                        break
+                return kw_results[:ent_lim]
 
             ent_rows = _query_entities("demo")
             if not ent_rows:
@@ -3075,12 +3322,13 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
                         lim=lim,
                     )
                 ]
-        return {"ok": True, "query": q, "entities": ent_rows, "edges": edges, "elapsed_ms": int((time.time() - t0) * 1000)}
+        return _build_graph_evidence_response(t0, q, True, 200, "graph_ok", entities=ent_rows, edges=edges)
     except Exception as e:
         _reset_graph_driver()
         driver2 = _get_graph_driver()
         if driver2 is None:
-            raise HTTPException(status_code=503, detail="Graph not available")
+            status_code, reason, error = _map_graph_exception(e)
+            return _build_graph_evidence_response(t0, q, False, status_code, reason, error=error)
         try:
             with driver2.session() as s:
                 entities = list(
@@ -3126,9 +3374,10 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
                             lim=lim,
                         )
                     ]
-            return {"ok": True, "query": q, "entities": ent_rows, "edges": edges, "elapsed_ms": int((time.time() - t0) * 1000)}
+            return _build_graph_evidence_response(t0, q, True, 200, "graph_ok", entities=ent_rows, edges=edges)
         except Exception as e2:
-            raise HTTPException(status_code=502, detail=str(e2) or str(e) or "Graph query error")
+            status_code, reason, error = _map_graph_exception(e2 if str(e2) else e)
+            return _build_graph_evidence_response(t0, q, False, status_code, reason, error=error)
 
 
 @app.get("/v1/clinical/summary/{conv_id}")

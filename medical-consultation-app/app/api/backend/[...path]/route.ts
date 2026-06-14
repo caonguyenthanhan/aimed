@@ -118,7 +118,7 @@ function json(body: any, status = 200) {
   })
 }
 
-async function tryReadJson(req: NextRequest) {
+async function tryReadJson(req: Request) {
   try {
     return await req.json()
   } catch {
@@ -126,7 +126,7 @@ async function tryReadJson(req: NextRequest) {
   }
 }
 
-async function tryReadPayload(req: NextRequest) {
+async function tryReadPayload(req: Request) {
   const contentType = String(req.headers.get('content-type') || '').toLowerCase()
   if (contentType.includes('application/json')) {
     return tryReadJson(req)
@@ -171,7 +171,7 @@ function touchConversation(c: StubConversation) {
   return c
 }
 
-async function handleStub(req: NextRequest, pathParts: string[]) {
+async function handleStub(req: Request, pathParts: string[]) {
   loadStubConfig()
   const method = req.method.toUpperCase()
 

@@ -7,10 +7,10 @@ import { agentRegistry } from '@/lib/agent-registry'
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { agentId: string } }
+  context: { params: Promise<{ agentId: string }> }
 ) {
+  const { agentId } = await context.params
   try {
-    const { agentId } = params
     const body = await request.json()
     const { initialData } = body
 
@@ -36,7 +36,7 @@ export async function POST(
 
     return NextResponse.json(content)
   } catch (error) {
-    console.error(`Error fetching agent content for ${params.agentId}:`, error)
+    console.error(`Error fetching agent content for ${agentId}:`, error)
     return NextResponse.json(
       { error: 'Failed to fetch agent content' },
       { status: 500 }
@@ -138,7 +138,7 @@ async function findDoctors(specialty: string): Promise<any[]> {
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { agentId: string } }
+  _context: { params: Promise<{ agentId: string }> }
 ) {
   try {
     const body = await request.json()

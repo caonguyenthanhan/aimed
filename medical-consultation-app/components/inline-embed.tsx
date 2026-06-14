@@ -48,7 +48,7 @@ export function InlineEmbed({
           <Suspense fallback={<LoadingFallback />}>
             <EmbedTriLieu
               context={context}
-              onComplete={onComplete}
+              onComplete={() => onComplete?.(undefined)}
             />
           </Suspense>
         )

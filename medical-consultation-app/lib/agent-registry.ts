@@ -278,7 +278,9 @@ export class AgentRegistry {
     suggestionId: string,
     selection: 'embed' | 'link' | 'ignored'
   ): Promise<void> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       await client.query(
         `UPDATE agent_suggestions 
@@ -296,7 +298,9 @@ export class AgentRegistry {
    * Lấy các đề xuất cho một cuộc hội thoại
    */
   async getSuggestionsForConversation(conversationId: string): Promise<AgentSuggestion[]> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT * FROM agent_suggestions 
@@ -315,7 +319,9 @@ export class AgentRegistry {
    * Lấy thống kê sử dụng agent
    */
   async getAgentUsageStats(): Promise<Record<string, number>> {
-    const client = await this.pool.connect()
+    const pool = this.getPool()
+    if (!pool) throw new Error("Missing DATABASE_URL")
+    const client = await pool.connect()
     try {
       const result = await client.query(
         `SELECT agent_id, COUNT(*) as usage_count

@@ -7,6 +7,7 @@ import { persistChatTurn } from '@/lib/chat-persistence'
 import crypto from 'crypto'
 import { assessSos, buildSosResponse } from '@/lib/sos-mode'
 import { planChunkedMessages, verifyContentIntegrity } from '@/lib/chat-delivery'
+import { buildSystemState, hasInternalDemoPass, isInternalDemoPass, normalizeRuntimeProvider, normalizeRuntimeTarget } from '@/lib/runtime-sync'
 
 const toHeaderRecord = (headers?: HeadersInit): Record<string, string> => {
   if (!headers) return {}
@@ -27,6 +28,26 @@ const json = (data: any, init?: ResponseInit) =>
       'Content-Type': 'application/json; charset=utf-8',
     },
   })
+
+const withSystemState = (metadata: Record<string, any>) => {
+  const provider = normalizeRuntimeProvider(metadata?.provider)
+  const mode = normalizeRuntimeTarget(metadata?.mode, provider === 'gemini' || provider === 'foza' ? 'gpu' : 'cpu')
+  return {
+    ...metadata,
+    system_state: buildSystemState({
+      provider,
+      mode,
+      graph_connected: false,
+      graph_injected: false,
+      graph_reason: null,
+      db_ok: null,
+      fallback: typeof metadata?.fallback === 'string' ? metadata.fallback : null,
+      error: typeof metadata?.error === 'string' ? metadata.error : null,
+      demo_mode: Boolean(metadata?.demo_mode || metadata?.access === 'pass'),
+      internal_pass_matched: Boolean(metadata?.demo_mode || metadata?.access === 'pass'),
+    }),
+  }
+}
 
 // Determine context based on the conversation or user input
 function determineContext(userMessage: string, conversationHistory?: any[]): string {
@@ -53,14 +74,14 @@ export async function POST(request: NextRequest) {
     const auth = request.headers.get('authorization') || ''
     const referer = request.headers.get('referer') || ''
     const deliveryMode = delivery_mode === 'live' ? 'live' : 'chunked'
-    const planResponseMessages = (content: string) => {
+    const planResponseMessages = (content: string): Array<{ content: string; kind: string; delay_ms: number }> => {
       try {
         const contentStr = String(content || '').trim()
         if (!contentStr) {
           return [{ content: ' ', kind: 'text', delay_ms: 0 }]
         }
         
-        let result = [{ content: contentStr, kind: 'text', delay_ms: 0 }]
+        let result: Array<{ content: string; kind: string; delay_ms: number }> = [{ content: contentStr, kind: 'text', delay_ms: 0 }]
         
         if (deliveryMode === 'chunked') {
           try {
@@ -71,7 +92,11 @@ export async function POST(request: NextRequest) {
               if (!integrityOk) {
                 console.warn('[LLM] Content integrity check failed, reverting to single message')
               } else {
-                result = planned
+                result = planned.map((item) => ({
+                  content: String(item.content || ''),
+                  kind: String(item.kind || 'text'),
+                  delay_ms: typeof item.delay_ms === 'number' ? item.delay_ms : 0,
+                }))
               }
             }
           } catch (e) {
@@ -110,13 +135,14 @@ export async function POST(request: NextRequest) {
         response: content,
         messages: planResponseMessages(content),
         delivery: { mode: deliveryMode },
-        metadata: {
+        metadata: withSystemState({
           timestamp: new Date().toISOString(),
           mode: 'sos',
+          provider: 'server',
           sos: true,
           hotlines: sos.hotlines,
           reasons: sos.reasons,
-        },
+        }),
         conversation_id: sid,
       })
     }
@@ -136,12 +162,13 @@ export async function POST(request: NextRequest) {
         response: buildBlockResponse(safetyHits),
         messages: planResponseMessages(buildBlockResponse(safetyHits)),
         delivery: { mode: deliveryMode },
-        metadata: {
+        metadata: withSystemState({
           timestamp: new Date().toISOString(),
           mode: 'safety',
+          provider: 'server',
           blocked: true,
           blocked_categories: Array.from(new Set(safetyHits.map(h => h.category))).sort(),
-        },
+        }),
         conversation_id: sid,
       })
     }
@@ -229,8 +256,7 @@ NGUYÊN TẮC QUAN TRỌNG:
         if (m2?.[1]) return Math.ceil(Number(m2[1]))
         return null
       }
-      const expectedPass = String(process.env.AGENT_KEY_PASS || '').trim()
-      const passOk = expectedPass && String(access_pass || '').trim() === expectedPass
+      const passOk = hasInternalDemoPass() ? isInternalDemoPass(access_pass) : false
       const accessSecret = String(access_pass || '').trim()
       const systemKey = String(process.env.GEMINI_API_KEY || '').trim()
       const keyToUse = passOk ? systemKey : (accessSecret || systemKey)
@@ -266,17 +292,18 @@ NGUYÊN TẮC QUAN TRỌNG:
             delivery: { mode: deliveryMode },
             context: determinedContext,
             model_info: { model_name: process.env.GEMINI_MODEL || 'gemini', provider: 'Gemini' },
-            metadata: {
+            metadata: withSystemState({
               context: determinedContext,
               timestamp: new Date().toISOString(),
               mode: 'gpu',
               tier: modeHeader,
               provider: 'gemini',
               access: passOk ? 'pass' : (accessSecret ? 'user_key' : 'system_key'),
+              demo_mode: passOk,
               rate_limited: true,
               retry_after_sec: retryAfter ?? undefined,
               duration_ms: Date.now() - startGemini
-            },
+            }),
             conversation_id: sid
           })
         }
@@ -306,7 +333,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
           provider: 'Gemini'
         },
-        metadata: {
+        metadata: withSystemState({
           context: determinedContext,
           prompt_length: String(userMessage).length,
           response_length: content.length,
@@ -316,8 +343,9 @@ NGUYÊN TẮC QUAN TRỌNG:
           fallback: false,
           provider: 'gemini',
           access: passOk ? 'pass' : (accessSecret ? 'user_key' : 'system_key'),
+          demo_mode: passOk,
           duration_ms: durationGemini
-        },
+        }),
         conversation_id: sid
       })
     }
@@ -385,7 +413,7 @@ NGUYÊN TẮC QUAN TRỌNG:
           delivery: { mode: deliveryMode },
           context: determinedContext,
           model_info: { model_name: modelName, provider: 'Foza' },
-          metadata: {
+          metadata: withSystemState({
             context: determinedContext,
             prompt_length: String(userMessage).length,
             response_length: content.length,
@@ -395,7 +423,7 @@ NGUYÊN TẮC QUAN TRỌNG:
             fallback: false,
             provider: 'foza',
             duration_ms: Date.now() - startFoza
-          },
+          }),
           conversation_id: sid
         })
       } catch (e: any) {
@@ -430,7 +458,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                 delivery: { mode: deliveryMode },
                 context: determinedContext,
                 model_info: { model_name: out?.model || process.env.GEMINI_MODEL || 'gemini', provider: 'Gemini' },
-                metadata: {
+                metadata: withSystemState({
                   context: determinedContext,
                   prompt_length: String(userMessage).length,
                   response_length: content.length,
@@ -441,7 +469,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                   provider: 'gemini',
                   error: msg.slice(0, 280),
                   duration_ms: durationGemini
-                },
+                }),
                 conversation_id: sid
               })
             }
@@ -511,7 +539,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                     model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
                     provider: 'Gemini'
                   },
-                  metadata: {
+                  metadata: withSystemState({
                     context: determinedContext,
                     prompt_length: String(userMessage).length,
                     response_length: content.length,
@@ -521,7 +549,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                     fallback: true,
                     provider: 'gemini',
                     duration_ms: durationGemini
-                  },
+                  }),
                   conversation_id: conversation_id || null
                 })
               }
@@ -601,7 +629,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                 model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
                 provider: 'Gemini'
               },
-              metadata: {
+              metadata: withSystemState({
                 context: determinedContext,
                 prompt_length: String(userMessage).length,
                 response_length: content.length,
@@ -611,7 +639,7 @@ NGUYÊN TẮC QUAN TRỌNG:
                 fallback: true,
                 provider: 'gemini',
                 duration_ms: durationGemini
-              },
+              }),
               conversation_id: sid
             })
           }
@@ -674,7 +702,7 @@ NGUYÊN TẮC QUAN TRỌNG:
         model_name: 'local-llama-compatible',
         provider: 'Internal FastAPI'
       },
-      metadata: {
+      metadata: withSystemState({
         context: determinedContext,
         prompt_length: userMessage.length,
         response_length: content.length,
@@ -685,7 +713,7 @@ NGUYÊN TẮC QUAN TRỌNG:
         model_init: !!(data && (data as any).model_init),
         rag: (data && (data as any).rag) ? (data as any).rag : undefined,
         provider: 'server'
-      },
+      }),
       conversation_id: newConversationId
     })
     

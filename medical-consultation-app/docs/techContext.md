@@ -42,6 +42,7 @@
 - `FOZA_AGENT_TIMEOUT_MS` (default 35000): deadline tổng cho 1 lượt `/api/agent-chat` khi dùng Foza.
 - `FOZA_CIRCUIT_FAIL_THRESHOLD` (default 3): số lỗi FOZA liên tiếp trước khi “open circuit”.
 - `FOZA_CIRCUIT_OPEN_MS` (default 600000): thời gian open circuit trước khi thử FOZA lại.
+- `INTERNAL_DEMO_PASS`: pass demo nội bộ ưu tiên cho `/api/agent-chat`, `/api/llm-chat`, `/api/live/access`; nếu thiếu sẽ fallback sang `AGENT_KEY_PASS`, rồi `1234567`.
 
 ## YouTube
 
@@ -95,6 +96,8 @@
   - `LG_GRAPH_TIMEOUT_S` (default 12)
   - `LG_GRAPH_STATUS_CACHE_TTL_S` (default 2)
   - `LG_GRAPH_EVIDENCE_CACHE_TTL_S` (default 60)
+- Demo runtime helper:
+  - `medical-consultation-app/lib/runtime-sync.ts`: shared helper cho demo pass fallback, provider normalization, và browser event `runtime_mode_changed`.
 
 ## Production LLMOps (CPU server)
 

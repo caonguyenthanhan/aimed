@@ -2,7 +2,8 @@
 
 import React from 'react'
 import { ToolAgentType, TOOL_AGENTS } from '@/lib/tool-agents'
-import { Markdown } from '@/components/markdown'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { AlertCircle, CheckCircle, Loader } from 'lucide-react'
 
 interface ToolAgentResponseProps {
@@ -81,7 +82,7 @@ export function ToolAgentResponse({
               <span className="text-sm font-medium">Phản hồi từ {config?.name}</span>
             </div>
             <div className="prose dark:prose-invert max-w-none text-sm">
-              <Markdown content={response} />
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{response}</ReactMarkdown>
             </div>
           </div>
         )}

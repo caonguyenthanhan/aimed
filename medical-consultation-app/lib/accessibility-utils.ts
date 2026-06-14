@@ -111,7 +111,7 @@ export function generateAriaLabel(
   type: string,
   props: Record<string, any>
 ): string {
-  const labels = {
+  const labels: Record<string, string> = {
     'message': `Tin nhắn từ ${props.role === 'user' ? 'bạn' : 'trợ lý'}${
       props.timestamp ? ` lúc ${props.timestamp}` : ''
     }`,

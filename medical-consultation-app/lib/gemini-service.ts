@@ -53,6 +53,12 @@ interface GeminiResponse {
   }
 }
 
+type GeminiToolCall = { name: string; args: any }
+
+function isGeminiToolCall(value: GeminiToolCall | null): value is GeminiToolCall {
+  return Boolean(value && value.name)
+}
+
 export class GeminiService {
   private apiKey: string
   private baseUrl: string = 'https://generativelanguage.googleapis.com/v1beta/models'
@@ -305,8 +311,8 @@ export class GeminiService {
     const parts = data?.candidates?.[0]?.content?.parts || []
     const text = parts.map((p: any) => p?.text || '').join('').trim()
     const toolCalls = parts
-      .map((p: any) => p?.functionCall ? { name: String(p.functionCall?.name || '').trim(), args: p.functionCall?.args ?? {} } : null)
-      .filter((x: any) => x && x.name)
+      .map((p: any): GeminiToolCall | null => p?.functionCall ? { name: String(p.functionCall?.name || '').trim(), args: p.functionCall?.args ?? {} } : null)
+      .filter(isGeminiToolCall)
     return { text, model: modelToUse, toolCalls }
   }
 
@@ -539,7 +545,7 @@ Trả lời bằng tiếng Việt:`
         return this.getFallbackResponse(context, question)
       }
 
-      const generatedText = candidate.content.parts[0].text
+      const generatedText = String(candidate.content.parts[0]?.text || '')
       
       // Thêm disclaimer an toàn cho nội dung y tế
       return this.addMedicalDisclaimer(generatedText)

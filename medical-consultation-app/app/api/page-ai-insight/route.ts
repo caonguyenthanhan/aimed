@@ -181,7 +181,8 @@ LƯU Ý: Giọng điệu ấm áp, chuyên nghiệp, hỗ trợ. Chỉ trả v�
           maxDelayMs: 8000, 
           backoffMultiplier: 2,
           onRetry: (attempt, error) => {
-            console.log(`[v0] Retry attempt ${attempt} for page insight. Error: ${error.message}`)
+            const errorMessage = error instanceof Error ? error.message : String(error)
+            console.log(`[v0] Retry attempt ${attempt} for page insight. Error: ${errorMessage}`)
           }
         }
       )

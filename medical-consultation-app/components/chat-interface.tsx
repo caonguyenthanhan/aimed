@@ -27,6 +27,17 @@ import { ChatSpecialMessage, parseSpecialMessages, type SpecialMessageData } fro
 import { VirtualChatList } from "@/components/virtual-chat-list"
 import { OptimizedMessage } from "@/components/optimized-message"
 import { useMultiDeviceSync, useLocalSyncListener } from "@/lib/multi-device-sync"
+import {
+  buildRuntimeDetailFromMetadata,
+  buildRuntimeDetailFromSystemState,
+  dispatchRuntimeModeChanged,
+  emptySystemState,
+  getStoredProvider,
+  mergeSystemState,
+  normalizeSystemState,
+  setStoredProvider,
+  type SystemState,
+} from "@/lib/runtime-sync"
 
 interface Message {
   id: string
@@ -50,35 +61,17 @@ type AgentStatus = {
   cpu_proxy_error?: string
 }
 
-type GraphStatusUI = {
-  ok?: boolean
-  connected?: boolean
-  nodes?: number
-  latency_ms?: number
-  checked_at?: string
-  error?: any
-}
-
-type DbStatusUI = {
-  ok?: boolean
-  dbEnabled?: boolean
-  latencyMs?: number
-  source?: string
-  attempts?: number
-  error?: any
-}
-
 export function ChatInterface({ initialConversationId }: { initialConversationId?: string }) {
   const router = useRouter()
   const { toast } = useToast()
   const { getSuggestedQuestions } = useLanguage()
   const initRef = useRef<{ fetched: boolean; opened: boolean; navigating: boolean }>({ fetched: false, opened: false, navigating: false })
+  const systemStateRef = useRef<SystemState>(emptySystemState())
   const [agentMode, setAgentMode] = useState(false)
   const [llmContextOpen, setLlmContextOpen] = useState(false)
   const [llmContext, setLlmContext] = useState<any>(null)
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null)
-  const [graphStatus, setGraphStatus] = useState<GraphStatusUI | null>(null)
-  const [dbStatus, setDbStatus] = useState<DbStatusUI | null>(null)
+  const [systemState, setSystemState] = useState<SystemState>(emptySystemState())
   const agentIntroShownForConvRef = useRef<string | null>(null)
   const [specialMessages, setSpecialMessages] = useState<SpecialMessageData[]>([])
   const handleCloseSpecialMessage = (id: string) => {
@@ -123,7 +116,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       agentIntroShownForConvRef.current = null
       if (!next) {
         setAgentStatus(null)
-        setGraphStatus(null)
       }
       return next
     })
@@ -143,6 +135,33 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   useEffect(() => {
     toast({ title: "Live text", description: textLiveMode ? "Đã bật" : "Đã tắt" })
   }, [textLiveMode, toast])
+
+  useEffect(() => {
+    systemStateRef.current = systemState
+  }, [systemState])
+
+  const applySystemState = (next?: Partial<SystemState> | null, gpuUrl?: string | null) => {
+    const merged = mergeSystemState(systemStateRef.current, next || undefined)
+    systemStateRef.current = merged
+    setSystemState(merged)
+    setStoredProvider(merged.provider)
+    dispatchRuntimeModeChanged(buildRuntimeDetailFromSystemState(merged, gpuUrl))
+  }
+
+  const loadSystemState = async () => {
+    try {
+      const resp = await fetch("/api/runtime/mode", { cache: "no-store" })
+      const data = await resp.json().catch(() => null)
+      if (!resp.ok) throw new Error(String(data?.error || `runtime_state_${resp.status}`))
+      const normalized = normalizeSystemState((data as any)?.system_state, {
+        provider: (data as any)?.provider,
+        mode: (data as any)?.target,
+      })
+      applySystemState(normalized, typeof (data as any)?.gpu_url === "string" ? (data as any).gpu_url : null)
+    } catch (e: any) {
+      applySystemState({ error: String(e?.message || e || "runtime_state_error") })
+    }
+  }
 
   const requireAuthIfNeeded = (meta?: any) => {
     try {
@@ -185,38 +204,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     ].filter(Boolean).join("\n")
   }
 
-  const fetchGraphStatus = async () => {
-    try {
-      const resp = await fetch("/api/mcp/call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: "graph.status", args: {} }),
-      })
-      const data = await resp.json().catch(() => null)
-      const r = data?.result || null
-      if (!r) {
-        setGraphStatus({ ok: false, connected: false, error: data || null })
-        return
-      }
-      setGraphStatus({
-        ok: !!r.ok,
-        connected: !!r.connected,
-        nodes: typeof r.nodes === "number" ? r.nodes : undefined,
-        latency_ms: typeof r.latency_ms === "number" ? r.latency_ms : undefined,
-        checked_at: typeof r.checked_at === "string" ? r.checked_at : undefined,
-        error: r.error,
-      })
-    } catch (e: any) {
-      setGraphStatus({ ok: false, connected: false, error: String(e?.message || e || "") })
-    }
-  }
-
   useEffect(() => {
-    if (!agentMode) return
     let stopped = false
     const tick = async () => {
       if (stopped) return
-      await fetchGraphStatus()
+      await loadSystemState()
     }
     void tick()
     const id = setInterval(() => {
@@ -232,17 +224,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     try {
       const uid = typeof window !== "undefined" ? (localStorage.getItem("userId") || "") : ""
       const k = localStorage.getItem(secretKeyOf(uid || "anon")) || ""
-      setAuthSecret(String(k || ""))
-    } catch {
-      setAuthSecret("")
-    }
-  }, [])
-
-  useEffect(() => {
-    try {
-      const uid = typeof window !== "undefined" ? (localStorage.getItem("userId") || "") : ""
-      const k = localStorage.getItem(secretKeyOf(uid || "anon")) || ""
-      setAuthSecret(String(k || ""))
+      setAuthSecret(String(k || "").trim())
     } catch {
       setAuthSecret("")
     }
@@ -263,6 +245,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   const ensureGeminiQuota = () => {
+    if (systemState.demo_mode && systemState.internal_pass_matched) return true
     if (hasSecret()) return true
     if (canUseSystemGemini()) return true
     setAuthOpen(true)
@@ -288,6 +271,19 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       localStorage.removeItem(secretKeyOf(uid || "anon"))
     } catch {}
     setAuthSecret("")
+    applySystemState({ demo_mode: false, internal_pass_matched: false })
+  }
+
+  const syncRuntimeUi = (meta?: any) => {
+    const detail = buildRuntimeDetailFromMetadata(meta, "cpu")
+    if (detail?.system_state) {
+      applySystemState(detail.system_state, detail.gpu_url || null)
+      return
+    }
+    if (detail?.provider) {
+      setStoredProvider(detail.provider)
+      dispatchRuntimeModeChanged(detail)
+    }
   }
 
   const stopLiveMode = async () => {
@@ -316,7 +312,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   const startLiveMode = async () => {
-    if (!hasSecret()) {
+    if (!hasSecret() && !(systemState.demo_mode && systemState.internal_pass_matched)) {
       setAuthOpen(true)
       return
     }
@@ -329,6 +325,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ access_pass: apiKey }),
     }).then((x) => x.json()).catch(() => null)
+    if (r?.system_state) {
+      applySystemState(r.system_state)
+    }
     if (r?.ok && typeof r?.api_key === "string" && String(r.api_key).trim()) {
       apiKey = String(r.api_key).trim()
     }
@@ -464,39 +463,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [authToken, setAuthToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!authToken) {
-      setDbStatus(null)
-      return
-    }
-    let stopped = false
-    const tick = async () => {
-      if (stopped) return
-      try {
-        const resp = await fetch("/api/db/ping", { method: "GET" })
-        const data = await resp.json().catch(() => null)
-        setDbStatus({
-          ok: !!data?.ok,
-          dbEnabled: !!data?.dbEnabled,
-          latencyMs: typeof data?.latencyMs === "number" ? data.latencyMs : undefined,
-          source: typeof data?.source === "string" ? data.source : undefined,
-          attempts: typeof data?.attempts === "number" ? data.attempts : undefined,
-          error: data?.error,
-        })
-      } catch (e: any) {
-        setDbStatus({ ok: false, dbEnabled: true, error: String(e?.message || e || "") })
-      }
-    }
-    void tick()
-    const id = setInterval(() => {
-      void tick()
-    }, 30000)
-    return () => {
-      stopped = true
-      clearInterval(id)
-    }
-  }, [authToken])
 
   useEffect(() => {
     try {
@@ -887,11 +853,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           loadLocalConversations()
         } catch {}
       }
-      let provider: string = "server"
-      try {
-        const p = typeof window !== "undefined" ? localStorage.getItem("llm_provider") : null
-        if (p === "gemini" || p === "server" || p === "foza") provider = p
-      } catch {}
+      let provider: string = systemStateRef.current.provider || getStoredProvider() || "server"
       const needsGeminiGate = agentMode || provider === "gemini"
       if (needsGeminiGate && !ensureGeminiQuota()) return
 
@@ -937,6 +899,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
       const md = (data as any)?.metadata
       requireAuthIfNeeded(md)
+      syncRuntimeUi(md)
       if (agentMode) {
         const ctx = (md as any)?.llm_context || (md as any)?.debug_context
         if (ctx) setLlmContext(ctx)
@@ -1758,7 +1721,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       // Merge with pending messages from sessionStorage
       try {
         if (typeof window !== 'undefined') {
-          const rawPend = sessionStorage.getItem(`pending_conv_messages_${id}`)
+          const pendingConversationId = String(initialConversationId || "").trim()
+          const rawPend = pendingConversationId ? sessionStorage.getItem(`pending_conv_messages_${pendingConversationId}`) : null
           if (rawPend) {
             const arr = JSON.parse(rawPend)
             const pend: Message[] = Array.isArray(arr) ? arr.map((m: any) => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: new Date(m.timestamp) })) : []
@@ -1771,7 +1735,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               merged.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
               setMessages(merged)
             }
-            sessionStorage.removeItem(`pending_conv_messages_${id}`)
+            sessionStorage.removeItem(`pending_conv_messages_${pendingConversationId}`)
           }
         }
       } catch {}
@@ -2041,7 +2005,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             <DialogTitle>API Key / Pass</DialogTitle>
           </DialogHeader>
           <DialogDescription className="sr-only">
-            Bạn được hỏi 5 lượt bằng key hệ thống. Sau đó cần API key của bạn hoặc pass.
+            Demo pass is prefilled for internal testing. You can still replace it with your own API key.
           </DialogDescription>
           <div className="space-y-3">
             <Input type="password" value={authSecret} onChange={(e) => setAuthSecret(e.target.value)} placeholder="Nhập API key hoặc pass" />
@@ -2061,9 +2025,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               <span className="text-xs font-semibold text-foreground">Lịch sử</span>
               {authToken ? (
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                  dbStatus?.ok ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" : dbStatus ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-secondary text-muted-foreground"
+                  systemState.db_ok === true ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" : systemState.db_ok === false ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-secondary text-muted-foreground"
                 }`}>
-                  db: {dbStatus?.ok ? `ok${typeof dbStatus.latencyMs === "number" ? ` (${dbStatus.latencyMs}ms)` : ""}` : dbStatus ? "down" : "…"}
+                  db: {systemState.db_ok === true ? `ok${typeof systemState.db_latency_ms === "number" ? ` (${systemState.db_latency_ms}ms)` : ""}` : systemState.db_ok === false ? "down" : "…"}
                 </span>
               ) : null}
             </div>
@@ -2105,7 +2069,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               <div className="text-xs text-muted-foreground px-2 py-4">Đang tải...</div>
             ) : (
               serverUnavailable ? (
-                <div className="text-xs text-destructive px-2 py-4">Không kết nối được</div>
+                <div className="text-xs text-muted-foreground px-2 py-4">Đang dùng local cache</div>
               ) : (
                 (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).length
                   ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
@@ -2176,7 +2140,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                   <div className="text-sm text-gray-500">Đang tải...</div>
                 ) : (
                   serverUnavailable ? (
-                    <div className="text-sm text-red-600">Không kết nối được với server</div>
+                    <div className="text-sm text-slate-500">Đang dùng local cache</div>
                   ) : (
                     (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).length
                       ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
@@ -2245,14 +2209,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                   </span>
                   <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
                     graph: {(() => {
-                      if (graphStatus?.connected) return `ok${typeof graphStatus.latency_ms === "number" ? ` (${graphStatus.latency_ms}ms)` : ""}`
-                      const reason = (agentStatus as any)?.graph_reason || (agentStatus as any)?.llm_context?.graph_reason
+                      const reason = systemState.graph_reason
+                      if (systemState.graph_injected) return "bật"
                       if (reason === "graph_disabled_no_cpu_url") return "tắt (chưa cấu hình CPU)"
                       if (reason === "graph_404") return "lỗi 404"
                       if (reason === "graph_timeout") return "timeout"
                       if (reason === "graph_empty") return "không có dữ liệu"
                       if (reason === "graph_down") return "down"
-                      if (agentStatus?.graph_injected) return "bật"
+                      if (systemState.graph_connected) return `ok${typeof systemState.graph_latency_ms === "number" ? ` (${systemState.graph_latency_ms}ms)` : ""}`
                       if (agentStatus?.graph_tool_called) return "lỗi/tắt"
                       return "tắt"
                     })()}
@@ -2490,7 +2454,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           onDrop={handleDrop}
           agentMode={agentMode}
           onToggleAgentMode={toggleAgentMode}
-          hasContext={!!llmContext}
+          hasContext={agentMode}
           onShowContext={() => setLlmContextOpen(true)}
           isLiveMode={liveMode}
           onToggleLiveMode={toggleLiveMode}
@@ -2504,7 +2468,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Context gửi cho LLM</DialogTitle>
-            <DialogDescription>Dùng để demo: evidence + prompt input</DialogDescription>
+            <DialogDescription>Dùng để demo: SystemState, graph reason và fallback chain từ backend</DialogDescription>
           </DialogHeader>
           <div className="max-h-[70vh] overflow-auto rounded-md border border-border bg-muted/20 p-3 text-xs">
             {/* Diagnostic errors — shown only when present */}
@@ -2514,7 +2478,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                 {agentStatus?.gemini_error && <div><strong>gemini_error:</strong> {agentStatus.gemini_error}</div>}
               </div>
             )}
-            <pre className="whitespace-pre-wrap break-words">{JSON.stringify(llmContext || {}, null, 2)}</pre>
+            <pre className="whitespace-pre-wrap break-words">{JSON.stringify({
+              system_state: systemState,
+              graph_reason: systemState.graph_reason,
+              fallback_chain: systemState.fallback_chain || [],
+              fallback: systemState.fallback,
+              error: systemState.error,
+              llm_context: llmContext || {},
+            }, null, 2)}</pre>
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setLlmContextOpen(false)}>

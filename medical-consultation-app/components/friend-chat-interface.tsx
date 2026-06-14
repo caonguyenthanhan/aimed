@@ -33,6 +33,7 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
     }
   }
   const [greeting, setGreeting] = useState(GREETINGS[0])
+  const [friendStyle, setFriendStyle] = useState<"standard" | "deep">("deep")
   useEffect(() => {
     const randomGreeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
     setGreeting(randomGreeting)
@@ -98,7 +99,6 @@ export function FriendChatInterface({ initialConversationId }: { initialConversa
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState<string>("")
   const [selectedModel, setSelectedModel] = useState<"flash" | "pro">("flash")
-  const [friendStyle, setFriendStyle] = useState<"standard" | "deep">("deep")
   const [voiceMode, setVoiceMode] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
