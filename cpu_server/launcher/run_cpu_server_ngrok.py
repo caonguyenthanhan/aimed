@@ -643,6 +643,33 @@ def _step_4_ngrok_public_url_ready(settings: LauncherSettings, runtime: BootRunt
         public_url = _pick_ngrok_public_url(settings.ngrok.api_base)
         if public_url:
             runtime.ngrok_public_url = public_url
+            
+            # Automatically update Vercel environment variables (CPU_SERVER_URL)
+            try:
+                print(f"\n[Vercel Sync] Syncing CPU_SERVER_URL ({public_url}) to Vercel...", flush=True)
+                npx_path = shutil.which("npx")
+                if npx_path:
+                    # Update Production environment
+                    subprocess.run(
+                        [npx_path, "vercel", "env", "add", "CPU_SERVER_URL", "production", "--value", public_url, "--yes", "--force"],
+                        cwd=str(settings.repo_root),
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        check=False
+                    )
+                    # Update Preview environment
+                    subprocess.run(
+                        [npx_path, "vercel", "env", "add", "CPU_SERVER_URL", "preview", "--value", public_url, "--yes", "--force"],
+                        cwd=str(settings.repo_root),
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        check=False
+                    )
+                    print("[Vercel Sync] CPU_SERVER_URL synced to Vercel production and preview!", flush=True)
+                else:
+                    print("[Vercel Sync] Warning: npx not found, skipping Vercel sync.", flush=True)
+            except Exception as e:
+                print(f"[Vercel Sync] Warning: Failed to sync to Vercel: {e}", flush=True)
             break
         time.sleep(settings.ngrok.poll_interval_s)
     if not runtime.ngrok_public_url:

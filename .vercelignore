@@ -1,25 +1,25 @@
 # Ignore backend servers, local models and big folders
-cpu_server/
-gpu_server/
-models/
-_models/
-_workspace/
-archived/
-venv/
-.venv/
-.ipynb_checkpoints/
-postgres-platform/
-memgraph-platform/
-DB_ALL/
-doc/
-docs/
-screenshots/
-data/
-audio/
-test/
-tests/
-node_modules/
-.pytest_cache/
+/cpu_server/
+/gpu_server/
+/models/
+/_models/
+/_workspace/
+/archived/
+/venv/
+/.venv/
+/.ipynb_checkpoints/
+/postgres-platform/
+/memgraph-platform/
+/DB_ALL/
+/doc/
+/docs/
+/screenshots/
+/data/
+/audio/
+/test/
+/tests/
+/node_modules/
+/.pytest_cache/
 
 # General files
 .git/
