@@ -15,8 +15,8 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" })
 
 export const metadata: Metadata = {
-  title: "TÆ° váº¥n Y táº¿ AI - á»¨ng dá»¥ng ChÄƒm sÃ³c Sá»©c khá»e",
-  description: "á»¨ng dá»¥ng tÆ° váº¥n y táº¿ thÃ´ng minh vá»›i AI, tra cá»©u thÃ´ng tin sá»©c khá»e vÃ  sÃ ng lá»c tÃ¢m lÃ½",
+  title: "Tư vấn Y tế AI - Ứng dụng Chăm sóc Sức khỏe",
+  description: "Ứng dụng tư vấn y tế thông minh với AI, tra cứu thông tin sức khỏe và sàng lọc tâm lý",
   manifest: "/manifest.webmanifest",
   formatDetection: {
     telephone: false,
