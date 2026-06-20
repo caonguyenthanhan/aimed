@@ -2,27 +2,72 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useMemo, useState } from "react"
-import { Activity, Bell, BookOpenText, BrainCircuit, Home, Menu, MessageSquare, Mic, Newspaper, Search, Smile } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Activity, Bell, BookOpenText, BrainCircuit, DatabaseZap, Home, Menu, MessageSquare, Mic, Newspaper, Search, ServerCog, Settings, ShieldCheck, Smile, Users } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
 
 type Item = { href: string; label: string; Icon: any }
+type UserRole = "patient" | "doctor" | "admin"
 
 export function MobileBottomNav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [userRole, setUserRole] = useState<UserRole>("patient")
 
-  const primary = useMemo<Item[]>(
-    () => [
+  useEffect(() => {
+    try {
+      const role = typeof window !== "undefined" ? localStorage.getItem("userRole") : null
+      if (role === "doctor" || role === "admin" || role === "patient") {
+        setUserRole(role)
+      } else {
+        setUserRole("patient")
+      }
+    } catch {
+      setUserRole("patient")
+    }
+  }, [pathname])
+
+  const primary = useMemo<Item[]>(() => {
+    if (userRole === "doctor") {
+      return [
+        { href: "/doctor", label: "Bảng điều khiển", Icon: Home },
+        { href: "/doctor/patients", label: "Bệnh nhân", Icon: Users },
+        { href: "/doctor/appointments", label: "Lịch hẹn", Icon: Bell },
+      ]
+    }
+    if (userRole === "admin") {
+      return [
+        { href: "/quan-ly", label: "Tổng quan", Icon: ShieldCheck },
+        { href: "/quan-ly/user", label: "Người dùng", Icon: Users },
+        { href: "/admin/server", label: "Runtime", Icon: ServerCog },
+      ]
+    }
+    return [
       { href: "/tu-van", label: "Tư vấn", Icon: MessageSquare },
       { href: "/tam-su", label: "Tâm sự", Icon: Smile },
       { href: "/speech-chat", label: "Stream", Icon: Mic },
-    ],
-    [],
-  )
+    ]
+  }, [userRole])
 
-  const more = useMemo<Item[]>(
-    () => [
+  const more = useMemo<Item[]>(() => {
+    if (userRole === "doctor") {
+      return [
+        { href: "/doctor/reports", label: "Báo cáo", Icon: BookOpenText },
+        { href: "/doctor/forum", label: "Chia sẻ", Icon: MessageSquare },
+        { href: "/doctor/profile", label: "Hồ sơ", Icon: Settings },
+        { href: "/tra-cuu", label: "Tra cứu", Icon: Search },
+      ]
+    }
+    if (userRole === "admin") {
+      return [
+        { href: "/quan-ly/data", label: "Dữ liệu", Icon: DatabaseZap },
+        { href: "/quan-ly/config", label: "Cấu hình", Icon: Settings },
+        { href: "/admin/server", label: "Runtime", Icon: ServerCog },
+        { href: "/", label: "Trang chủ", Icon: Home },
+      ]
+    }
+    return [
       { href: "/", label: "Trang chủ", Icon: Home },
       { href: "/agent-hub", label: "Agent", Icon: BrainCircuit },
       { href: "/tra-cuu", label: "Tra cứu", Icon: Search },
@@ -30,35 +75,38 @@ export function MobileBottomNav() {
       { href: "/tin-tuc-y-khoa", label: "Tin tức", Icon: Newspaper },
       { href: "/tri-lieu", label: "Trị liệu", Icon: BookOpenText },
       { href: "/nhac-nho", label: "Nhắc nhở", Icon: Bell },
-    ],
-    [],
-  )
+    ]
+  }, [userRole])
 
   if (!pathname) return null
   if (pathname === "/" || pathname === "/ke-hoach") return null
 
   return (
     <div className="sm:hidden fixed inset-x-0 bottom-0 z-50">
-      <div className="mx-auto max-w-4xl px-3 pb-[env(safe-area-inset-bottom)]">
-        <div className="glass-panel dark:glass-panel-dark rounded-2xl h-16 flex items-center justify-around">
+      <div className="mx-auto max-w-4xl px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
+        <div className="glass-panel dark:glass-panel-dark flex h-[var(--mobile-nav-height)] items-center justify-around rounded-[1.35rem] border border-border/70 px-1.5">
           {primary.map(({ href, label, Icon }) => {
             const active = pathname === href
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex flex-col items-center justify-center gap-1 w-20 py-2 rounded-lg transition active:scale-[0.98] ${
-                  active ? "text-blue-600 dark:text-blue-400" : "text-slate-600 dark:text-slate-400"
-                }`}
+                className={cn(
+                  "flex w-20 flex-col items-center justify-center gap-1 rounded-xl py-2 transition active:scale-[0.98]",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
               >
-                <div className={`h-10 w-10 rounded-lg flex items-center justify-center transition ${
-                  active 
-                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400" 
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
-                }`}>
+                <div
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-xl border transition",
+                    active
+                      ? "border-primary/10 bg-primary/10 text-primary shadow-[0_14px_28px_-22px_rgba(20,71,230,0.9)]"
+                      : "border-transparent bg-secondary/80 text-muted-foreground",
+                  )}
+                >
                   <Icon size={20} />
                 </div>
-                <div className="text-[10px] font-semibold">{label}</div>
+                <div className="text-[10px] font-semibold tracking-tight">{label}</div>
               </Link>
             )
           })}
@@ -67,18 +115,18 @@ export function MobileBottomNav() {
             <DrawerTrigger asChild>
               <button
                 type="button"
-                className="flex flex-col items-center justify-center gap-1 w-20 py-2 rounded-lg transition active:scale-[0.98] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300"
+                className="flex w-20 flex-col items-center justify-center gap-1 rounded-xl py-2 text-muted-foreground transition active:scale-[0.98]"
                 aria-label="Mở menu"
               >
-                <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-transparent bg-secondary/80">
                   <Menu size={20} />
                 </div>
-                <div className="text-[10px] font-semibold">Menu</div>
+                <div className="text-[10px] font-semibold tracking-tight">Menu</div>
               </button>
             </DrawerTrigger>
-            <DrawerContent className="px-3 pb-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+            <DrawerContent className="rounded-t-[1.75rem] border-t border-border/70 bg-background px-3 pb-6">
               <DrawerHeader>
-                <DrawerTitle className="text-base">Các chức năng khác</DrawerTitle>
+                <DrawerTitle className="text-base font-semibold">Các chức năng khác</DrawerTitle>
               </DrawerHeader>
               <div className="px-1 grid grid-cols-2 gap-2">
                 {more.map(({ href, label, Icon }) => {
@@ -88,17 +136,19 @@ export function MobileBottomNav() {
                       key={href}
                       href={href}
                       onClick={() => setOpen(false)}
-                      className={`flex items-center gap-3 rounded-lg border px-3 py-3 text-sm font-medium transition active:scale-[0.98] ${
-                        active 
-                          ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400" 
-                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-50 hover:border-slate-300 dark:hover:border-slate-600"
-                      }`}
+                      className={cn(
+                        "flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm font-medium transition active:scale-[0.98]",
+                        active
+                          ? "border-primary/15 bg-primary/5 text-primary"
+                          : "border-border/70 bg-card text-foreground",
+                      )}
                     >
-                      <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${
-                        active 
-                          ? "bg-blue-600 dark:bg-blue-600 text-white" 
-                          : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
-                      }`}>
+                      <div
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-xl",
+                          active ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground",
+                        )}
+                      >
                         <Icon size={18} />
                       </div>
                       <span>{label}</span>
@@ -113,4 +163,3 @@ export function MobileBottomNav() {
     </div>
   )
 }
-

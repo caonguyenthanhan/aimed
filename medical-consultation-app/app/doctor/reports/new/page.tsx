@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Calendar, FileText, Save } from "lucide-react"
+import { Calendar, FileText, Save, ShieldCheck } from "lucide-react"
 import { demoPatients } from "@/lib/doctor-demo"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { Button } from "@/components/ui/button"
 
 type DoctorReportDraft = {
   id: string
@@ -88,15 +91,15 @@ export default function DoctorReportNewPage() {
   const canSave = !!title.trim() && !!fromDate && !!toDate
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6">
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50">Tạo báo cáo mới</div>
-          <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">Bản demo: lưu cục bộ, tải xuống được</div>
-        </div>
-        <button
+    <PortalShell
+      eyebrow="Create Report"
+      title="Tạo báo cáo mới"
+      description="Workspace tạo báo cáo trong doctor portal. Logic vẫn lưu cục bộ vào `mcs_doctor_reports_v1` và điều hướng về danh sách sau khi tạo."
+      actions={
+        <Button
           type="button"
           disabled={!canSave}
+          className="rounded-xl"
           onClick={() => {
             if (!canSave) return
             const id = `dr-${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`
@@ -128,108 +131,170 @@ export default function DoctorReportNewPage() {
             saveLocalReports([report, ...prev].slice(0, 200))
             router.push("/doctor/reports?created=1")
           }}
-          className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${
-            canSave ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-slate-200 text-slate-500 cursor-not-allowed"
-          }`}
         >
-          <Save size={18} />
+          <Save className="mr-2 h-4 w-4" />
           Lưu báo cáo
-        </button>
-      </div>
-
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-6 shadow-sm space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <div className="text-sm font-medium">Loại báo cáo</div>
-            <select
-              value={reportType}
-              onChange={(e) => setReportType(e.target.value)}
-              className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
-            >
-              <option value="Tùy chỉnh">Tùy chỉnh</option>
-              <option value="Hàng tuần">Hàng tuần</option>
-              <option value="Hàng tháng">Hàng tháng</option>
-              <option value="Quý">Quý</option>
-            </select>
-          </div>
-          <div className="space-y-1">
-            <div className="text-sm font-medium">Bệnh nhân (tùy chọn)</div>
-            <select
-              value={String(patientId || 0)}
-              onChange={(e) => setPatientId(Number(e.target.value))}
-              className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
-            >
-              <option value="0">Tất cả</option>
-              {demoPatients.map((p) => (
-                <option key={p.id} value={String(p.id)}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <div className="text-sm font-medium flex items-center gap-2">
-              <Calendar size={16} />
-              Từ ngày
+        </Button>
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Tóm tắt" description="Preview nhanh trước khi lưu báo cáo.">
+            <div className="space-y-3 text-sm">
+              <div className="rounded-xl bg-secondary/55 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Loại</div>
+                <div className="mt-1 font-medium text-foreground">{reportType}</div>
+              </div>
+              <div className="rounded-xl bg-secondary/55 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Phạm vi</div>
+                <div className="mt-1 font-medium text-foreground">{fromDate} → {toDate}</div>
+              </div>
+              <div className="rounded-xl bg-secondary/55 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Đối tượng</div>
+                <div className="mt-1 font-medium text-foreground">
+                  {patientId ? demoPatients.find((p) => p.id === patientId)?.name || patientId : "Tất cả bệnh nhân"}
+                </div>
+              </div>
             </div>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
-            />
-          </div>
-          <div className="space-y-1">
-            <div className="text-sm font-medium flex items-center gap-2">
-              <Calendar size={16} />
-              Đến ngày
+          </SectionCard>
+
+          <SectionCard title="Storage Mode" description="Thông tin về cách lưu report trong bản hiện tại.">
+            <div className="rounded-[1.2rem] bg-primary px-5 py-5 text-primary-foreground">
+              <div className="mb-2 flex items-center gap-2 text-primary-foreground/90">
+                <ShieldCheck className="h-5 w-5" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Local Save</span>
+              </div>
+              <p className="text-sm leading-6 text-primary-foreground/85">
+                Draft/report mới được lưu vào localStorage và hợp nhất trong màn `doctor/reports`.
+              </p>
             </div>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
-            />
+          </SectionCard>
+        </div>
+      }
+    >
+      <div className="space-y-6">
+        <SectionCard
+          title="Bước 1 — Cấu hình báo cáo"
+          description="Chọn loại báo cáo và đối tượng muốn tổng hợp."
+          badge={
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              Step 1
+            </span>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Loại báo cáo</div>
+              <select
+                value={reportType}
+                onChange={(e) => setReportType(e.target.value)}
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+              >
+                <option value="Tùy chỉnh">Tùy chỉnh</option>
+                <option value="Hàng tuần">Hàng tuần</option>
+                <option value="Hàng tháng">Hàng tháng</option>
+                <option value="Quý">Quý</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Bệnh nhân (tùy chọn)</div>
+              <select
+                value={String(patientId || 0)}
+                onChange={(e) => setPatientId(Number(e.target.value))}
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+              >
+                <option value="0">Tất cả</option>
+                {demoPatients.map((p) => (
+                  <option key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
+        </SectionCard>
 
-        <div className="space-y-1">
-          <div className="text-sm font-medium flex items-center gap-2">
-            <FileText size={16} />
-            Tiêu đề
+        <SectionCard
+          title="Bước 2 — Khoảng thời gian"
+          description="Chọn khoảng thời gian để thống kê dữ liệu cho báo cáo."
+          badge={
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              Step 2
+            </span>
+          }
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Calendar className="h-4 w-4" />
+                Từ ngày
+              </div>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Calendar className="h-4 w-4" />
+                Đến ngày
+              </div>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+              />
+            </div>
           </div>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-sm"
-          />
-        </div>
+        </SectionCard>
 
-        <div className="space-y-1">
-          <div className="text-sm font-medium">Ghi chú</div>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={5}
-            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm resize-none"
-            placeholder="Tóm tắt nhận định và khuyến nghị..."
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => router.push("/doctor/reports")}
-            className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          >
-            Quay lại
-          </button>
-        </div>
+        <SectionCard
+          title="Bước 3 — Nội dung báo cáo"
+          description="Tinh chỉnh tiêu đề và ghi chú cho báo cáo sẽ được lưu."
+          badge={
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              Step 3
+            </span>
+          }
+        >
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <FileText className="h-4 w-4" />
+                Tiêu đề
+              </div>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Ghi chú</div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={5}
+                className="w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-sm"
+                placeholder="Tóm tắt nhận định và khuyến nghị..."
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => router.push("/doctor/reports")}
+              >
+                Quay lại
+              </Button>
+            </div>
+          </div>
+        </SectionCard>
       </div>
-    </div>
+    </PortalShell>
   )
 }
 

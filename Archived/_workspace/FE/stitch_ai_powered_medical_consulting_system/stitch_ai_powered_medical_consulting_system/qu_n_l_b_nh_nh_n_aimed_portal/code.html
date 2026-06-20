@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Patient Directory | MedPortal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "dark-card": "#1A1F2E",
+                    "on-error-container": "#93000a",
+                    "surface-container-high": "#e6e8e9",
+                    "on-secondary-container": "#60656b",
+                    "surface-bright": "#f8fafb",
+                    "primary-fixed": "#dde1ff",
+                    "surface-tint": "#1c4bea",
+                    "on-secondary-fixed-variant": "#42474d",
+                    "surface-dim": "#d8dadb",
+                    "tertiary-container": "#005aac",
+                    "surface-container": "#eceeef",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#004383",
+                    "surface": "#f8fafb",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#dfe3ea",
+                    "dark-bg": "#0F1419",
+                    "outline-variant": "#c4c5d8",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary": "#5a5f65",
+                    "on-background": "#191c1d",
+                    "teal-accent": "#14B8A6",
+                    "on-secondary-fixed": "#171c21",
+                    "primary": "#0032b6",
+                    "on-tertiary-container": "#bcd4ff",
+                    "on-tertiary-fixed": "#001b3c",
+                    "inverse-primary": "#b9c3ff",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#d5e3ff",
+                    "primary-container": "#1447e6",
+                    "on-surface-variant": "#434655",
+                    "primary-fixed-dim": "#b9c3ff",
+                    "on-tertiary-fixed-variant": "#004689",
+                    "tertiary-fixed-dim": "#a8c8ff",
+                    "on-surface": "#191c1d",
+                    "muted-blue": "#E8F0FF",
+                    "inverse-surface": "#2e3132",
+                    "secondary-fixed-dim": "#c2c7cd",
+                    "inverse-on-surface": "#eff1f2",
+                    "destructive": "#E63946",
+                    "outline": "#747687",
+                    "on-primary-container": "#c9d0ff",
+                    "surface-container-low": "#f2f4f5",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-secondary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "background": "#f8fafb",
+                    "on-primary-fixed-variant": "#0035be",
+                    "on-error": "#ffffff",
+                    "surface-variant": "#e1e3e4",
+                    "secondary-container": "#dfe3ea",
+                    "on-primary-fixed": "#001356"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "1rem",
+                    "header-height": "4.5rem",
+                    "gutter": "1.5rem",
+                    "container-max": "1280px",
+                    "stack-gap": "1rem"
+            },
+            "fontFamily": {
+                    "headline-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "button-text": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-mono": ["Geist"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f8fafb;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c4c5d8;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #747687;
+        }
+        .glass-panel {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .active-nav-indicator {
+            position: absolute;
+            left: 0;
+            width: 4px;
+            height: 24px;
+            background: #0032b6;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- Background Atmospheric Blobs -->
+<div class="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
+<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] animate-pulse"></div>
+<div class="absolute top-[40%] -right-[5%] w-[30%] h-[30%] bg-teal-accent/5 rounded-full blur-[120px]" style="animation-delay: 2s"></div>
+</div>
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center h-header-height px-gutter bg-surface/80 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-8">
+<h1 class="font-headline-md text-headline-md text-primary font-bold">MedPortal</h1>
+<div class="hidden md:flex items-center gap-2 bg-surface-container rounded-full px-4 py-2 w-96 group focus-within:ring-2 focus-within:ring-primary transition-all">
+<span class="material-symbols-outlined text-secondary">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm w-full outline-none" placeholder="Search patients, IDs, or records..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-secondary hover:bg-primary-container/10 rounded-full transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-secondary hover:bg-primary-container/10 rounded-full transition-colors active:scale-95 duration-200">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-10 w-10 rounded-full bg-primary-fixed flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A professional portrait of a senior male physician with grey hair and glasses, wearing a white lab coat and a stethoscope. The background is a blurred high-end medical clinic office with soft, professional cool-toned lighting. The image captures a sense of clinical expertise and trust." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCluh1mBQIe41szQNnRuS0vHSk5zG-lbk-rN-brISJ8VSU0oENmTyP7CdVvjD_XetL0fOcJrZkYHQGq9QTFurNDuaQHCA8BXXUeBOpd9nb8TTp1-lPJfnZw-hZyVs0qeDKOGix83OyTjsuIk8aIygYyZoyLdA_K6B1E2pScxFc_4Z5E4BtMR0JV_bvCgZAn-HUgj1I9UPWOFK7Ia2NJMwJL0dVHvOLeuX-bGbPzErlM1_-DzqZ1aCz3Jh48eriuMG1KMaFoCto94KUU"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-64 z-40 flex flex-col pt-header-height pb-6 px-4 bg-surface-container-low/90 backdrop-blur-lg shadow-md">
+<div class="mt-6 flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 text-secondary px-4 py-3 hover:translate-x-1 hover:text-primary transition-all active:scale-98 duration-150" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-sm">Dashboard</span>
+</a>
+<a class="relative flex items-center gap-3 text-primary font-bold bg-primary-fixed/20 rounded-lg px-4 py-3 active:scale-98 duration-150" href="#">
+<div class="active-nav-indicator"></div>
+<span class="material-symbols-outlined">group</span>
+<span class="font-body-sm">Patients</span>
+</a>
+<a class="flex items-center gap-3 text-secondary px-4 py-3 hover:translate-x-1 hover:text-primary transition-all active:scale-98 duration-150" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-body-sm">Appointments</span>
+</a>
+<a class="flex items-center gap-3 text-secondary px-4 py-3 hover:translate-x-1 hover:text-primary transition-all active:scale-98 duration-150" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-sm">Reports</span>
+</a>
+</div>
+<div class="border-t border-outline-variant pt-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 text-secondary px-4 py-3 hover:translate-x-1 hover:text-primary transition-all active:scale-98 duration-150" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 text-secondary px-4 py-3 hover:translate-x-1 hover:text-primary transition-all active:scale-98 duration-150" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-sm">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pl-64 pt-header-height h-screen">
+<div class="h-full overflow-hidden flex flex-col p-8">
+<!-- Page Header Actions -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Patient Directory</h2>
+<p class="text-secondary font-body-md mt-1">Managing 1,248 active patient profiles across departments.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-outline text-primary hover:bg-primary/5 transition-all font-button-text active:scale-95">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+                        Advanced Filters
+                    </button>
+<button class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-on-primary shadow-lg shadow-primary/20 hover:translate-y-[-2px] transition-all font-button-text active:scale-95">
+<span class="material-symbols-outlined text-[20px]">person_add</span>
+                        Add New Patient
+                    </button>
+</div>
+</div>
+<!-- Table Container -->
+<div class="flex-1 bg-white rounded-2xl shadow-sm border border-surface-container-high flex flex-col overflow-hidden glass-panel">
+<!-- Table Header (Sticky) -->
+<div class="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_80px] px-6 py-4 border-b border-surface-container-high bg-surface-container-lowest/50 font-label-mono text-secondary uppercase tracking-wider items-center">
+<div>Patient Name</div>
+<div>Patient ID</div>
+<div>Last Visit</div>
+<div>Diagnosis</div>
+<div>Status</div>
+<div class="text-right pr-2">Action</div>
+</div>
+<!-- Table Body (Scrollable) -->
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<!-- Row 1 -->
+<div class="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_80px] px-6 py-4 border-b border-surface-container-low hover:bg-surface-container-lowest transition-colors items-center group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A close-up portrait of a middle-aged woman with a friendly expression. She has warm brown eyes and slightly grey hair, wearing a casual light-colored sweater. High-key natural lighting creates a soft, clean look consistent with a modern clinical software environment. Soft blurred background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMKyV4FEyOSvXEckbSeVKz3HlJGuYFZOGbEp-QOu0UroiAoDKmIuFefSeaOjFfK3yJVJoyl1OMTzki53wDI05LCgR-D2A0iQQnG7nmVW0yDG1csKm7rUsPnv_VJMSca1yZMmYSJXvU2cRlIhmpWw2qQmEr3RB55cQtyDIgc5sOndnAsVzyNmJan9_YkDvt0t3YX9C2FDYoqi-Xr5feUHN2ruZbe98QI3Ri9-gGWs3tHT6VxtTRy_0SdX0ww1VH3MLAPsiMEEg0ZmAI"/>
+</div>
+<div>
+<p class="font-body-md font-semibold text-on-surface">Elena Rodriguez</p>
+<p class="text-xs text-secondary">F • 42 years</p>
+</div>
+</div>
+<div class="font-label-mono text-secondary">#MP-98421</div>
+<div class="text-body-sm text-on-surface-variant">Oct 24, 2023</div>
+<div class="text-body-sm font-medium text-on-surface-variant truncate pr-4">Type 2 Diabetes Mellitus</div>
+<div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
+                                Stable
+                            </span>
+</div>
+<div class="text-right">
+<button class="p-2 text-outline hover:text-primary hover:bg-primary-container/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_80px] px-6 py-4 border-b border-surface-container-low hover:bg-surface-container-lowest transition-colors items-center group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="Portrait of a young adult male with short dark hair and a neat beard. He is looking slightly off-camera with a neutral expression. Studio lighting with a clean white-to-grey gradient background. The style is sharp, professional, and clinical for a healthcare database interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSjADCbc7yiB9sK_VDEHdE_CeZXW137SrSVri6V3bKbejZJ9IVnx3SaJu27kS1Prjfup2QfSliZ9UbCxul4R5sIW5cVLU8scic9bq5hSwSaxUkzCTLAZ8Y9eVh5Z83h-tttxhbM0tyj5FbOulT4DyKXM2IUtIdwetJsgjYdDJn7M4O97wYMvReANVrXoNcw-HhMeZC8On0_c_kCedTPguU7fJLr42tPSwWMnRgsfUaVRhgoJrcCTnjrFzE8D2hUbjzRcPpi3dnl2M2"/>
+</div>
+<div>
+<p class="font-body-md font-semibold text-on-surface">Jameson Cooper</p>
+<p class="text-xs text-secondary">M • 29 years</p>
+</div>
+</div>
+<div class="font-label-mono text-secondary">#MP-87210</div>
+<div class="text-body-sm text-on-surface-variant">Oct 26, 2023</div>
+<div class="text-body-sm font-medium text-on-surface-variant truncate pr-4">Acute Hypertension</div>
+<div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-error">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse mr-1.5"></span>
+                                Critical
+                            </span>
+</div>
+<div class="text-right">
+<button class="p-2 text-outline hover:text-primary hover:bg-primary-container/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_80px] px-6 py-4 border-b border-surface-container-low hover:bg-surface-container-lowest transition-colors items-center group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="Portrait of an elderly man with white hair and gentle facial lines, wearing a simple blue shirt. He has a calm, pleasant expression. High-quality clinical photography, well-lit with soft shadows. Clear, neutral background for a patient records system." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf_mp8Me7PyzUdlrwb0LFvg_Tb1gRHkQVVSvIxRQRxGOi6XJfxcGTd_Ea3Fg2tevm7VL-zOgnXbZPTTzKMQoPaBlviCsq2Rv6oCP2N9o0b5wuuhhqBFyv0-dYu5omhdx_pAFZK-z7nTJronIGwRPnCev4skbGCxZqLVs6BjyvMEuqZQd4B237bntMUH3O5lFuQzvrgRIxVQ1wry5pVdK3EJ0LNfi531Mnkz-UVQsnZ-aL0HaHeY5XhF642rj5mx1y7TM-BMWejEKPF"/>
+</div>
+<div>
+<p class="font-body-md font-semibold text-on-surface">Albert Finch</p>
+<p class="text-xs text-secondary">M • 76 years</p>
+</div>
+</div>
+<div class="font-label-mono text-secondary">#MP-12003</div>
+<div class="text-body-sm text-on-surface-variant">Oct 22, 2023</div>
+<div class="text-body-sm font-medium text-on-surface-variant truncate pr-4">Post-op Cardiac Monitoring</div>
+<div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span>
+                                Active
+                            </span>
+</div>
+<div class="text-right">
+<button class="p-2 text-outline hover:text-primary hover:bg-primary-container/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_80px] px-6 py-4 border-b border-surface-container-low hover:bg-surface-container-lowest transition-colors items-center group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="Portrait of a young woman with curly hair and a focused look. She is wearing a dark top, against a soft, bright professional background. The lighting is balanced and crisp, emphasizing clear facial features for a secure patient directory application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD45Lj8YBt_LMPZd-MTOC-5n42IWA_PtRHyrJgHLrzivJ1irTAKuDQI4RPK7YybqCHesTUmVbMx95R-UgqXmB3lZMRVo__1hDJtlfvNWsY4_790D0uxHWN54fZaM79x3cu_6mn55Qtom58VhmHnyDjKefdJGZkPW_7oOxuUseTUsjoqL0t7J6VcJJb-tHqfXei3mRsURcuuQnhnxYps5eRzqfmiYEgBT7-s4eoztVC10BQrv-YkVQ5Ufv21ShODLXGwemjK2aDe3ICW"/>
+</div>
+<div>
+<p class="font-body-md font-semibold text-on-surface">Sarah Chen</p>
+<p class="text-xs text-secondary">F • 34 years</p>
+</div>
+</div>
+<div class="font-label-mono text-secondary">#MP-55421</div>
+<div class="text-body-sm text-on-surface-variant">Oct 25, 2023</div>
+<div class="text-body-sm font-medium text-on-surface-variant truncate pr-4">Seasonal Allergies &amp; Asthma</div>
+<div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
+                                Stable
+                            </span>
+</div>
+<div class="text-right">
+<button class="p-2 text-outline hover:text-primary hover:bg-primary-container/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Row 5 -->
+<div class="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_80px] px-6 py-4 border-b border-surface-container-low hover:bg-surface-container-lowest transition-colors items-center group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="Portrait of a middle-aged man with short cropped hair, wearing a polo shirt. A subtle, helpful smile is on his face. Professional medical portal photography with soft-focus hospital interior background and cool color temperature." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA3dncJEsEweQALr4rmP3ItRLQ4rgb6jymlquueiJL1G6WknroR3PNLrCRCA5SHKuDF0c_RMgJTGe0SPDj5jmhqRKXUAxDoWk_MIG3uPJF0BzQaqtBoTK8HClmppbC58mBJ7aBrR7fVnp84GmssGEyH7cQarQHxytCsOjp9F1BWYf_vJgx0vbHD6joNiWuHYsh_1nfPv6dN9ndz1DrSY_BMQ1zFxbeLbLHSL-3D6L_m7gQimdvuFWC2qUitcbp3u2Q-np2KKpuKXw2_"/>
+</div>
+<div>
+<p class="font-body-md font-semibold text-on-surface">Gregory Vance</p>
+<p class="text-xs text-secondary">M • 51 years</p>
+</div>
+</div>
+<div class="font-label-mono text-secondary">#MP-99218</div>
+<div class="text-body-sm text-on-surface-variant">Oct 20, 2023</div>
+<div class="text-body-sm font-medium text-on-surface-variant truncate pr-4">Hypercholesterolemia</div>
+<div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
+                                Stable
+                            </span>
+</div>
+<div class="text-right">
+<button class="p-2 text-outline hover:text-primary hover:bg-primary-container/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Row 6 -->
+<div class="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_80px] px-6 py-4 border-b border-surface-container-low hover:bg-surface-container-lowest transition-colors items-center group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="Portrait of an older woman with silver hair pulled back, wearing a floral blouse. She has a gentle and trust-inspiring look. Lighting is warm and even. High-quality digital healthcare directory style image." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA8lpr2UI8FsegTypPdSL2KrAEp9fbZNVMaiE1ECi8and0lx-HgIGJbnfC-3HIvAYLruZ55QskuQ9xnlyBFvgcl8S1nNQ5-fZH5XSpj3l2v8ndJ43BhJV8s5EBNhEj9zjDJ_gGkvJlFD2xcljUMxFdVfxiPJQrCA9cl68Jh2731thkxLTSsRE93ohlUqm-SkUSsucarTEDXTHwSS8pma8cfYu0JVTMJXcnZ3Cs7ocMAvA7akLcQworAH8IeEPa180Mp6wbw4zPeB_Rf"/>
+</div>
+<div>
+<p class="font-body-md font-semibold text-on-surface">Miriam Thorne</p>
+<p class="text-xs text-secondary">F • 68 years</p>
+</div>
+</div>
+<div class="font-label-mono text-secondary">#MP-21094</div>
+<div class="text-body-sm text-on-surface-variant">Oct 18, 2023</div>
+<div class="text-body-sm font-medium text-on-surface-variant truncate pr-4">Chronic Kidney Disease - Stage 3</div>
+<div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary mr-1.5"></span>
+                                Active
+                            </span>
+</div>
+<div class="text-right">
+<button class="p-2 text-outline hover:text-primary hover:bg-primary-container/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Row 7 -->
+<div class="grid grid-cols-[1.5fr_1fr_1fr_1.5fr_1fr_80px] px-6 py-4 border-b border-surface-container-low hover:bg-surface-container-lowest transition-colors items-center group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border border-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A portrait of a young male patient with a friendly but professional appearance. He is wearing a simple grey t-shirt. The image lighting is soft and professional, set against a clean, minimal white background, suitable for a digital health profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZI6EcD1WqIvL3sx2PB0GNZ2h2cN-ntkZUWlrvF8kfGRtuH0QBstJ1sgLOIi0-ztT5QqVS2drDiBW9nxF5ovdIlffLiA_iF6Ec0bo2_uZ2-_1KyyCQjWrmhHVbkNW4_f1wmuPHQ47rGcAsue_D1miG4LNs4kvj13gEwefNyaLKT1qdmI9VB9EhhMj4jsYd2HCFkaMwkZ0OMxRsjOM7iqx3Fzyp3urG6cmsR37MjC44VE2GbhPzRSUCskAAyFp18evkR12OnaeimIbp"/>
+</div>
+<div>
+<p class="font-body-md font-semibold text-on-surface">Derek Lo</p>
+<p class="text-xs text-secondary">M • 24 years</p>
+</div>
+</div>
+<div class="font-label-mono text-secondary">#MP-44329</div>
+<div class="text-body-sm text-on-surface-variant">Oct 26, 2023</div>
+<div class="text-body-sm font-medium text-on-surface-variant truncate pr-4">Acute Bronchitis</div>
+<div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-error">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse mr-1.5"></span>
+                                Critical
+                            </span>
+</div>
+<div class="text-right">
+<button class="p-2 text-outline hover:text-primary hover:bg-primary-container/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Table Footer -->
+<div class="px-6 py-4 border-t border-surface-container-high bg-surface-container-lowest/50 flex justify-between items-center text-body-sm">
+<div class="text-secondary">Showing 1-10 of 1,248 patients</div>
+<div class="flex items-center gap-1">
+<button class="p-2 hover:bg-surface-container rounded-lg text-secondary disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center bg-primary text-on-primary rounded-lg font-semibold">1</button>
+<button class="w-8 h-8 flex items-center justify-center hover:bg-surface-container rounded-lg">2</button>
+<button class="w-8 h-8 flex items-center justify-center hover:bg-surface-container rounded-lg">3</button>
+<span class="px-1 text-secondary">...</span>
+<button class="w-8 h-8 flex items-center justify-center hover:bg-surface-container rounded-lg">125</button>
+<button class="p-2 hover:bg-surface-container rounded-lg text-secondary">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Micro-interactions for table rows
+        document.querySelectorAll('.grid-cols-\\[1\\.5fr_1fr_1fr_1\\.5fr_1fr_80px\\]').forEach(row => {
+            row.addEventListener('click', () => {
+                // Future implementation: Open patient details
+                console.log('Row clicked');
+            });
+        });
+
+        // Search bar interaction
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('w-[480px]');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('w-[480px]');
+        });
+    </script>
+</body></html>

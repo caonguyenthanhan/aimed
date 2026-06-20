@@ -2,9 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { ArrowLeft, MessageSquare, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { DoctorForumPost } from "@/lib/doctor-forum"
 import { normalizeForumPost } from "@/lib/doctor-forum"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
 
 const LOCAL_KEY = "mcs_doctor_forum_posts_v1"
 
@@ -82,37 +85,63 @@ export default function DoctorForumPostDetailPage() {
   if (!mounted) return null
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <Button variant="outline" onClick={() => router.push("/doctor/forum")}>
+    <PortalShell
+      eyebrow="Forum Detail"
+      title={post?.title || "Chi tiết bài viết"}
+      description="Màn xem chi tiết một case discussion trong doctor forum."
+      actions={
+        <Button variant="outline" className="rounded-xl" onClick={() => router.push("/doctor/forum")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Quay lại
         </Button>
-      </div>
-
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Thread State" description="Trạng thái dữ liệu của bài thảo luận này.">
+            <div className="rounded-[1.2rem] bg-primary px-5 py-5 text-primary-foreground">
+              <div className="mb-2 flex items-center gap-2 text-primary-foreground/90">
+                <ShieldCheck className="h-5 w-5" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">{dbDisabled ? "Offline Mode" : "Forum Thread"}</span>
+              </div>
+              <p className="text-sm leading-6 text-primary-foreground/85">
+                {dbDisabled ? "Bài viết đang được đọc từ fallback cục bộ." : "Bài viết được nạp từ nguồn forum hiện có."}
+              </p>
+            </div>
+          </SectionCard>
+        </div>
+      }
+    >
       {loading ? <div className="rounded-xl border bg-background p-4 text-sm text-muted-foreground">Đang tải...</div> : null}
       {dbDisabled ? <div className="rounded-xl border bg-background p-4 text-sm">Chế độ offline.</div> : null}
 
       {post ? (
-        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-          <div className="p-6 sm:p-8">
-            <div className="text-2xl font-semibold text-slate-900">{post.title}</div>
-            <div className="text-xs text-slate-500 mt-2">{new Date(post.created_at).toLocaleString("vi-VN")}</div>
-            {post.tags?.length ? (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {post.tags.map((t) => (
-                  <span key={t} className="text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700">
-                    {t}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-            <div className="mt-6 text-sm text-slate-800 whitespace-pre-wrap">{post.content}</div>
-          </div>
-        </div>
+        <SectionCard
+          title="Nội dung thảo luận"
+          description={new Date(post.created_at).toLocaleString("vi-VN")}
+          badge={<span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Case Thread</span>}
+        >
+          {post.tags?.length ? (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {post.tags.map((t) => (
+                <span key={t} className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground">
+                  {t}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          <div className="rounded-[1.3rem] bg-secondary/35 p-5 text-sm leading-7 text-foreground whitespace-pre-wrap">{post.content}</div>
+        </SectionCard>
       ) : (
-        !loading && <div className="rounded-xl border bg-background p-4 text-sm">Không tìm thấy bài viết.</div>
+        !loading && (
+          <SectionCard title="Không tìm thấy bài viết" description="Bài viết có thể đã bị xóa hoặc không có trong nguồn hiện tại.">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MessageSquare className="h-4 w-4" />
+              Không tìm thấy bài viết.
+            </div>
+          </SectionCard>
+        )
       )}
-    </div>
+    </PortalShell>
   )
 }
 

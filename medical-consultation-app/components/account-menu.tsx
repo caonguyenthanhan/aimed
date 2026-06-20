@@ -24,7 +24,7 @@ import { saveCurrentSession } from '@/lib/account-manager'
 
 interface AccountMenuProps {
   userLabel: string
-  userRole: 'doctor' | 'patient'
+  userRole: 'doctor' | 'patient' | 'admin'
   userFullName?: string
   userEmail?: string
   avatarUrl?: string
@@ -121,13 +121,19 @@ export default function AccountMenu({
   }
 
   const getRoleStyles = () => {
-    return userRole === 'doctor'
-      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-      : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+    if (userRole === 'doctor') {
+      return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+    }
+    if (userRole === 'admin') {
+      return 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400'
+    }
+    return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
   }
 
   const getRoleLabel = () => {
-    return userRole === 'doctor' ? 'Bác sĩ' : 'Bệnh nhân'
+    if (userRole === 'doctor') return 'Bác sĩ'
+    if (userRole === 'admin') return 'Quản trị viên'
+    return 'Bệnh nhân'
   }
 
   return (
@@ -185,6 +191,15 @@ export default function AccountMenu({
               <a href="/doctor/profile" className="flex items-center gap-2 cursor-pointer">
                 <Settings className="h-4 w-4" />
                 <span>Hồ sơ bác sĩ</span>
+              </a>
+            </DropdownMenuItem>
+          ) : null}
+
+          {userRole === "admin" ? (
+            <DropdownMenuItem asChild>
+              <a href="/quan-ly" className="flex items-center gap-2 cursor-pointer">
+                <Settings className="h-4 w-4" />
+                <span>Trung tâm quản trị</span>
               </a>
             </DropdownMenuItem>
           ) : null}

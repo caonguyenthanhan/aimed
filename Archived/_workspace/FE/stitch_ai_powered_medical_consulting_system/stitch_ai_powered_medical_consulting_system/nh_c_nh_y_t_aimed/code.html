@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIMed | Medication Reminders &amp; Habits</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#eceeef",
+                    "on-surface-variant": "#434655",
+                    "secondary": "#5a5f65",
+                    "inverse-on-surface": "#eff1f2",
+                    "on-secondary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#a8c8ff",
+                    "surface-container-low": "#f2f4f5",
+                    "primary-container": "#1447e6",
+                    "error": "#ba1a1a",
+                    "dark-card": "#1A1F2E",
+                    "on-primary-container": "#c9d0ff",
+                    "surface-container-high": "#e6e8e9",
+                    "surface-tint": "#1c4bea",
+                    "surface-container-lowest": "#ffffff",
+                    "on-background": "#191c1d",
+                    "on-secondary-container": "#60656b",
+                    "tertiary": "#004383",
+                    "teal-accent": "#14B8A6",
+                    "surface": "#f8fafb",
+                    "on-tertiary-fixed-variant": "#004689",
+                    "surface-bright": "#f8fafb",
+                    "tertiary-fixed": "#d5e3ff",
+                    "outline-variant": "#c4c5d8",
+                    "background": "#f8fafb",
+                    "on-secondary-fixed": "#171c21",
+                    "surface-dim": "#d8dadb",
+                    "secondary-fixed-dim": "#c2c7cd",
+                    "primary-fixed-dim": "#b9c3ff",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed": "#001b3c",
+                    "surface-variant": "#e1e3e4",
+                    "on-surface": "#191c1d",
+                    "destructive": "#E63946",
+                    "on-primary-fixed": "#001356",
+                    "on-secondary-fixed-variant": "#42474d",
+                    "on-primary-fixed-variant": "#0035be",
+                    "primary": "#0032b6",
+                    "on-tertiary-container": "#bcd4ff",
+                    "dark-bg": "#0F1419",
+                    "inverse-surface": "#2e3132",
+                    "primary-fixed": "#dde1ff",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-error": "#ffffff",
+                    "secondary-fixed": "#dfe3ea",
+                    "inverse-primary": "#b9c3ff",
+                    "outline": "#747687",
+                    "tertiary-container": "#005aac",
+                    "muted-blue": "#E8F0FF",
+                    "secondary-container": "#dfe3ea",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "1rem",
+                    "gutter": "1.5rem",
+                    "header-height": "4.5rem",
+                    "stack-gap": "1rem",
+                    "container-max": "1280px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "button-text": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-mono": ["Geist"],
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            overflow: hidden;
+            height: 100vh;
+            background-color: #f8fafb;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c4c5d8;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #747687;
+        }
+        .glass-panel {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 23px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: repeating-linear-gradient(to bottom, #dde1ff 0%, #dde1ff 50%, transparent 50%, transparent 100%);
+            background-size: 2px 10px;
+            z-index: 0;
+        }
+        .asymmetric-user { border-bottom-right-radius: 4px; }
+        .asymmetric-bot { border-bottom-left-radius: 4px; }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- Background Blobs -->
+<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+
+</div>
+<!-- TopNavBar -->
+<header class="bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md bg-white/80 dark:bg-dark-bg/80 shadow-sm docked full-width top-0 sticky z-50">
+<div class="flex justify-between items-center h-header-height px-gutter max-w-container-max mx-auto">
+<div class="flex items-center gap-8">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">AIMed</h1>
+<nav class="hidden md:flex gap-6">
+<a class="font-body-md text-body-md text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Dashboard</a>
+<a class="font-body-md text-body-md text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Emergency</a>
+<a class="font-body-md text-body-md text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Pharmacy</a>
+<a class="font-body-md text-body-md text-primary dark:text-primary-fixed border-b-2 border-primary dark:border-primary-fixed pb-1" href="#">Appointments</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 transition-transform">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 transition-transform">settings</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a middle-aged male doctor with a kind expression, wearing a crisp white medical coat and a subtle stethoscope around his neck. The background is a brightly lit, clean clinical setting with soft blue and white tones. The lighting is professional and high-key, creating a trustworthy and competent professional image for a medical dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVYc5IrsQ6y2IpGvSDPnoUGbXVCXFbTCPltmMiZ2tcQ2c2KTsvmsoc4uNa0he1eHtEs_o1akZfirV220tUFDc8wJJaXb3V47kfqLbh1NSLB4FoRw_mU09Bf9u11t2LWP4BdSsW2DPuE3dM07_yhqYEUM8pbGoQb-huce2Ab_lTlY_rI1bVKx7HEXI7LU6sJleTpqZ-nx0lz3tU0OhN7P4phbYIygt-yuS-A4KNgNlYWuvvhLCMBBz3Wn9ikmiptX0UKGI10wacwh9O"/>
+</div>
+</div>
+</div>
+</header>
+<main class="flex h-[calc(100vh-4.5rem)]">
+<!-- SideNavBar -->
+<aside class="bg-surface-container-low/90 dark:bg-dark-card/90 backdrop-blur-xl bg-surface-container-low/90 dark:bg-dark-card/90 shadow-lg h-screen w-64 fixed left-0 top-0 pt-header-height flex flex-col p-4 gap-stack-gap h-full border-r border-outline-variant dark:border-outline hidden lg:flex">
+<div class="flex flex-col gap-2 mb-6">
+<div class="flex items-center gap-3 px-2">
+<div class="w-10 h-10 rounded-xl bg-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<p class="font-body-sm text-body-sm font-bold text-on-surface">Dr. Julian Vance</p>
+<p class="text-[12px] text-on-surface-variant">General Practitioner</p>
+</div>
+</div>
+</div>
+<nav class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-on-secondary-container px-4 py-3 hover:bg-surface-container-high dark:hover:bg-inverse-surface rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-body-sm text-body-sm">Consultations</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-on-secondary-container px-4 py-3 hover:bg-surface-container-high dark:hover:bg-inverse-surface rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">medical_services</span>
+<span class="font-body-sm text-body-sm">Health Records</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-on-secondary-container px-4 py-3 hover:bg-surface-container-high dark:hover:bg-inverse-surface rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="font-body-sm text-body-sm">AI Analysis</span>
+</a>
+<a class="flex items-center gap-3 bg-primary-container dark:bg-primary-fixed-dim text-on-primary-container dark:text-on-primary-fixed rounded-xl px-4 py-3 hover:translate-x-1 duration-200" href="/nhac-nho">
+<span class="material-symbols-outlined">event_repeat</span>
+<span class="font-body-sm text-body-sm">Reminders</span>
+</a>
+</nav>
+<button class="w-full py-3 px-4 bg-primary text-white rounded-xl font-button-text text-button-text shadow-lg hover:shadow-xl transition-all active:scale-95 mb-4">
+                New Consultation
+            </button>
+<div class="flex flex-col gap-1 border-t border-outline-variant pt-4">
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-2 hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-2 hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<div class="flex-1 lg:ml-64 overflow-hidden flex flex-col">
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-10">
+<div class="max-w-6xl mx-auto">
+<!-- Page Header -->
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<span class="font-label-mono text-label-mono text-primary uppercase tracking-widest">Daily Protocol</span>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mt-2">Reminders &amp; Habits</h2>
+<p class="text-on-surface-variant mt-1">Today is Monday, October 24, 2024</p>
+</div>
+<div class="flex items-center gap-3 bg-muted-blue rounded-full px-4 py-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="text-primary font-button-text">65% Progress today</span>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Medication Timeline -->
+<div class="lg:col-span-7 space-y-8 relative timeline-line">
+<!-- Morning Slot -->
+<section class="relative z-10">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-full bg-white shadow-sm border border-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">light_mode</span>
+</div>
+<h3 class="font-headline-md text-headline-md">Morning</h3>
+</div>
+<div class="ml-16 space-y-4">
+<!-- Med Card -->
+<div class="bg-white p-5 rounded-2xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start">
+<div class="flex gap-4">
+<div class="w-12 h-12 bg-muted-blue rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">pill</span>
+</div>
+<div>
+<h4 class="font-body-lg text-body-lg font-semibold">Atorvastatin</h4>
+<p class="text-on-surface-variant font-label-mono">20mg • Take with breakfast</p>
+</div>
+</div>
+<button class="px-4 py-2 bg-primary-container text-on-primary-container rounded-lg font-button-text flex items-center gap-2 hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">done</span> Mark as Taken
+                                            </button>
+</div>
+</div>
+<!-- Med Card Taken -->
+<div class="bg-surface-container-low/50 p-5 rounded-2xl border border-outline-variant/30 opacity-70">
+<div class="flex justify-between items-start">
+<div class="flex gap-4">
+<div class="w-12 h-12 bg-teal-accent/10 rounded-xl flex items-center justify-center text-teal-accent">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<h4 class="font-body-lg text-body-lg font-semibold line-through">Multivitamin</h4>
+<p class="text-on-surface-variant font-label-mono">1 Tablet • Daily supplement</p>
+</div>
+</div>
+<span class="text-on-surface-variant font-body-sm italic">Taken at 08:15 AM</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Afternoon Slot -->
+<section class="relative z-10">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-full bg-white shadow-sm border border-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">sunny</span>
+</div>
+<h3 class="font-headline-md text-headline-md">Afternoon</h3>
+</div>
+<div class="ml-16 space-y-4">
+<div class="bg-white p-5 rounded-2xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start">
+<div class="flex gap-4">
+<div class="w-12 h-12 bg-muted-blue rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">medication</span>
+</div>
+<div>
+<h4 class="font-body-lg text-body-lg font-semibold">Lisinopril</h4>
+<p class="text-on-surface-variant font-label-mono">10mg • Blood Pressure Control</p>
+</div>
+</div>
+<button class="px-4 py-2 bg-primary-container text-on-primary-container rounded-lg font-button-text flex items-center gap-2 hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">done</span> Mark as Taken
+                                            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Evening Slot -->
+<section class="relative z-10">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-full bg-white shadow-sm border border-primary-fixed flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">bedtime</span>
+</div>
+<h3 class="font-headline-md text-headline-md">Evening</h3>
+</div>
+<div class="ml-16 space-y-4">
+<div class="bg-white p-5 rounded-2xl border border-outline-variant shadow-sm hover:shadow-md transition-shadow group">
+<div class="flex justify-between items-start">
+<div class="flex gap-4">
+<div class="w-12 h-12 bg-muted-blue rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">pill</span>
+</div>
+<div>
+<h4 class="font-body-lg text-body-lg font-semibold">Melatonin</h4>
+<p class="text-on-surface-variant font-label-mono">5mg • Take 30 min before bed</p>
+</div>
+</div>
+<button class="px-4 py-2 bg-primary-container text-on-primary-container rounded-lg font-button-text flex items-center gap-2 hover:bg-primary hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">done</span> Mark as Taken
+                                            </button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Habit Tracker Grid -->
+<div class="lg:col-span-5 space-y-6">
+<div class="glass-panel p-6 rounded-3xl border border-outline-variant shadow-lg sticky top-0">
+<h3 class="font-headline-md text-headline-md mb-6">Habit Tracker</h3>
+<div class="grid grid-cols-1 gap-4">
+<!-- Habit: Water -->
+<div class="p-4 bg-white rounded-2xl border border-outline-variant">
+<div class="flex justify-between items-center mb-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-blue-500">water_drop</span>
+<span class="font-semibold">Water Intake</span>
+</div>
+<span class="font-label-mono text-on-surface-variant">5/8 glasses</span>
+</div>
+<div class="flex gap-2">
+<div class="h-2 flex-1 rounded-full bg-blue-500"></div>
+<div class="h-2 flex-1 rounded-full bg-blue-500"></div>
+<div class="h-2 flex-1 rounded-full bg-blue-500"></div>
+<div class="h-2 flex-1 rounded-full bg-blue-500"></div>
+<div class="h-2 flex-1 rounded-full bg-blue-500"></div>
+<div class="h-2 flex-1 rounded-full bg-surface-container"></div>
+<div class="h-2 flex-1 rounded-full bg-surface-container"></div>
+<div class="h-2 flex-1 rounded-full bg-surface-container"></div>
+</div>
+<button class="mt-4 w-full py-2 bg-secondary-container text-on-secondary-container rounded-lg font-button-text hover:bg-muted-blue transition-colors">+ Add Glass</button>
+</div>
+<!-- Habit: Exercise -->
+<div class="p-4 bg-white rounded-2xl border border-outline-variant">
+<div class="flex justify-between items-center mb-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-teal-accent">fitness_center</span>
+<span class="font-semibold">Exercise</span>
+</div>
+<span class="font-label-mono text-teal-accent font-bold">COMPLETED</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+<div class="bg-teal-accent h-full w-full"></div>
+</div>
+<p class="mt-2 text-on-surface-variant text-body-sm">30 min morning walk finished.</p>
+</div>
+<!-- Habit: Meditation -->
+<div class="p-4 bg-white rounded-2xl border border-outline-variant">
+<div class="flex justify-between items-center mb-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-purple-500">self_improvement</span>
+<span class="font-semibold">Meditation</span>
+</div>
+<span class="font-label-mono text-on-surface-variant">0/10 min</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2"></div>
+<button class="mt-4 w-full py-2 bg-primary text-white rounded-lg font-button-text shadow-sm hover:translate-y-[-2px] transition-all">Start Session</button>
+</div>
+</div>
+<!-- AI Insight Card -->
+<div class="mt-8 p-4 bg-primary-fixed/30 rounded-2xl border border-primary-fixed flex gap-4">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+<div>
+<p class="font-body-sm text-body-sm font-semibold text-on-primary-fixed">AI Insight</p>
+<p class="text-on-surface-variant text-body-sm">You usually complete your meditation in the evening. Don't forget your session before bed!</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB: Add New Reminder -->
+<button class="fixed bottom-8 right-8 w-16 h-16 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-50 group">
+<span class="material-symbols-outlined text-3xl">add</span>
+<span class="absolute right-full mr-4 px-3 py-1 bg-dark-bg text-white rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Add New Reminder</span>
+</button>
+<!-- Footer (Only if needed, here we provide for compliance) -->
+<footer class="hidden md:block bg-surface-container dark:bg-dark-bg border-t border-outline-variant dark:border-outline fixed bottom-0 left-0 right-0 z-40">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto text-center md:text-left gap-4 py-4">
+<p class="font-body-sm text-body-sm text-secondary dark:text-secondary-fixed">© 2024 AIMed AI Medical Systems. For clinical support only.</p>
+<div class="flex gap-6">
+<a class="font-body-sm text-body-sm text-on-surface-variant dark:text-on-secondary-container hover:text-primary transition-colors underline" href="#">Medical Disclaimer</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant dark:text-on-secondary-container hover:text-primary transition-colors underline" href="#">Privacy Policy</a>
+</div>
+</div>
+</footer>
+<script>
+        // Micro-interaction for 'Mark as Taken' buttons
+        document.querySelectorAll('button').forEach(btn => {
+            if(btn.innerText.includes('Mark as Taken')) {
+                btn.addEventListener('click', function() {
+                    const card = this.closest('.bg-white');
+                    const title = card.querySelector('h4');
+                    const icon = card.querySelector('.text-primary span');
+                    
+                    this.innerHTML = `<span class="material-symbols-outlined text-sm">done_all</span> Done`;
+                    this.classList.remove('bg-primary-container', 'text-on-primary-container');
+                    this.classList.add('bg-teal-accent/10', 'text-teal-accent');
+                    
+                    card.classList.add('opacity-70', 'bg-surface-container-low/50');
+                    title.classList.add('line-through');
+                    
+                    if(icon) {
+                        icon.innerText = 'check_circle';
+                        icon.style.setProperty('font-variation-settings', "'FILL' 1");
+                        icon.parentElement.classList.remove('bg-muted-blue', 'text-primary');
+                        icon.parentElement.classList.add('bg-teal-accent/10', 'text-teal-accent');
+                    }
+                });
+            }
+        });
+    </script>
+</body></html>

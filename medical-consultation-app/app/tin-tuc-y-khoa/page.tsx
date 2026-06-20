@@ -1,405 +1,92 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { getCarePlan, getLastScreening } from "@/lib/screening-store"
-
-type WebSearchItem = {
-  title: string
-  link: string
-  snippet: string
-  displayLink?: string
-}
-
-const RIGHT_RATIO_KEY = "mcs_news_right_ratio_v1"
-const DEFAULT_QUERY = "tin-tuc-y-khoa"
-const DEFAULT_GOOGLE_NEWS_URL = `https://www.google.com.vn/search?tbm=nws&q=${encodeURIComponent(DEFAULT_QUERY)}`
-
-type KnowledgeEntity = {
-  id: string
-  name: string
-  category: string
-  specialty?: string
-  description?: string
-}
-
-type KnowledgeRelation = {
-  source_id: string
-  target_id: string
-  relation_type: string
-  evidence_level?: number
-  evidence_note?: string
-  source_name?: string
-  target_name?: string
-}
-
-type KnowledgeIntervention = {
-  id: string
-  entity_id: string
-  entity_name?: string
-  title: string
-  target_care_level: number
-  content_markdown: string
-}
+import { Newspaper, PanelsTopLeft, ShieldCheck } from "lucide-react"
+import { MedicalNewsSearchPanel } from "@/components/medical-news/medical-news-search-panel"
+import { MedicalNewsWorkspace } from "@/components/medical-news/medical-news-workspace"
+import { useMedicalNewsController } from "@/components/medical-news/use-medical-news-controller"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
 
 export default function TinTucYKhoaPage() {
-  const [q, setQ] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [items, setItems] = useState<WebSearchItem[]>([])
-  const [selectedUrl, setSelectedUrl] = useState<string>("")
-  const [notice, setNotice] = useState("")
-  const [topics, setTopics] = useState<string[]>([])
-  const [rightRatio, setRightRatio] = useState(0.62)
-  const [isLarge, setIsLarge] = useState(false)
-  const [authToken, setAuthToken] = useState("")
-  const [refQuery, setRefQuery] = useState("")
-  const [refLoading, setRefLoading] = useState(false)
-  const [refError, setRefError] = useState("")
-  const [refEntities, setRefEntities] = useState<KnowledgeEntity[]>([])
-  const [refRelations, setRefRelations] = useState<KnowledgeRelation[]>([])
-  const [refInterventions, setRefInterventions] = useState<KnowledgeIntervention[]>([])
-
-  const canSearch = useMemo(() => q.trim().length >= 2, [q])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const mq = window.matchMedia("(min-width: 1024px)")
-    const update = () => setIsLarge(!!mq.matches)
-    update()
-    try {
-      mq.addEventListener("change", update)
-      return () => mq.removeEventListener("change", update)
-    } catch {
-      mq.addListener(update)
-      return () => mq.removeListener(update)
-    }
-  }, [])
-
-  const applyRightRatio = (value: number) => {
-    const next = Math.max(0.5, Math.min(0.8, value))
-    setRightRatio(next)
-    try {
-      localStorage.setItem(RIGHT_RATIO_KEY, String(next))
-    } catch {}
-  }
-
-  const runRefSearch = async (query: string) => {
-    const qq = (query || "").trim()
-    if (!qq) return
-    if (!authToken) {
-      setRefError("Đăng nhập để xem dữ liệu tham khảo.")
-      setRefEntities([])
-      setRefRelations([])
-      setRefInterventions([])
-      return
-    }
-    setRefError("")
-    setRefLoading(true)
-    try {
-      const resp = await fetch(`/api/backend/v1/knowledge/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ query: qq, limit: 8, include_relations: true, include_interventions: true }),
-      })
-      if (!resp.ok) {
-        const t = await resp.text()
-        throw new Error(t || `HTTP ${resp.status}`)
-      }
-      const data = (await resp.json()) as {
-        entities?: KnowledgeEntity[]
-        relations?: KnowledgeRelation[]
-        interventions?: KnowledgeIntervention[]
-      }
-      setRefEntities(Array.isArray(data?.entities) ? data.entities : [])
-      setRefRelations(Array.isArray(data?.relations) ? data.relations : [])
-      setRefInterventions(Array.isArray(data?.interventions) ? data.interventions : [])
-    } catch (e: any) {
-      setRefError(e?.message || "Không tải được dữ liệu tham khảo")
-      setRefEntities([])
-      setRefRelations([])
-      setRefInterventions([])
-    } finally {
-      setRefLoading(false)
-    }
-  }
-
-  const runSearch = async (forcedQuery?: string) => {
-    const query = (forcedQuery ?? q).trim()
-    if (!query) return
-    setError("")
-    setLoading(true)
-    try {
-      const resp = await fetch(`/api/web-search?q=${encodeURIComponent(query)}&num=8`, { method: "GET" })
-      if (!resp.ok) {
-        const t = await resp.text()
-        throw new Error(t || `HTTP ${resp.status}`)
-      }
-      const data = (await resp.json()) as { items?: WebSearchItem[] }
-      const next = Array.isArray(data?.items) ? data.items : []
-      setItems(next)
-      const first = next?.[0]
-      const firstUrl = first?.link || ""
-      const firstRef = (first?.title || query).trim()
-      setSelectedUrl(firstUrl)
-      setRefQuery(firstRef)
-      void runRefSearch(firstRef)
-    } catch (e: any) {
-      setError(e?.message || "Không tìm kiếm được")
-      setItems([])
-      setSelectedUrl("")
-      setRefQuery(query)
-      void runRefSearch(query)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    try {
-      const t = localStorage.getItem("authToken")
-      if (t) setAuthToken(t)
-    } catch {}
-    try {
-      const raw = localStorage.getItem(RIGHT_RATIO_KEY)
-      if (raw) {
-        const v = Number(raw)
-        if (!Number.isNaN(v)) applyRightRatio(v)
-      }
-    } catch {}
-
-    const plan = (() => {
-      try {
-        return getCarePlan()
-      } catch {
-        return null
-      }
-    })()
-    const last = (() => {
-      try {
-        return getLastScreening()
-      } catch {
-        return null
-      }
-    })()
-
-    if (plan?.severity === "high") {
-      setNotice("Nếu bạn đang thấy căng thẳng hoặc lo lắng, hãy đọc chậm lại, hít thở sâu, và ưu tiên nội dung mang tính trấn an. Bạn không cần phải xử lý mọi thông tin tiêu cực ngay lúc này.")
-      setTopics([
-        ...(Array.isArray(plan?.suggestedArticles) ? plan.suggestedArticles : []),
-        DEFAULT_QUERY,
-      ])
-      const first = (Array.isArray(plan?.suggestedArticles) ? plan.suggestedArticles[0] : "") || "kỹ thuật thở giảm lo âu"
-      setQ(first)
-      void runSearch(first)
-      return
-    }
-
-    if (last?.level) {
-      setNotice(`Gợi ý theo kết quả sàng lọc gần nhất: ${last.title} • ${last.level} (${last.score ?? "?"}).`)
-    } else {
-      setNotice("")
-    }
-    setTopics([
-      ...(Array.isArray(plan?.suggestedArticles) ? plan.suggestedArticles.slice(0, 4) : ["khuyến cáo y khoa mới", "tiêm chủng và phòng bệnh", "dinh dưỡng và vận động", "y tế cộng đồng"]),
-      DEFAULT_QUERY,
-    ])
-    setQ(DEFAULT_QUERY)
-    void runSearch(DEFAULT_QUERY)
-  }, [])
+  const news = useMedicalNewsController()
 
   return (
-    <div className="h-[calc(100dvh-4rem)] overflow-y-auto p-4 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-4 pb-10">
-        <div className="space-y-1">
-          <div className="text-xl font-semibold">Tin tức y khoa</div>
-          <div className="text-sm text-muted-foreground">
-            Tìm link y khoa và nhúng vào web để đọc nhanh.
-          </div>
-        </div>
-
-        {notice ? (
-          <div className="rounded-xl border bg-background p-3">
-            <div className="text-sm whitespace-pre-wrap">{notice}</div>
-          </div>
-        ) : null}
-
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.open(DEFAULT_GOOGLE_NEWS_URL, "_blank", "noopener,noreferrer")}>
-            Mở Google News mặc định
-          </Button>
-          {topics.map((t) => (
-            <Button
-              key={t}
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setQ(t)
-                void runSearch(t)
-              }}
-            >
-              {t}
-            </Button>
-          ))}
-        </div>
-
-        <div className="rounded-xl border bg-background p-4 flex flex-col md:flex-row gap-2">
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Ví dụ: khuyến cáo WHO về cúm mùa 2026"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canSearch && !loading) {
-                e.preventDefault()
-                void runSearch()
-              }
-            }}
-          />
-          <Button onClick={() => runSearch()} disabled={!canSearch || loading}>
-            {loading ? "Đang tìm..." : "Tìm kiếm"}
-          </Button>
-          {selectedUrl ? (
-            <Button variant="outline" onClick={() => window.open(selectedUrl, "_blank", "noopener,noreferrer")}>
-              Mở tab mới
-            </Button>
-          ) : null}
-        </div>
-
-        {error ? (
-          <div className="rounded-xl border bg-background p-3">
-            <div className="text-sm text-red-600 whitespace-pre-wrap">{error}</div>
-          </div>
-        ) : null}
-
-        <div className="flex flex-col gap-4 lg:flex-row">
-          <div
-            className="rounded-xl border bg-background p-4 space-y-3 lg:flex-none"
-            style={isLarge ? {
-              flexBasis: `${Math.round((1 - rightRatio) * 1000) / 10}%`,
-              maxWidth: `${Math.round((1 - rightRatio) * 1000) / 10}%`,
-            } : undefined}
-          >
-            <div className="text-sm font-medium">Kết quả</div>
-            {!items.length && !loading ? (
-              <div className="text-sm text-muted-foreground">Chưa có kết quả.</div>
-            ) : null}
-            <div className="space-y-2">
-              {items.map((it) => {
-                const active = it.link === selectedUrl
-                return (
-                  <button
-                    key={it.link}
-                    type="button"
-                    onClick={() => {
-                      setSelectedUrl(it.link)
-                      const rq = (it.title || it.link).trim()
-                      setRefQuery(rq)
-                      void runRefSearch(rq)
-                    }}
-                    className={`w-full text-left rounded-lg border p-3 hover:bg-muted transition-colors ${active ? "bg-muted" : ""}`}
-                  >
-                    <div className="text-sm font-medium line-clamp-2">{it.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{it.snippet}</div>
-                    <div className="text-xs text-blue-600 mt-1 break-all">{it.displayLink || it.link}</div>
-                  </button>
-                )
-              })}
+    <PortalShell
+      eyebrow="Medical News"
+      title="Tin tức y khoa"
+      description="Không gian đọc nhanh tin y khoa, mở nguồn ngoài và đối chiếu thêm dữ liệu tham khảo nội bộ."
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Lưu ý đọc tin" description="Nhịp sử dụng an toàn cho người đang có tải cảm xúc cao.">
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>Ưu tiên đọc các nguồn có giọng điệu bình tĩnh và tránh doom scrolling khi đang căng thẳng.</p>
+              <p>Dùng cột tham khảo để đối chiếu thuật ngữ, entity và can thiệp thay vì chỉ tin vào tiêu đề báo.</p>
             </div>
-          </div>
-
-          <div
-            className="rounded-xl border bg-background p-4 space-y-3 overflow-hidden flex flex-col min-h-[60vh] lg:flex-none"
-            style={isLarge ? { flexBasis: `${Math.round(rightRatio * 1000) / 10}%`, maxWidth: `${Math.round(rightRatio * 1000) / 10}%` } : undefined}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-medium">Nhúng trang</div>
-              <div className="hidden md:flex items-center gap-2">
-                <div className="text-xs text-muted-foreground">{Math.round(rightRatio * 100)}%</div>
-                <input
-                  type="range"
-                  min={50}
-                  max={80}
-                  value={Math.round(rightRatio * 100)}
-                  onChange={(e) => applyRightRatio(Number(e.target.value) / 100)}
-                />
-              </div>
-            </div>
-            {!selectedUrl ? (
-              <div className="text-sm text-muted-foreground">Chọn một kết quả để nhúng.</div>
-            ) : (
-              <iframe
-                key={selectedUrl}
-                src={selectedUrl}
-                className="w-full flex-1 rounded-lg border"
-                referrerPolicy="no-referrer"
-                sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
-                title="Medical news embed"
-              />
-            )}
-
-            <div className="rounded-lg border p-3 bg-background">
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-sm font-medium">Dữ liệu tham khảo</div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!refQuery.trim() || refLoading}
-                  onClick={() => void runRefSearch(refQuery)}
+          </SectionCard>
+          <SectionCard title="Chủ đề gợi ý" description="Các truy vấn được sinh từ care plan hoặc screening gần nhất.">
+            <div className="flex flex-wrap gap-2">
+              {news.topics.map((topic) => (
+                <button
+                  key={topic}
+                  type="button"
+                  onClick={() => {
+                    news.setQ(topic)
+                    void news.runSearch(topic)
+                  }}
+                  className="rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-background"
                 >
-                  {refLoading ? "Đang tải..." : "Làm mới"}
-                </Button>
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                {refQuery ? `Từ khóa: ${refQuery}` : "Chọn kết quả hoặc tìm kiếm để xem tham khảo."}
-              </div>
-              {refError ? <div className="text-sm text-red-600 whitespace-pre-wrap mt-2">{refError}</div> : null}
-              {!refError && !refLoading && !refEntities.length ? (
-                <div className="text-sm text-muted-foreground mt-2">Chưa có dữ liệu.</div>
-              ) : null}
-              {refEntities.length ? (
-                <div className="mt-3 space-y-2">
-                  {refEntities.slice(0, 6).map((e) => (
-                    <div key={e.id} className="rounded-md border p-2">
-                      <div className="text-sm font-medium">{e.name}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {String(e.category || "").toUpperCase()}
-                        {e.specialty ? ` • ${e.specialty}` : ""}
-                      </div>
-                      {e.description ? <div className="text-xs text-muted-foreground mt-1 line-clamp-3">{e.description}</div> : null}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {refInterventions.length ? (
-                <div className="mt-3 space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">Can thiệp gợi ý</div>
-                  {refInterventions.slice(0, 3).map((itv) => (
-                    <div key={itv.id} className="rounded-md border p-2">
-                      <div className="text-sm font-medium">{itv.title}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {itv.entity_name ? `${itv.entity_name} • ` : ""}
-                        Level {itv.target_care_level}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1 line-clamp-4 whitespace-pre-wrap">{itv.content_markdown}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              {refRelations.length ? (
-                <div className="mt-3 space-y-2">
-                  <div className="text-xs font-medium text-muted-foreground">Quan hệ liên quan</div>
-                  {refRelations.slice(0, 6).map((r, idx) => (
-                    <div key={`${r.source_id}-${r.target_id}-${r.relation_type}-${idx}`} className="text-xs text-muted-foreground">
-                      {r.source_name || r.source_id} → {r.relation_type} → {r.target_name || r.target_id}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+                  {topic}
+                </button>
+              ))}
             </div>
-          </div>
+          </SectionCard>
         </div>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard label="Topics" value={news.topics.length} helper="Gợi ý theo care plan và screening" icon={<Newspaper className="h-5 w-5" />} tone="primary" />
+        <StatCard label="Results" value={news.items.length} helper={news.loading ? "Đang tải nguồn ngoài" : "Kết quả web-search hiện tại"} icon={<PanelsTopLeft className="h-5 w-5" />} tone="teal" />
+        <StatCard label="Reference" value={news.refEntities.length} helper={news.refQuery ? `Theo từ khóa: ${news.refQuery}` : "Chưa chọn kết quả"} icon={<ShieldCheck className="h-5 w-5" />} tone="neutral" />
       </div>
-    </div>
+
+      {news.notice ? (
+        <SectionCard title="Notice" description="Nhắc nhở ngữ cảnh theo trạng thái sàng lọc gần nhất.">
+          <div className="text-sm whitespace-pre-wrap text-muted-foreground">{news.notice}</div>
+        </SectionCard>
+      ) : null}
+
+      <SectionCard title="Tìm kiếm nguồn tin" description="Tìm bài viết, mở nguồn ngoài và lưu nhịp đọc tin phù hợp.">
+        <MedicalNewsSearchPanel
+          q={news.q}
+          setQ={news.setQ}
+          canSearch={news.canSearch}
+          loading={news.loading}
+          selectedUrl={news.selectedUrl}
+          topics={news.topics}
+          error={news.error}
+          onSearch={news.runSearch}
+        />
+      </SectionCard>
+
+      <SectionCard title="Workspace" description="Kết quả bên trái, trang nhúng và dữ liệu tham khảo bên phải.">
+        <MedicalNewsWorkspace
+          items={news.items}
+          loading={news.loading}
+          selectedUrl={news.selectedUrl}
+          isLarge={news.isLarge}
+          rightRatio={news.rightRatio}
+          onRatioChange={news.applyRightRatio}
+          onSelectItem={news.selectItem}
+          refQuery={news.refQuery}
+          refLoading={news.refLoading}
+          refError={news.refError}
+          refEntities={news.refEntities}
+          refRelations={news.refRelations}
+          refInterventions={news.refInterventions}
+          onRefreshReference={() => void news.runRefSearch(news.refQuery)}
+        />
+      </SectionCard>
+    </PortalShell>
   )
 }

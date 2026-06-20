@@ -1,0 +1,257 @@
+## Error Type
+Console Error
+
+## Error Message
+In HTML, <html> cannot be a child of <div>.
+This will cause a hydration error.
+
+  ...
+    <HTTPAccessFallbackErrorBoundary pathname="/vi" notFound={<NotAllowedRootHTTPFallbackError>} forbidden={undefined} ...>
+      <RedirectBoundary>
+        <RedirectErrorBoundary router={{...}}>
+          <Head>
+          <__next_root_layout_boundary__>
+            <SegmentViewNode type="layout" pagePath="layout.tsx">
+              <SegmentTrieNode>
+              <link>
+              <script>
+              <script>
+              <script>
+              <script>
+              <RootLayout>
+                <html lang="vi" suppressHydrationWarning={true}>
+                  <body suppressHydrationWarning={true} className="font-sans ...">
+                    <Script>
+                    <Script>
+                    <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true} ...>
+                      <J attribute="class" defaultTheme="system" enableSystem={true} disableTransitionOnChange={true}>
+                        <V attribute="class" defaultTheme="system" enableSystem={true} disableTransitionOnChange={true}>
+                          <script>
+                          <LanguageProvider>
+                            <SiteHeader>
+                            <div className="flex-1 fle...">
+                              <div>
+>                             <div className="flex-1 flex flex-col min-h-0 w-full">
+                                ...
+                                  <SegmentViewNode type="layout" pagePath="[locale]/l...">
+                                    <SegmentTrieNode>
+                                    <LocaleLayout>
+>                                     <html lang="vi" suppressHydrationWarning={true}>
+                            ...
+          ...
+
+
+
+    at createConsoleError (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:2189:71)
+    at handleConsoleError (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:2970:54)
+    at console.error (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:3114:57)
+    at validateDOMNesting (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:1957:211)
+    at resolveSingletonInstance (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:12383:34)
+    at completeWork (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6911:124)
+    at runWithFiberInDEV (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:959:74)
+    at completeUnitOfWork (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9621:23)
+    at performUnitOfWork (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9558:28)
+    at workLoopConcurrentByScheduler (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9552:58)
+    at renderRootConcurrent (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9535:71)
+    at performWorkOnRoot (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9062:150)
+    at performWorkOnRootViaSchedulerTask (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10224:9)
+    at MessagePort.performWorkUntilDeadline (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:64)
+    at html (<anonymous>:null:null)
+    at LocaleLayout (app\[locale]\layout.tsx:44:5)
+
+## Code Frame
+  42 |   const { locale } = await params
+  43 |   return (
+> 44 |     <html lang={locale} suppressHydrationWarning>
+     |     ^
+  45 |       <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 sm:pt-18 md:pt-20 h-screen flex flex-col antialiased overflow-hidden`}>
+  46 |         <LanguageProvider>
+  47 |           <SiteHeader />
+
+Next.js version: 16.0.10 (Turbopack)
+
+
+
+
+
+## Error Type
+Console Error
+
+## Error Message
+<div> cannot contain a nested <html>.
+See this log for the ancestor stack trace.
+
+
+    at createConsoleError (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:2189:71)
+    at handleConsoleError (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:2970:54)
+    at console.error (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:3114:57)
+    at <unknown> (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:1959:21)
+    at runWithFiberInDEV (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:959:74)
+    at validateDOMNesting (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:1958:178)
+    at resolveSingletonInstance (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:12383:34)
+    at completeWork (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:6911:124)
+    at runWithFiberInDEV (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:959:74)
+    at completeUnitOfWork (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9621:23)
+    at performUnitOfWork (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9558:28)
+    at workLoopConcurrentByScheduler (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9552:58)
+    at renderRootConcurrent (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9535:71)
+    at performWorkOnRoot (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:9062:150)
+    at performWorkOnRootViaSchedulerTask (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:10224:9)
+    at MessagePort.performWorkUntilDeadline (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_a0e4c7b4._.js:2647:64)
+    at div (<anonymous>:null:null)
+    at RootLayout (app\layout.tsx:66:15)
+
+## Code Frame
+  64 |                 <div className="absolute -bottom-[10%] left-[25%] w-[40%] h-[40%] rounded-full bg-blue-100/15 dark:bg-blue-500/5 blur-[120px] animate-blob animation-delay-4000" />
+  65 |               </div>
+> 66 |               <div className="flex-1 flex flex-col min-h-0 w-full">
+     |               ^
+  67 |                 <Suspense fallback={null}>{children}</Suspense>
+  68 |               </div>
+  69 |             </div>
+
+Next.js version: 16.0.10 (Turbopack)
+
+
+## Error Type
+Console Error
+
+## Error Message
+You are mounting a new html component when a previous one has not first unmounted. It is an error to render more than one html component at a time and attributes and children of these components will likely fail in unpredictable ways. Please only render a single instance of <html> and if you need to mount a new one, ensure any previous ones have unmounted first.
+
+
+    at createConsoleError (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:2189:71)
+    at handleConsoleError (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:2970:54)
+    at console.error (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:3114:57)
+    at acquireSingletonInstance (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:12405:21)
+    at runWithFiberInDEV (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:959:74)
+    at commitHostSingletonAcquisition (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7519:13)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7888:50)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7855:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7855:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7936:470)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7925:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7855:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7936:470)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at html (<anonymous>:null:null)
+    at LocaleLayout (app\[locale]\layout.tsx:44:5)
+
+## Code Frame
+  42 |   const { locale } = await params
+  43 |   return (
+> 44 |     <html lang={locale} suppressHydrationWarning>
+     |     ^
+  45 |       <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 sm:pt-18 md:pt-20 h-screen flex flex-col antialiased overflow-hidden`}>
+  46 |         <LanguageProvider>
+  47 |           <SiteHeader />
+
+Next.js version: 16.0.10 (Turbopack)
+
+
+## Error Type
+Console Error
+
+## Error Message
+You are mounting a new body component when a previous one has not first unmounted. It is an error to render more than one body component at a time and attributes and children of these components will likely fail in unpredictable ways. Please only render a single instance of <body> and if you need to mount a new one, ensure any previous ones have unmounted first.
+
+
+    at createConsoleError (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:2189:71)
+    at handleConsoleError (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:2970:54)
+    at console.error (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_7a8122d0._.js:3114:57)
+    at acquireSingletonInstance (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:12405:21)
+    at runWithFiberInDEV (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:959:74)
+    at commitHostSingletonAcquisition (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7519:13)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7888:50)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7891:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7855:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7855:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7936:470)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7925:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7855:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7949:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at commitLayoutEffectOnFiber (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:7851:17)
+    at recursivelyTraverseLayoutEffects (file://D:/desktop/tlcn/medical consulting system/medical-consultation-app/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_1e674e59._.js:8531:105)
+    at body (<anonymous>:null:null)
+    at LocaleLayout (app\[locale]\layout.tsx:45:7)
+
+## Code Frame
+  43 |   return (
+  44 |     <html lang={locale} suppressHydrationWarning>
+> 45 |       <body suppressHydrationWarning className={`font-sans ${inter.variable} ${GeistMono.variable} pt-16 sm:pt-18 md:pt-20 h-screen flex flex-col antialiased overflow-hidden`}>
+     |       ^
+  46 |         <LanguageProvider>
+  47 |           <SiteHeader />
+  48 |           <div className="flex-1 flex min-h-0">
+
+Next.js version: 16.0.10 (Turbopack)

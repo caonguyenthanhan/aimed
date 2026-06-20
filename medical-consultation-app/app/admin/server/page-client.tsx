@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { DatabaseZap, RefreshCcw, ServerCog, ShieldCheck, Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
 
 type ServerItem = {
   id: string
@@ -141,129 +147,137 @@ export default function AdminServerPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Quản trị địa chỉ Server</h1>
-        <div className="text-sm text-slate-600">Mới nhất: <span className="font-semibold text-primary">{latestUrl || "(chưa có)"}</span></div>
-      </div>
-      <div className="mt-6 grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 bg-white rounded-xl border p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Danh sách server</h2>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)} />
-              Tự làm mới
-            </label>
-          </div>
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500">
-                  <th className="py-2 pr-4">ID</th>
-                  <th className="py-2 pr-4">Tên</th>
-                  <th className="py-2 pr-4">URL</th>
-                  <th className="py-2 pr-4">Trạng thái</th>
-                  <th className="py-2 pr-4">Cập nhật</th>
-                  <th className="py-2 pr-4">Kiểm tra</th>
-                </tr>
-              </thead>
-              <tbody>
-                {servers.map(s => (
-                  <tr key={s.id} className="border-t">
-                    <td className="py-2 pr-4 font-mono">{s.id}</td>
-                    <td className="py-2 pr-4">{s.name || "-"}</td>
-                    <td className="py-2 pr-4"><a href={s.url} className="text-primary hover:underline" target="_blank" rel="noreferrer">{s.url}</a></td>
-                    <td className={`py-2 pr-4 ${s.status === 'active' ? 'text-green-600' : s.status === 'inactive' ? 'text-red-600' : 'text-slate-600'}`}>{s.status}</td>
-                    <td className="py-2 pr-4">{new Date(s.updated_at).toISOString()}</td>
-                    <td className="py-2 pr-4">
-                      <button disabled={checkingId === s.id} onClick={() => check(s)} className="inline-flex items-center rounded-md bg-primary text-primary-foreground px-3 py-1.5">
-                        {checkingId === s.id ? 'Đang kiểm tra...' : 'Kiểm tra'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+    <PortalShell
+      eyebrow="Admin Runtime"
+      title="Quản trị địa chỉ Server"
+      description="Màn vận hành cho server registry, GPU URL, logs thay đổi và runtime events. Tất cả action hiện vẫn dùng đúng API admin/runtime cũ."
+      actions={
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" className="rounded-xl" onClick={load}>
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Tải lại
+          </Button>
+          <Button variant="outline" className="rounded-xl" asChild>
+            <Link href="/api/servers/latest">API latest</Link>
+          </Button>
         </div>
-        <div className="bg-white rounded-xl border p-6">
-          <h2 className="font-semibold">Cập nhật URL GPU (Ngrok)</h2>
-          <div className="mt-4 space-y-3">
-            <input value={form.url} onChange={e => setForm({ url: e.target.value })} placeholder="https://xxx.ngrok-free.dev" className="w-full border rounded-md px-3 py-2" />
-            <div className="flex gap-2">
-              <button onClick={submit} className="inline-flex items-center rounded-md bg-primary text-primary-foreground px-4 py-2 text-sm">Lưu</button>
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Cập nhật URL GPU" description="Lưu URL Colab/Ngrok mới và đồng bộ runtime mode sang GPU.">
+            <div className="space-y-3">
+              <Input value={form.url} onChange={e => setForm({ url: e.target.value })} placeholder="https://xxx.ngrok-free.dev" className="input-glow" />
+              <div className="flex flex-wrap gap-3">
+                <Button className="rounded-xl" onClick={submit}>Lưu</Button>
+                <Button variant="outline" className="rounded-xl" onClick={updateFromColab}>Đồng bộ Colab</Button>
+              </div>
             </div>
-            <div className="text-xs text-slate-500">API latest: <Link href="/api/servers/latest" className="text-primary hover:underline">/api/servers/latest</Link></div>
-          </div>
+          </SectionCard>
+          <SectionCard title="Danger Zone" description="Các thao tác xóa log/runtime để dọn môi trường demo.">
+            <div className="grid gap-3">
+              <Button variant="outline" className="justify-start rounded-xl" disabled={clearing} onClick={clearEvents}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                {clearing ? "Đang xóa..." : "Xóa log runtime"}
+              </Button>
+              <Button variant="outline" className="justify-start rounded-xl text-destructive" disabled={clearing} onClick={clearAllConversations}>
+                <DatabaseZap className="mr-2 h-4 w-4" />
+                {clearing ? "Đang xóa..." : "Xóa tất cả hội thoại"}
+              </Button>
+            </div>
+          </SectionCard>
         </div>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard label="Servers" value={servers.length} helper="Registry hiện có" icon={<ServerCog className="h-5 w-5" />} tone="primary" />
+        <StatCard label="Active" value={servers.filter(s => s.status === "active").length} helper="Server hoạt động" icon={<ShieldCheck className="h-5 w-5" />} tone="teal" />
+        <StatCard label="Events" value={events.length} helper="Runtime events đã ghi" icon={<RefreshCcw className="h-5 w-5" />} tone="neutral" />
       </div>
-      <div className="mt-8 bg-white rounded-xl border p-6">
-        <h2 className="font-semibold">Lịch sử thay đổi</h2>
-        <div className="mt-4 overflow-x-auto">
+
+      <SectionCard
+        title="Danh sách server"
+        description={`Mới nhất: ${latestUrl || "(chưa có)"}`}
+        badge={
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)} />
+            Auto refresh
+          </label>
+        }
+      >
+        <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="text-left text-slate-500">
-                <th className="py-2 pr-4">Thời gian</th>
-                <th className="py-2 pr-4">Loại</th>
-                <th className="py-2 pr-4">ID</th>
-                <th className="py-2 pr-4">URL</th>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2 pr-4">ID</th><th className="py-2 pr-4">Tên</th><th className="py-2 pr-4">URL</th><th className="py-2 pr-4">Trạng thái</th><th className="py-2 pr-4">Cập nhật</th><th className="py-2 pr-4">Kiểm tra</th>
+              </tr>
+            </thead>
+            <tbody>
+              {servers.map(s => (
+                <tr key={s.id} className="border-b border-border/60">
+                  <td className="py-3 pr-4 font-mono">{s.id}</td>
+                  <td className="py-3 pr-4">{s.name || "-"}</td>
+                  <td className="py-3 pr-4"><a href={s.url} className="text-primary hover:underline" target="_blank" rel="noreferrer">{s.url}</a></td>
+                  <td className={`py-3 pr-4 ${s.status === "active" ? "text-teal-accent" : s.status === "inactive" ? "text-destructive" : "text-muted-foreground"}`}>{s.status}</td>
+                  <td className="py-3 pr-4">{new Date(s.updated_at).toISOString()}</td>
+                  <td className="py-3 pr-4"><Button size="sm" className="rounded-lg" disabled={checkingId === s.id} onClick={() => check(s)}>{checkingId === s.id ? "Đang kiểm tra..." : "Kiểm tra"}</Button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Lịch sử thay đổi" description="Các bản ghi add/update của server registry.">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2 pr-4">Thời gian</th><th className="py-2 pr-4">Loại</th><th className="py-2 pr-4">ID</th><th className="py-2 pr-4">URL</th>
               </tr>
             </thead>
             <tbody>
               {logs.slice().reverse().map((l, i) => (
-                <tr key={i} className="border-t">
-                  <td className="py-2 pr-4">{new Date(l.ts).toISOString()}</td>
-                  <td className="py-2 pr-4">{l.type}</td>
-                  <td className="py-2 pr-4 font-mono">{l.id}</td>
-                  <td className="py-2 pr-4"><a href={l.url} className="text-primary hover:underline" target="_blank" rel="noreferrer">{l.url}</a></td>
+                <tr key={i} className="border-b border-border/60">
+                  <td className="py-3 pr-4">{new Date(l.ts).toISOString()}</td>
+                  <td className="py-3 pr-4">{l.type}</td>
+                  <td className="py-3 pr-4 font-mono">{l.id}</td>
+                  <td className="py-3 pr-4"><a href={l.url} className="text-primary hover:underline" target="_blank" rel="noreferrer">{l.url}</a></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
-      <div className="mt-8 bg-white rounded-xl border p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">Lịch sử runtime</h2>
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={eventsAutoRefresh} onChange={e => setEventsAutoRefresh(e.target.checked)} />
-              Tự làm mới
-            </label>
-            <button onClick={load} className="inline-flex items-center rounded-md bg-slate-100 px-3 py-1.5 text-sm">Tải lại</button>
-            <button disabled={clearing} onClick={clearEvents} className="inline-flex items-center rounded-md bg-red-500 text-white px-3 py-1.5 text-sm">{clearing ? 'Đang xóa...' : 'Xóa log runtime'}</button>
-            <button disabled={clearing} onClick={clearAllConversations} className="inline-flex items-center rounded-md bg-red-600 text-white px-3 py-1.5 text-sm">{clearing ? 'Đang xóa...' : 'Xóa tất cả hội thoại'}</button>
-          </div>
-        </div>
-        <div className="mt-4 overflow-x-auto">
+      </SectionCard>
+
+      <SectionCard
+        title="Lịch sử runtime"
+        description="Theo dõi mode changes, fallback và các runtime transitions trong app."
+        badge={
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <input type="checkbox" checked={eventsAutoRefresh} onChange={e => setEventsAutoRefresh(e.target.checked)} />
+            Auto refresh
+          </label>
+        }
+      >
+        <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="text-left text-slate-500">
-                <th className="py-2 pr-4">Thời gian</th>
-                <th className="py-2 pr-4">Loại</th>
-                <th className="py-2 pr-4">Chi tiết</th>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2 pr-4">Thời gian</th><th className="py-2 pr-4">Loại</th><th className="py-2 pr-4">Chi tiết</th>
               </tr>
             </thead>
             <tbody>
               {events.slice().reverse().map((ev, i) => (
-                <tr key={i} className="border-t">
-                  <td className="py-2 pr-4">{new Date(ev.ts).toISOString()}</td>
-                  <td className="py-2 pr-4">{ev.type}</td>
-                  <td className="py-2 pr-4">
-                    {ev.type === 'mode_change' ? (
-                      <span>target: {ev.target}{ev.gpu_url ? `, gpu_url: ${ev.gpu_url}` : ''}</span>
-                    ) : ev.type === 'fallback' ? (
-                      <span>from: {ev.from}, to: {ev.to}</span>
-                    ) : (
-                      <span>{JSON.stringify(ev)}</span>
-                    )}
-                  </td>
+                <tr key={i} className="border-b border-border/60">
+                  <td className="py-3 pr-4">{new Date(ev.ts).toISOString()}</td>
+                  <td className="py-3 pr-4">{ev.type}</td>
+                  <td className="py-3 pr-4">{ev.type === "mode_change" ? `target: ${ev.target}${ev.gpu_url ? `, gpu_url: ${ev.gpu_url}` : ""}` : ev.type === "fallback" ? `from: ${ev.from}, to: ${ev.to}` : JSON.stringify(ev)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </SectionCard>
+    </PortalShell>
   )
 }

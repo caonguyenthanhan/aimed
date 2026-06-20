@@ -1,47 +1,130 @@
 import Link from "next/link"
+import { ArrowRight, Bot, Database, Settings2, ShieldCheck, UsersRound, ServerCog } from "lucide-react"
+import PortalShell from "@/components/portal-shell"
 import { RoleGuard } from "@/components/role-guard"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
+
+const workspaces = [
+  {
+    title: "Người dùng",
+    description: "Theo dõi tài khoản, vai trò và trạng thái truy cập của toàn hệ thống.",
+    href: "/quan-ly/user",
+    helper: "Accounts and RBAC",
+    icon: <UsersRound className="h-5 w-5" />,
+    tone: "primary" as const,
+  },
+  {
+    title: "Dữ liệu y khoa",
+    description: "Quản trị danh mục bệnh, thuốc, tập dữ liệu và nhịp đồng bộ nội dung.",
+    href: "/quan-ly/data",
+    helper: "Medical content hub",
+    icon: <Database className="h-5 w-5" />,
+    tone: "teal" as const,
+  },
+  {
+    title: "Cấu hình hệ thống",
+    description: "Kiểm tra các thông số tích hợp, runtime và thiết lập điều hành.",
+    href: "/quan-ly/config",
+    helper: "Settings and integrations",
+    icon: <Settings2 className="h-5 w-5" />,
+    tone: "neutral" as const,
+  },
+  {
+    title: "Runtime server",
+    description: "Đi tới màn vận hành GPU URL, server registry và runtime events đã được nâng cấp.",
+    href: "/admin/server",
+    helper: "Operational console",
+    icon: <ServerCog className="h-5 w-5" />,
+    tone: "primary" as const,
+  },
+]
 
 export default function ManagementPage() {
   return (
     <RoleGuard roles={["ADMIN"]}>
-      <div className="mx-auto max-w-6xl px-4 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50">Trang quản lý</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">Quản trị hệ thống, người dùng và nội dung</p>
+      <PortalShell
+        eyebrow="Admin Workspace"
+        title="Trung tâm quản trị hệ thống"
+        description="Điểm vào chung cho đội vận hành: người dùng, dữ liệu y khoa, cấu hình tích hợp và runtime server. Trang này chỉ đổi shell trực quan, giữ nguyên role gate và route đích hiện có."
+        aside={
+          <div className="space-y-6">
+            <SectionCard title="Ưu tiên điều hành" description="Các cụm cần kiểm tra nhanh trước mỗi buổi demo hoặc vận hành.">
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+                  Kiểm tra `Runtime server` khi cần đổi URL Colab/Ngrok, xác minh health-check hoặc dọn runtime events.
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+                  Vào `Người dùng` để rà role `ADMIN/DOCTOR/PATIENT` và luồng truy cập trước khi demo.
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-4">
+                  Dùng `Dữ liệu y khoa` và `Cấu hình hệ thống` làm hub cho nội dung vận hành và tích hợp.
+                </div>
+              </div>
+            </SectionCard>
+            <SectionCard title="Nguyên tắc" description="Giữ nhất quán với rule hệ thống hiện tại.">
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>UI chỉ đổi trình bày, không đổi hành vi backend/API.</p>
+                <p>Admin routes tiếp tục đi qua `RoleGuard` để chặn truy cập sai vai trò.</p>
+                <p>Runtime, logs và dữ liệu vận hành vẫn lấy từ các route đang có trong app.</p>
+              </div>
+            </SectionCard>
+          </div>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard
+            label="Workspaces"
+            value={workspaces.length}
+            helper="Các khu vực admin hiện có"
+            icon={<ShieldCheck className="h-5 w-5" />}
+            tone="primary"
+          />
+          <StatCard
+            label="Operations"
+            value="1 live console"
+            helper="`/admin/server` đã dùng shell mới"
+            icon={<ServerCog className="h-5 w-5" />}
+            tone="teal"
+          />
+          <StatCard
+            label="Coverage"
+            value="GĐ5"
+            helper="Đang tiếp tục retrofit nhóm Admin/System"
+            icon={<Bot className="h-5 w-5" />}
+            tone="neutral"
+          />
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Link href="/quan-ly/user" className="group relative block p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md transition-all hover:-translate-y-0.5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <span className="text-xl">👥</span>
-              </div>
-              <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-transform">Mở →</span>
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Người dùng</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Quản lý tài khoản, phân quyền người dùng</p>
-          </Link>
-          <Link href="/quan-ly/data" className="group relative block p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-teal-300 dark:hover:border-teal-600 hover:shadow-md transition-all hover:-translate-y-0.5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
-                <span className="text-xl">📊</span>
-              </div>
-              <span className="text-sm font-semibold text-teal-600 dark:text-teal-400 group-hover:translate-x-1 transition-transform">Mở →</span>
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Dữ liệu y khoa</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Cơ sở dữ liệu bệnh lý, thuốc, triệu chứng</p>
-          </Link>
-          <Link href="/quan-ly/config" className="group relative block p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 dark:hover:border-emerald-600 hover:shadow-md transition-all hover:-translate-y-0.5">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <span className="text-xl">⚙️</span>
-              </div>
-              <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-transform">Mở →</span>
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-50">Cấu hình hệ thống</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Thông số cấu hình, tích hợp API và thông báo</p>
-          </Link>
-        </div>
-      </div>
+
+        <SectionCard
+          title="Khu vực quản trị"
+          description="Chọn workspace để tiếp tục kiểm soát hệ thống hoặc chỉnh sâu từng mảng."
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            {workspaces.map((workspace) => (
+              <Link
+                key={workspace.href}
+                href={workspace.href}
+                className="app-surface hover-lift group rounded-[1rem] border border-border/70 bg-card/85 p-5 transition-colors hover:border-primary/40"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      {workspace.icon}
+                    </div>
+                    <div className="space-y-2">
+                      <h2 className="text-lg font-semibold tracking-tight text-foreground">{workspace.title}</h2>
+                      <p className="text-sm leading-6 text-muted-foreground">{workspace.description}</p>
+                    </div>
+                  </div>
+                  <ArrowRight className="mt-1 h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                </div>
+                <div className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{workspace.helper}</div>
+              </Link>
+            ))}
+          </div>
+        </SectionCard>
+      </PortalShell>
     </RoleGuard>
   )
 }

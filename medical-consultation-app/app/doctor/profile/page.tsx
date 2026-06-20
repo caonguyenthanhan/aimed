@@ -2,14 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { Eye, Save, ShieldCheck, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DoctorProfileView } from "@/components/doctor-profile-view"
 import type { DoctorProfilePrivate, DoctorProfilePublic } from "@/lib/doctor-profile"
 import { defaultPublicProfile } from "@/lib/doctor-profile"
 import { loadLocalDoctorPrivate, loadLocalDoctorPublic, saveLocalDoctorProfile } from "@/lib/doctor-profile-store"
 import { useToast } from "@/hooks/use-toast"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
 
 const parseCsv = (s: string) =>
   String(s || "")
@@ -114,176 +116,144 @@ export default function DoctorProfileManagePage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 space-y-4">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="space-y-1">
-          <div className="text-2xl font-semibold">Hồ sơ bác sĩ</div>
-          <div className="text-sm text-muted-foreground">Public: người dùng thấy • Private: chỉ bác sĩ thấy</div>
-        </div>
+    <PortalShell
+      eyebrow="Doctor Profile"
+      title="Hồ sơ bác sĩ"
+      description="Public: người dùng thấy. Private: chỉ bác sĩ thấy. Preview: mô phỏng màn public profile đang chia sẻ."
+      actions={
         <div className="flex gap-2 flex-wrap">
           <Button
             variant="outline"
+            className="rounded-xl"
             onClick={() => {
               if (!shareUrl) return
               window.open(shareUrl, "_blank", "noopener,noreferrer")
             }}
             disabled={!shareUrl}
           >
+            <Eye className="mr-2 h-4 w-4" />
             Xem public
           </Button>
-          <Button onClick={() => void save()} disabled={loading}>
+          <Button className="rounded-xl" onClick={() => void save()} disabled={loading}>
+            <Save className="mr-2 h-4 w-4" />
             Lưu
           </Button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("public")}
-          className={`h-9 px-4 rounded-xl text-sm border ${activeTab === "public" ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200"}`}
-        >
-          Public
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("private")}
-          className={`h-9 px-4 rounded-xl text-sm border ${activeTab === "private" ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200"}`}
-        >
-          Private
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("preview")}
-          className={`h-9 px-4 rounded-xl text-sm border ${activeTab === "preview" ? "bg-blue-600 text-white border-blue-600" : "bg-white border-slate-200"}`}
-        >
-          Preview
-        </button>
-      </div>
-
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Profile State" description="Trạng thái nguồn dữ liệu của hồ sơ bác sĩ.">
+            <div className="rounded-[1.2rem] bg-primary px-5 py-5 text-primary-foreground">
+              <div className="mb-2 flex items-center gap-2 text-primary-foreground/90">
+                <ShieldCheck className="h-5 w-5" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Sync + Local</span>
+              </div>
+              <p className="text-sm leading-6 text-primary-foreground/85">
+                Hồ sơ vẫn ưu tiên `/api/doctor-profile/me`, fallback về local khi DB chưa sẵn sàng. Share URL không đổi.
+              </p>
+            </div>
+          </SectionCard>
+          <SectionCard title="Tabs" description="Chọn khu vực đang chỉnh sửa.">
+            <div className="flex flex-wrap gap-2">
+              {(["public", "private", "preview"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground hover:bg-secondary/80"}`}
+                >
+                  {tab === "public" ? "Public" : tab === "private" ? "Private" : "Preview"}
+                </button>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      }
+    >
       {activeTab === "public" ? (
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Thông tin public</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Tên hiển thị</div>
-                <Input value={publicProfile.displayName} onChange={(e) => setPublicProfile((p) => ({ ...p, displayName: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Chức danh</div>
-                <Input value={publicProfile.title} onChange={(e) => setPublicProfile((p) => ({ ...p, title: e.target.value }))} />
-              </div>
-            </div>
-
+        <SectionCard title="Thông tin public" description="Các trường sẽ xuất hiện trên hồ sơ công khai của bác sĩ." contentClassName="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
-              <div className="text-sm font-medium">Chuyên khoa (phân cách dấu phẩy)</div>
-              <Input
-                value={(publicProfile.specialties || []).join(", ")}
-                onChange={(e) => setPublicProfile((p) => ({ ...p, specialties: parseCsv(e.target.value) }))}
-              />
+              <div className="text-sm font-medium">Tên hiển thị</div>
+              <Input value={publicProfile.displayName} onChange={(e) => setPublicProfile((p) => ({ ...p, displayName: e.target.value }))} />
             </div>
-
             <div className="space-y-1">
-              <div className="text-sm font-medium">Giới thiệu</div>
-              <textarea
-                value={publicProfile.bio}
-                onChange={(e) => setPublicProfile((p) => ({ ...p, bio: e.target.value }))}
-                rows={6}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm resize-none"
-              />
+              <div className="text-sm font-medium">Chức danh</div>
+              <Input value={publicProfile.title} onChange={(e) => setPublicProfile((p) => ({ ...p, title: e.target.value }))} />
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Ảnh đại diện (URL)</div>
-                <Input value={publicProfile.avatarUrl || ""} onChange={(e) => setPublicProfile((p) => ({ ...p, avatarUrl: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Hình thức tư vấn (phân cách dấu phẩy)</div>
-                <Input
-                  value={(publicProfile.consultationModes || []).join(", ")}
-                  onChange={(e) => setPublicProfile((p) => ({ ...p, consultationModes: parseCsv(e.target.value) }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Ngôn ngữ (phân cách dấu phẩy)</div>
-                <Input value={(publicProfile.languages || []).join(", ")} onChange={(e) => setPublicProfile((p) => ({ ...p, languages: parseCsv(e.target.value) }))} />
-              </div>
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Phòng khám / Nơi làm việc</div>
-                <Input value={publicProfile.clinicName || ""} onChange={(e) => setPublicProfile((p) => ({ ...p, clinicName: e.target.value }))} />
-              </div>
-            </div>
-
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Chuyên khoa</div>
+            <Input value={(publicProfile.specialties || []).join(", ")} onChange={(e) => setPublicProfile((p) => ({ ...p, specialties: parseCsv(e.target.value) }))} />
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Giới thiệu</div>
+            <textarea value={publicProfile.bio} onChange={(e) => setPublicProfile((p) => ({ ...p, bio: e.target.value }))} rows={6} className="w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-sm" />
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1">
-              <div className="text-sm font-medium">Địa chỉ</div>
-              <Input value={publicProfile.clinicAddress || ""} onChange={(e) => setPublicProfile((p) => ({ ...p, clinicAddress: e.target.value }))} />
+              <div className="text-sm font-medium">Ảnh đại diện (URL)</div>
+              <Input value={publicProfile.avatarUrl || ""} onChange={(e) => setPublicProfile((p) => ({ ...p, avatarUrl: e.target.value }))} />
             </div>
-
-            {doctorId ? (
-              <div className="rounded-xl border bg-background p-3 text-sm">
-                Link public: <span className="font-medium">{shareUrl}</span>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Hình thức tư vấn</div>
+              <Input value={(publicProfile.consultationModes || []).join(", ")} onChange={(e) => setPublicProfile((p) => ({ ...p, consultationModes: parseCsv(e.target.value) }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Ngôn ngữ</div>
+              <Input value={(publicProfile.languages || []).join(", ")} onChange={(e) => setPublicProfile((p) => ({ ...p, languages: parseCsv(e.target.value) }))} />
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Phòng khám / Nơi làm việc</div>
+              <Input value={publicProfile.clinicName || ""} onChange={(e) => setPublicProfile((p) => ({ ...p, clinicName: e.target.value }))} />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Địa chỉ</div>
+            <Input value={publicProfile.clinicAddress || ""} onChange={(e) => setPublicProfile((p) => ({ ...p, clinicAddress: e.target.value }))} />
+          </div>
+          {doctorId ? (
+            <div className="rounded-xl bg-secondary/50 p-3 text-sm">
+              Link public: <span className="font-medium">{shareUrl}</span>
+            </div>
+          ) : null}
+        </SectionCard>
       ) : null}
 
       {activeTab === "private" ? (
-        <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Thông tin private</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Số điện thoại</div>
-                <Input value={privateProfile.phone || ""} onChange={(e) => setPrivateProfile((p) => ({ ...p, phone: e.target.value }))} />
-              </div>
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Email</div>
-                <Input value={privateProfile.email || ""} onChange={(e) => setPrivateProfile((p) => ({ ...p, email: e.target.value }))} />
-              </div>
+        <SectionCard title="Thông tin private" description="Chỉ bác sĩ nhìn thấy và được lưu cùng hồ sơ nội bộ." contentClassName="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Số điện thoại</div>
+              <Input value={privateProfile.phone || ""} onChange={(e) => setPrivateProfile((p) => ({ ...p, phone: e.target.value }))} />
             </div>
             <div className="space-y-1">
-              <div className="text-sm font-medium">Địa chỉ riêng</div>
-              <Input value={privateProfile.address || ""} onChange={(e) => setPrivateProfile((p) => ({ ...p, address: e.target.value }))} />
+              <div className="text-sm font-medium">Email</div>
+              <Input value={privateProfile.email || ""} onChange={(e) => setPrivateProfile((p) => ({ ...p, email: e.target.value }))} />
             </div>
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Ghi chú nội bộ</div>
-              <textarea
-                value={privateProfile.notes || ""}
-                onChange={(e) => setPrivateProfile((p) => ({ ...p, notes: e.target.value }))}
-                rows={6}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm resize-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Prompt cá nhân hóa trợ lý AI</div>
-              <textarea
-                value={privateProfile.assistantPrompt || ""}
-                onChange={(e) => setPrivateProfile((p) => ({ ...p, assistantPrompt: e.target.value }))}
-                rows={8}
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm resize-none"
-              />
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Địa chỉ riêng</div>
+            <Input value={privateProfile.address || ""} onChange={(e) => setPrivateProfile((p) => ({ ...p, address: e.target.value }))} />
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Ghi chú nội bộ</div>
+            <textarea value={privateProfile.notes || ""} onChange={(e) => setPrivateProfile((p) => ({ ...p, notes: e.target.value }))} rows={6} className="w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Prompt cá nhân hóa trợ lý AI</div>
+            <textarea value={privateProfile.assistantPrompt || ""} onChange={(e) => setPrivateProfile((p) => ({ ...p, assistantPrompt: e.target.value }))} rows={8} className="w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-sm" />
+          </div>
+        </SectionCard>
       ) : null}
 
       {activeTab === "preview" ? (
-        <div className="space-y-3">
-          <div className="text-sm text-muted-foreground">Preview hồ sơ public (giống người dùng nhìn thấy)</div>
+        <SectionCard title="Preview hồ sơ public" description="Mô phỏng màn người dùng cuối nhìn thấy từ public profile.">
           <DoctorProfileView profile={publicProfile} />
-        </div>
+        </SectionCard>
       ) : null}
-    </div>
+    </PortalShell>
   )
 }

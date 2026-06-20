@@ -26,8 +26,11 @@ describe('Next.js API Gateway Proxy (/api/backend)', () => {
     return mod.GET
   }
 
-  function makeRequest() {
-    return new Request('http://localhost/api/backend/v1/user', { method: 'GET' })
+  function makeRequest(token?: string) {
+    return new Request('http://localhost/api/backend/v1/user', {
+      method: 'GET',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
   }
 
   beforeEach(() => {
@@ -41,7 +44,7 @@ describe('Next.js API Gateway Proxy (/api/backend)', () => {
     vi.restoreAllMocks()
   })
 
-  test('Case A: Demo mode, no CPU server -> returns stub data (200 OK)', async () => {
+  test('Case A: Demo mode, no CPU server + auth -> returns token-aware stub data (200 OK)', async () => {
     setEnv({
       MCS_DEPLOY_MODE: 'demo',
       CPU_SERVER_URL: undefined,
@@ -50,12 +53,13 @@ describe('Next.js API Gateway Proxy (/api/backend)', () => {
     })
     const GET = await loadGetHandler()
 
-    const res = await GET(makeRequest() as any, routeParams)
+    const res = await GET(makeRequest('test_token_patient_001') as any, routeParams)
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.full_name).toBe('Minh Anh')
+    expect(body.full_name).toBe('Nguyễn Minh Anh')
     expect(body.nickname).toBe('patient.minh')
-    expect(body.email).toBe('patient.minh@aimed.demo')
+    expect(body.email).toBe('minh.nguyen@gmail.com')
+    expect(body.role).toBe('patient')
   })
 
   test('Case B: Prod mode, no CPU server -> returns 503 Service Unavailable', async () => {
@@ -101,7 +105,7 @@ describe('Next.js API Gateway Proxy (/api/backend)', () => {
     expect(global.fetch).toHaveBeenCalled()
   })
 
-  test('Case D: Demo mode, backend 404 -> falls back to stub data', async () => {
+  test('Case D: Demo mode, backend 404 + auth -> falls back to stub data', async () => {
     setEnv({
       MCS_DEPLOY_MODE: 'demo',
       CPU_SERVER_URL: 'https://demo-backend.example.com',
@@ -110,6 +114,7 @@ describe('Next.js API Gateway Proxy (/api/backend)', () => {
           full_name: 'Fallback Demo User',
           nickname: 'fallback.user',
           email: 'fallback@example.com',
+          bio: 'Fallback profile loaded from stub config',
         },
       }),
     })
@@ -117,12 +122,27 @@ describe('Next.js API Gateway Proxy (/api/backend)', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('missing', { status: 404 })))
     const GET = await loadGetHandler()
 
-    const res = await GET(makeRequest() as any, routeParams)
+    const res = await GET(makeRequest('test_token_patient_001') as any, routeParams)
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.full_name).toBe('Fallback Demo User')
-    expect(body.nickname).toBe('fallback.user')
+    expect(body.full_name).toBe('Nguyễn Minh Anh')
+    expect(body.nickname).toBe('patient.minh')
+    expect(body.bio).toBe('Fallback profile loaded from stub config')
     expect(global.fetch).toHaveBeenCalledOnce()
+  })
+
+  test('Case D2: Demo mode, /v1/user without auth -> returns 401', async () => {
+    setEnv({
+      MCS_DEPLOY_MODE: 'demo',
+      CPU_SERVER_URL: undefined,
+      BACKEND_URL: undefined,
+    })
+    const GET = await loadGetHandler()
+
+    const res = await GET(makeRequest() as any, routeParams)
+    expect(res.status).toBe(401)
+    const body = await res.json()
+    expect(body.error).toBe('Unauthorized')
   })
 
   test('Case E: Demo mode, backend 200 -> returns proxied response instead of stub', async () => {

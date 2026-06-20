@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIMed | Voice Consultation</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter & Geist -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "surface-container": "#eceeef",
+                "on-surface-variant": "#434655",
+                "secondary": "#5a5f65",
+                "inverse-on-surface": "#eff1f2",
+                "on-secondary": "#ffffff",
+                "error-container": "#ffdad6",
+                "tertiary-fixed-dim": "#a8c8ff",
+                "surface-container-low": "#f2f4f5",
+                "primary-container": "#1447e6",
+                "error": "#ba1a1a",
+                "dark-card": "#1A1F2E",
+                "on-primary-container": "#c9d0ff",
+                "surface-container-high": "#e6e8e9",
+                "surface-tint": "#1c4bea",
+                "surface-container-lowest": "#ffffff",
+                "on-background": "#191c1d",
+                "on-secondary-container": "#60656b",
+                "tertiary": "#004383",
+                "teal-accent": "#14B8A6",
+                "surface": "#f8fafb",
+                "on-tertiary-fixed-variant": "#004689",
+                "surface-bright": "#f8fafb",
+                "tertiary-fixed": "#d5e3ff",
+                "outline-variant": "#c4c5d8",
+                "background": "#f8fafb",
+                "on-secondary-fixed": "#171c21",
+                "surface-dim": "#d8dadb",
+                "secondary-fixed-dim": "#c2c7cd",
+                "primary-fixed-dim": "#b9c3ff",
+                "on-primary": "#ffffff",
+                "on-tertiary-fixed": "#001b3c",
+                "surface-variant": "#e1e3e4",
+                "on-surface": "#191c1d",
+                "destructive": "#E63946",
+                "on-primary-fixed": "#001356",
+                "on-secondary-fixed-variant": "#42474d",
+                "on-primary-fixed-variant": "#0035be",
+                "primary": "#0032b6",
+                "on-tertiary-container": "#bcd4ff",
+                "dark-bg": "#0F1419",
+                "inverse-surface": "#2e3132",
+                "primary-fixed": "#dde1ff",
+                "on-tertiary": "#ffffff",
+                "surface-container-highest": "#e1e3e4",
+                "on-error": "#ffffff",
+                "secondary-fixed": "#dfe3ea",
+                "inverse-primary": "#b9c3ff",
+                "outline": "#747687",
+                "tertiary-container": "#005aac",
+                "muted-blue": "#E8F0FF",
+                "secondary-container": "#dfe3ea",
+                "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "margin-mobile": "1rem",
+                "gutter": "1.5rem",
+                "header-height": "4.5rem",
+                "stack-gap": "1rem",
+                "container-max": "1280px"
+            },
+            "fontFamily": {
+                "headline-xl": ["Inter"],
+                "headline-lg-mobile": ["Inter"],
+                "button-text": ["Inter"],
+                "body-lg": ["Inter"],
+                "headline-lg": ["Inter"],
+                "headline-md": ["Inter"],
+                "label-mono": ["Geist Mono"],
+                "body-md": ["Inter"],
+                "body-sm": ["Inter"]
+            },
+            "fontSize": {
+                "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "headline-lg-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "600"}],
+                "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            overflow: hidden;
+            background-color: #f8fafb;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c4c5d8;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #747687;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-active {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .wave-bar {
+            width: 4px;
+            background: #1447e6;
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        .bg-blob {
+            filter: blur(120px);
+            opacity: 0.15;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Animated Background Blobs -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+<div class="absolute -top-24 -left-24 w-96 h-96 bg-primary rounded-full bg-blob"></div>
+<div class="absolute top-1/2 -right-24 w-80 h-80 bg-teal-accent rounded-full bg-blob"></div>
+<div class="absolute -bottom-24 left-1/3 w-72 h-72 bg-tertiary rounded-full bg-blob"></div>
+</div>
+<!-- Navigation Header -->
+<header class="fixed top-0 left-0 right-0 z-50 glass-panel shadow-sm">
+<div class="flex justify-between items-center h-header-height px-gutter max-w-container-max mx-auto">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-primary">AIMed</span>
+<div class="hidden md:flex gap-8 ml-8">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer" href="#">Dashboard</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer" href="#">Emergency</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer" href="#">Pharmacy</a>
+<a class="font-body-md text-body-md text-primary border-b-2 border-primary pb-1" href="#">Consultations</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">settings</span>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img class="w-full h-full object-cover" data-alt="A professional studio portrait of a male doctor in a clean white lab coat, smiling confidently with a blurred clinical office background. High-key lighting highlights the professional and empathetic demeanor, adhering to a modern corporate medical aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRAnL6SpGJ6_1ZoBlIeHkZkDjZVm4-w88TlkKqTmw05IYkejPvBc3Y_39PIkRfOnQX1d4pjFpWElnNiCgiOb1Di9H5Dfg6gEc-tk2R4veeFL23gi6DprdDyXZ-dGug5jnMhmPFEwcJ3wSIqODek1tuPfkI7b3ZbxcQ8IjeGsGbbgGVMJcpeZDS9lyAKL894YF4CAz3fAD7MDvAchxxNMH8WQYvUmbAdESkH5pvB0dFenxZwPJEWq4Au2fAEkU9VPeG-xm_cQ4kVQBR"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Layout -->
+<main class="flex h-screen pt-header-height overflow-hidden">
+<!-- Left Side Panel: Recent Topics -->
+<aside class="hidden lg:flex flex-col w-72 glass-panel border-r border-outline-variant p-6 gap-6">
+<div>
+<h3 class="font-headline-md text-headline-md text-primary mb-4">Recent Sessions</h3>
+<div class="space-y-3">
+<div class="p-4 rounded-xl bg-surface-container hover:bg-surface-container-high transition-all cursor-pointer group">
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-1">Yesterday, 4:15 PM</p>
+<p class="font-body-md text-body-md font-semibold text-on-surface group-hover:text-primary">Stomach Cramp Analysis</p>
+</div>
+<div class="p-4 rounded-xl bg-white/50 border border-outline-variant hover:shadow-sm transition-all cursor-pointer group">
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-1">Oct 24, 2024</p>
+<p class="font-body-md text-body-md font-semibold text-on-surface group-hover:text-primary">Flu Symptom Tracking</p>
+</div>
+<div class="p-4 rounded-xl bg-white/50 border border-outline-variant hover:shadow-sm transition-all cursor-pointer group">
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-1">Oct 20, 2024</p>
+<p class="font-body-md text-body-md font-semibold text-on-surface group-hover:text-primary">Medication Schedule</p>
+</div>
+</div>
+</div>
+<div class="mt-auto">
+<button class="w-full py-3 px-4 rounded-xl bg-primary text-white font-button-text text-button-text flex items-center justify-center gap-2 hover:translate-y-[-2px] transition-all shadow-lg active:scale-95">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                    New Session
+                </button>
+</div>
+</aside>
+<!-- Center: Voice Chat Canvas -->
+<section class="flex-1 flex flex-col items-center justify-center relative px-gutter text-center">
+<!-- Real-time Transcript -->
+<div class="absolute top-12 left-0 right-0 px-12 max-w-2xl mx-auto opacity-80">
+<p class="font-headline-lg text-headline-lg text-on-surface-variant leading-relaxed transition-all duration-300" id="transcript">
+                    "Tôi cảm thấy hơi đau đầu và mệt mỏi từ sáng nay..."
+                </p>
+</div>
+<!-- Voice Wave Visualization -->
+<div class="flex items-center justify-center gap-1.5 h-64 w-full max-w-md" id="wave-container">
+<!-- Bars will be animated via JS -->
+<div class="wave-bar h-8"></div>
+<div class="wave-bar h-16"></div>
+<div class="wave-bar h-24"></div>
+<div class="wave-bar h-32"></div>
+<div class="wave-bar h-48"></div>
+<div class="wave-bar h-32"></div>
+<div class="wave-bar h-64"></div>
+<div class="wave-bar h-40"></div>
+<div class="wave-bar h-24"></div>
+<div class="wave-bar h-12"></div>
+<div class="wave-bar h-8"></div>
+</div>
+<div class="mt-12 flex flex-col items-center gap-6">
+<div class="relative">
+<!-- Pulsing Ring -->
+<div class="absolute inset-0 bg-destructive rounded-full pulse-active opacity-40"></div>
+<!-- Main Button -->
+<button class="relative z-10 w-24 h-24 rounded-full bg-destructive text-white flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-transform group" id="mute-btn">
+<span class="material-symbols-outlined text-[40px] group-hover:hidden">mic</span>
+<span class="material-symbols-outlined text-[40px] hidden group-hover:block">mic_off</span>
+</button>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface font-bold">Listening...</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Dr. Julian is listening to your symptoms</p>
+</div>
+</div>
+</section>
+<!-- Right Side Panel: Settings -->
+<aside class="hidden xl:flex flex-col w-80 glass-panel border-l border-outline-variant p-6 gap-8">
+<div>
+<h3 class="font-label-mono text-label-mono text-secondary uppercase mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+                    Voice Settings
+                </h3>
+<div class="space-y-6">
+<div>
+<label class="font-body-sm text-body-sm font-semibold text-on-surface-variant block mb-3">AI Speaker Select</label>
+<div class="grid grid-cols-2 gap-2">
+<button class="p-3 rounded-lg border-2 border-primary bg-primary-fixed-dim text-on-primary-fixed font-body-sm text-body-sm font-medium">Male (Vance)</button>
+<button class="p-3 rounded-lg border border-outline-variant hover:border-primary transition-colors text-on-surface-variant font-body-sm text-body-sm">Female (Anna)</button>
+</div>
+</div>
+<div>
+<label class="font-body-sm text-body-sm font-semibold text-on-surface-variant block mb-3">Language &amp; Dialect</label>
+<select class="w-full bg-white/50 border border-outline-variant rounded-xl p-3 font-body-md text-body-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none">
+<option selected="">Vietnamese (Tiếng Việt)</option>
+<option>English (US)</option>
+<option>English (UK)</option>
+<option>French (Français)</option>
+</select>
+</div>
+<div>
+<label class="font-body-sm text-body-sm font-semibold text-on-surface-variant block mb-3">Input Sensitivity</label>
+<input class="w-full accent-primary" type="range" value="75"/>
+<div class="flex justify-between mt-2">
+<span class="font-label-mono text-label-mono text-secondary">Low</span>
+<span class="font-label-mono text-label-mono text-secondary">High</span>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-auto p-4 rounded-2xl bg-muted-blue/50 border border-primary/10">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">security</span>
+<span class="font-body-sm text-body-sm font-bold text-primary">Secure Channel</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-tight">
+                    Your voice data is encrypted end-to-end and HIPAA compliant. No recording is saved unless specified.
+                </p>
+</div>
+</aside>
+</main>
+<!-- Footer Disclaimer -->
+<footer class="fixed bottom-0 left-0 right-0 bg-surface-container/80 backdrop-blur-md py-4 border-t border-outline-variant">
+<div class="max-w-container-max mx-auto px-gutter flex flex-col md:flex-row justify-between items-center gap-2">
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                © 2024 AIMed AI Medical Systems. Clinical support only.
+            </p>
+<div class="flex gap-4">
+<a class="font-body-sm text-body-sm text-secondary hover:text-primary transition-colors" href="#">Medical Disclaimer</a>
+<a class="font-body-sm text-body-sm text-secondary hover:text-primary transition-colors" href="#">Privacy Policy</a>
+</div>
+</div>
+</footer>
+<script>
+        // Micro-interaction: Animated Waveform
+        const bars = document.querySelectorAll('.wave-bar');
+        const waveContainer = document.getElementById('wave-container');
+        let animationFrame;
+
+        function animateWave() {
+            bars.forEach((bar, index) => {
+                // Generate a pseudo-random height based on a sine wave for smooth feel
+                const time = Date.now() / 150;
+                const offset = index * 0.8;
+                const baseHeight = 20;
+                const variance = 80;
+                const randomPart = Math.abs(Math.sin(time + offset)) * variance;
+                bar.style.height = `${baseHeight + randomPart}px`;
+            });
+            animationFrame = requestAnimationFrame(animateWave);
+        }
+        animateWave();
+
+        // Simulated Transcript Updates
+        const transcriptEl = document.getElementById('transcript');
+        const phrases = [
+            "Tôi cảm thấy hơi đau đầu và mệt mỏi từ sáng nay...",
+            "Cơn đau nằm ở phía sau gáy, lan xuống vai.",
+            "Tôi không bị sốt nhưng cảm thấy buồn nôn.",
+            "Tôi đã uống một ít nước ấm nhưng không đỡ."
+        ];
+        let phraseIndex = 0;
+
+        setInterval(() => {
+            transcriptEl.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => {
+                phraseIndex = (phraseIndex + 1) % phrases.length;
+                transcriptEl.innerText = `"${phrases[phraseIndex]}"`;
+                transcriptEl.classList.remove('opacity-0', 'translate-y-2');
+            }, 500);
+        }, 4000);
+
+        // Mute Toggle Interaction
+        const muteBtn = document.getElementById('mute-btn');
+        const pulseRing = document.querySelector('.pulse-active');
+        const statusText = document.querySelector('h2');
+        let isMuted = false;
+
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            if (isMuted) {
+                cancelAnimationFrame(animationFrame);
+                pulseRing.classList.remove('pulse-active');
+                pulseRing.classList.add('hidden');
+                muteBtn.classList.replace('bg-destructive', 'bg-secondary');
+                statusText.innerText = 'Microphone Muted';
+                statusText.classList.replace('text-on-surface', 'text-on-surface-variant');
+                bars.forEach(bar => bar.style.height = '4px');
+            } else {
+                animateWave();
+                pulseRing.classList.add('pulse-active');
+                pulseRing.classList.remove('hidden');
+                muteBtn.classList.replace('bg-secondary', 'bg-destructive');
+                statusText.innerText = 'Listening...';
+                statusText.classList.replace('text-on-surface-variant', 'text-on-surface');
+            }
+        });
+    </script>
+</body></html>

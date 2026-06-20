@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FOZA Demo Runbook</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; line-height: 1.45; }
+      h1, h2 { margin: 0 0 12px; }
+      h2 { margin-top: 24px; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      .card { border: 1px solid rgba(120,120,120,.35); border-radius: 12px; padding: 16px; margin: 12px 0; }
+      ul { margin: 8px 0 0 20px; }
+      .kv { display: grid; grid-template-columns: 220px 1fr; gap: 8px 12px; }
+      .muted { opacity: .8; }
+    </style>
+  </head>
+  <body>
+    <h1>FOZA Demo Runbook</h1>
+    <p class="muted">Goal: run Agent mode with FOZA safely (no tool-calling timeouts), while keeping Graph evidence grounding.</p>
+
+    <div class="card">
+      <h2>1) Start CPU Server + Graph</h2>
+      <ul>
+        <li>Open Docker Desktop.</li>
+        <li>Run <code>cpu_server/launcher/run_menu.bat</code> (Admin) → option <code>1</code>.</li>
+        <li>Or PowerShell: <code>powershell -NoProfile -ExecutionPolicy Bypass -File "cpu_server\launcher\run.ps1" -Port 8000</code></li>
+        <li>Ensure <code>CPU_SERVER_URL</code> points to your reachable URL (local or ngrok).</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>2) FOZA Recommended Env</h2>
+      <div class="kv">
+        <div><code>AGENT_PROVIDER</code></div><div><code>foza</code></div>
+        <div><code>AGENT_FORCE_ACTIONS</code></div><div><code>0</code> (Simple Mode, no tool calling)</div>
+        <div><code>FOZA_BASE_URL</code></div><div><code>https://api.foza.ai/v1</code></div>
+        <div><code>FOZA_TOKEN</code></div><div>(your token)</div>
+        <div><code>LLM_MODEL_NAME</code></div><div>(your FOZA model)</div>
+      </div>
+      <p class="muted">Simple Mode still includes system persona + conversation history + GRAPH_EVIDENCE.</p>
+    </div>
+
+    <div class="card">
+      <h2>3) Circuit Breaker (Recommended)</h2>
+      <div class="kv">
+        <div><code>FOZA_CIRCUIT_FAIL_THRESHOLD</code></div><div><code>3</code></div>
+        <div><code>FOZA_CIRCUIT_OPEN_MS</code></div><div><code>600000</code> (10 min)</div>
+      </div>
+      <p class="muted">If FOZA times out repeatedly, the route skips FOZA temporarily instead of cascading into confusing downstream provider errors.</p>
+    </div>
+
+    <div class="card">
+      <h2>4) DB SSL Warning (Optional)</h2>
+      <p>If you see a warning about <code>sslmode=require/prefer/verify-ca</code>, set your DB URL to use <code>sslmode=verify-full</code> explicitly.</p>
+    </div>
+  </body>
+</html>
+

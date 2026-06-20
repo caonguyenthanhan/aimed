@@ -621,7 +621,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
 
   return (
     <div
-      className="flex overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50"
+      className="relative flex overflow-hidden bg-gradient-to-br from-background via-background to-secondary/45"
       style={{
         paddingTop: headerPad,
         paddingBottom: mobileBottomInset,
@@ -629,6 +629,11 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
         boxSizing: "border-box",
       }}
     >
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="animate-blob absolute -left-16 top-10 h-72 w-72 rounded-full bg-primary/10 blur-[110px]" />
+        <div className="animate-blob absolute bottom-0 right-0 h-80 w-80 rounded-full bg-teal-accent/10 blur-[130px]" style={{ animationDelay: "6s" }} />
+        <div className="animate-blob absolute left-1/3 top-1/2 h-56 w-56 rounded-full bg-primary/8 blur-[100px]" style={{ animationDelay: "11s" }} />
+      </div>
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
         <DialogContent className="border-red-300 bg-red-50">
           <DialogHeader>
@@ -650,18 +655,29 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="w-full h-full px-2 sm:px-4 py-3 sm:py-4">
-        <div className="rounded-2xl border bg-white shadow-sm overflow-hidden flex h-full min-h-0">
+      <div className="relative z-10 h-full w-full px-2 py-3 sm:px-4 sm:py-4">
+        <div className="glass-panel dark:glass-panel-dark flex h-full min-h-0 overflow-hidden rounded-[1.9rem] border border-border/60 shadow-[0_28px_80px_-38px_rgba(15,20,25,0.45)]">
           {!isMobile && showSidebar ? (
-            <div className="w-72 border-r bg-white flex flex-col">
-              <div className="p-3 border-b flex items-center justify-between gap-2">
-                <div className="text-sm font-semibold">Hội thoại</div>
-                <div className="flex items-center gap-2">
-                  <button className="text-xs px-2 py-1 border rounded" type="button" onClick={createConversation}>Mới</button>
-                  <button className="text-xs px-2 py-1 border rounded" type="button" onClick={() => setShowSidebar(false)}>Ẩn</button>
+            <div className="flex w-80 flex-col border-r border-border/70 bg-card/65">
+              <div className="border-b border-border/70 p-4">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-accent/12 text-teal-accent">
+                    <Heart className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">MindCare Companion</div>
+                    <div className="text-sm font-semibold text-foreground">Không gian trị liệu an toàn</div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm font-semibold">Hội thoại</div>
+                  <div className="flex items-center gap-2">
+                    <button className="rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-all hover:-translate-y-0.5 hover:bg-primary/90" type="button" onClick={createConversation}>Mới</button>
+                    <button className="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary" type="button" onClick={() => setShowSidebar(false)}>Ẩn</button>
+                  </div>
                 </div>
               </div>
-              <div className="p-2 overflow-y-auto flex-1">
+              <div className="custom-scrollbar flex-1 overflow-y-auto p-3">
                 {conversations.length ? (
                   <div className="space-y-2">
                     {conversations.map((c) => (
@@ -669,15 +685,15 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                         key={c.id}
                         type="button"
                         onClick={() => openConversation(c.id)}
-                        className={`w-full text-left px-3 py-2 rounded-xl border ${conversationId === c.id ? "border-blue-300 bg-blue-50" : "border-slate-200 hover:bg-slate-50"}`}
+                        className={`app-surface w-full rounded-[1rem] px-3 py-3 text-left transition ${conversationId === c.id ? "border-primary/15 bg-primary/5" : "hover-lift bg-card/80"}`}
                       >
-                        <div className="text-sm font-medium truncate">{c.title || "Tâm sự"}</div>
+                        <div className={`truncate text-sm font-medium ${conversationId === c.id ? "text-primary" : "text-foreground"}`}>{c.title || "Tâm sự"}</div>
                         <div className="text-xs text-muted-foreground">{c.last_active ? new Date(c.last_active).toLocaleString("vi-VN") : ""}</div>
                       </button>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-xs text-muted-foreground px-2 py-3">Chưa có hội thoại.</div>
+                  <div className="rounded-2xl bg-secondary/70 px-3 py-4 text-xs text-muted-foreground">Chưa có hội thoại.</div>
                 )}
               </div>
             </div>
@@ -689,32 +705,32 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 <div className="sr-only">
                   <DrawerTitle>Lịch sử tâm sự</DrawerTitle>
                 </div>
-                <div className="h-full min-h-0 bg-white dark:bg-slate-900 flex flex-col">
-                  <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
-                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Lịch sử tâm sự</div>
-                    <button className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition" type="button" onClick={() => setShowSidebar(false)}>
-                      <X className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <div className="flex h-full min-h-0 flex-col bg-background">
+                  <div className="flex items-center justify-between gap-2 border-b border-border/70 p-4">
+                    <div className="text-sm font-semibold text-foreground">Lịch sử tâm sự</div>
+                    <button className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary transition hover:bg-secondary/80" type="button" onClick={() => setShowSidebar(false)}>
+                      <X className="h-4 w-4 text-muted-foreground" />
                     </button>
                   </div>
-                  <div className="p-4 flex items-center gap-2 border-b border-slate-200 dark:border-slate-700">
-                    <button className="flex-1 text-sm px-4 py-2.5 rounded-lg bg-blue-600 dark:bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-700 font-medium transition" type="button" onClick={createConversation}>Tâm sự mới</button>
-                    <button className="text-sm px-3 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 hover:border-slate-300 dark:hover:border-slate-600 transition" type="button" onClick={refreshLocalConversations}>⟲</button>
+                  <div className="flex items-center gap-2 border-b border-border/70 p-4">
+                    <button className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90" type="button" onClick={createConversation}>Tâm sự mới</button>
+                    <button className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground transition hover:bg-secondary" type="button" onClick={refreshLocalConversations}>⟲</button>
                   </div>
-                  <div className="px-4 pb-6 overflow-y-auto flex-1 space-y-2">
+                  <div className="custom-scrollbar flex-1 space-y-2 overflow-y-auto px-4 pb-6">
                     {conversations.length ? (
                       conversations.map((c) => (
                         <button
                           key={c.id}
                           type="button"
                           onClick={() => { openConversation(c.id); setShowSidebar(false) }}
-                          className={`w-full text-left px-4 py-3 rounded-lg border transition ${conversationId === c.id ? "border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30" : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50"}`}
+                          className={`app-surface w-full rounded-[1rem] px-4 py-3 text-left transition ${conversationId === c.id ? "border-primary/15 bg-primary/5" : "bg-card/80"}`}
                         >
-                          <div className="text-sm font-medium truncate text-slate-900 dark:text-slate-50">{c.title || "Tâm sự"}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{c.last_active ? new Date(c.last_active).toLocaleString("vi-VN") : "Vừa mới"}</div>
+                          <div className={`truncate text-sm font-medium ${conversationId === c.id ? "text-primary" : "text-foreground"}`}>{c.title || "Tâm sự"}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">{c.last_active ? new Date(c.last_active).toLocaleString("vi-VN") : "Vừa mới"}</div>
                         </button>
                       ))
                     ) : (
-                      <div className="text-sm text-slate-500 dark:text-slate-400 py-6 text-center">Chưa có hội thoại nào. Bắt đầu tâm sự mới!</div>
+                      <div className="py-6 text-center text-sm text-muted-foreground">Chưa có hội thoại nào. Bắt đầu tâm sự mới.</div>
                     )}
                   </div>
                 </div>
@@ -722,32 +738,48 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
             </Drawer>
           ) : null}
 
-          <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden h-full">
-            <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-b flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto">
+          <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="border-b border-border/60 px-3 py-3 sm:px-5 sm:py-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Therapeutic Space</div>
+                  <div className="mt-1 text-lg font-semibold tracking-tight text-primary sm:text-xl">Tâm sự & Trị liệu</div>
+                  <div className="mt-1 text-xs text-muted-foreground sm:text-sm">Cùng MindCare AI tháo gỡ những áp lực tinh thần theo cách nhẹ nhàng hơn.</div>
+                </div>
+                <div className="hidden items-center -space-x-2 sm:flex">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-primary/10 text-primary">
+                    <Heart className="h-4 w-4" />
+                  </div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-teal-accent/12 text-teal-accent">
+                    <Music className="h-4 w-4" />
+                  </div>
+                </div>
+              </div>
+            <div className="flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto">
               <div className="min-w-0 flex-1">
                 {conversationId && renamingId === conversationId ? (
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <input
-                      className="text-xs sm:text-sm border rounded px-2 py-1 w-40 sm:w-64 max-w-full"
+                      className="w-40 max-w-full rounded-xl border border-border bg-card px-3 py-2 text-xs sm:w-64 sm:text-sm"
                       value={renameValue}
                       onChange={(e) => setRenameValue(e.target.value)}
                       placeholder="Đặt tên hội thoại"
                     />
-                    <button className="text-xs px-2 py-1 border rounded whitespace-nowrap" type="button" onClick={() => renameConversation(conversationId)}>Lưu</button>
-                    <button className="text-xs px-2 py-1 border rounded whitespace-nowrap" type="button" onClick={() => { setRenamingId(null); setRenameValue("") }}>Hủy</button>
+                    <button className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap" type="button" onClick={() => renameConversation(conversationId)}>Lưu</button>
+                    <button className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground whitespace-nowrap" type="button" onClick={() => { setRenamingId(null); setRenameValue("") }}>Hủy</button>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                    <div className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-50 truncate">{conversationId ? loadLocalTitle(conversationId) : "Tâm sự"}</div>
+                    <div className="truncate text-sm font-bold text-foreground sm:text-base">{conversationId ? loadLocalTitle(conversationId) : "Tâm sự"}</div>
                     {conversationId ? (
                       <>
-                        <button className="text-xs px-2 sm:px-3 py-1 sm:py-1.5 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 hover:border-blue-300 dark:hover:border-blue-600 transition whitespace-nowrap" type="button" onClick={() => { setRenamingId(conversationId); setRenameValue(loadLocalTitle(conversationId)) }}>✏️</button>
-                        <button className="text-xs px-2 sm:px-3 py-1 sm:py-1.5 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 hover:border-red-300 dark:hover:border-red-700 transition whitespace-nowrap" type="button" onClick={() => deleteConversation(conversationId)}>🗑️</button>
+                        <button className="rounded-xl border border-border bg-card px-2 py-1.5 text-xs font-medium text-foreground transition hover:bg-secondary whitespace-nowrap sm:px-3" type="button" onClick={() => { setRenamingId(conversationId); setRenameValue(loadLocalTitle(conversationId)) }}>✏️</button>
+                        <button className="rounded-xl border border-destructive/20 bg-destructive/5 px-2 py-1.5 text-xs font-medium text-destructive transition hover:bg-destructive/10 whitespace-nowrap sm:px-3" type="button" onClick={() => deleteConversation(conversationId)}>🗑️</button>
                       </>
                     ) : null}
                   </div>
                 )}
-                <div className="text-xs text-slate-600 dark:text-slate-400">Chia sẻ cảm xúc, tâm sự</div>
+                <div className="text-xs text-muted-foreground">Chia sẻ cảm xúc, tâm sự</div>
               </div>
               <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                 {isMobile ? (
@@ -788,12 +820,13 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                   </button>
                 ) : null}
                 {voiceMode && lastAudioUrl ? (
-                  <a className="text-xs px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-50 font-medium hover:border-blue-300 dark:hover:border-blue-600 transition" href={lastAudioUrl} target="_blank" rel="noreferrer">▶ Nghe</a>
+                  <a className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition hover:bg-secondary" href={lastAudioUrl} target="_blank" rel="noreferrer">▶ Nghe</a>
                 ) : null}
               </div>
             </div>
+            </div>
 
-            <div className="px-2 sm:px-4 py-2 sm:py-3 flex gap-1.5 sm:gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b border-border bg-secondary/30">
+            <div className="flex gap-1.5 overflow-x-auto whitespace-nowrap border-b border-border bg-secondary/20 px-2 py-2.5 sm:gap-2 sm:px-4 sm:py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {suggestedQuestions.slice(0, 4).map((q) => (
                 <button 
                   key={q} 
@@ -815,7 +848,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               ) : null}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto bg-background custom-scrollbar">
+            <div className="custom-scrollbar flex-1 min-h-0 overflow-y-auto bg-transparent">
               <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
                 <PageAiInsight
                   pageContext="emotional_support"
@@ -824,11 +857,11 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 />
                 {messages.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-accent/20 to-primary/20 flex items-center justify-center">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-accent/20 to-primary/20">
                     <Heart className="h-10 w-10 text-accent" />
                   </div>
-                  <h3 className="text-xl font-bold text-foreground">Nguoi Ban Lang Nghe</h3>
-                  <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">Khong gian an toan de ban chia se cam xuc va suy nghi cua minh. Toi luon o day lang nghe ban.</p>
+                  <h3 className="text-xl font-bold text-foreground">Người bạn lắng nghe</h3>
+                  <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">Không gian an toàn để bạn chia sẻ cảm xúc và suy nghĩ của mình. Tôi luôn ở đây lắng nghe bạn.</p>
                   </div>
                 ) : (
                   <>
@@ -865,12 +898,12 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                   {/* Music Recommendations */}
                   {musicRecommendations && musicRecommendations.length > 0 && (
                     <div className="flex justify-start animate-message-in">
-                      <div className="max-w-[95%] sm:max-w-[85%] rounded-2xl px-4 py-4 bg-gradient-to-br from-accent/10 to-primary/10 border border-accent/30">
+                      <div className="max-w-[95%] sm:max-w-[85%] rounded-[1.4rem] border border-accent/30 bg-gradient-to-br from-accent/10 to-primary/10 px-4 py-4 shadow-[0_20px_40px_-28px_rgba(20,71,230,0.45)]">
                         <div className="flex items-center gap-2 mb-4">
                           <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
                             <Music className="h-4 w-4 text-accent" />
                           </div>
-                          <span className="text-sm font-semibold text-foreground">{musicMessage || "Nhac goi y cho ban"}</span>
+                          <span className="text-sm font-semibold text-foreground">{musicMessage || "Nhạc gợi ý cho bạn"}</span>
                           <button 
                             onClick={() => { setMusicRecommendations(null); setPlayingVideoId(null) }}
                             className="ml-auto p-1.5 rounded-full hover:bg-secondary transition-colors"
@@ -950,7 +983,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                             <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                             <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                           </div>
-                          <span className="text-sm text-muted-foreground font-medium">Dang suy nghi...</span>
+                          <span className="text-sm font-medium text-muted-foreground">Đang suy nghĩ...</span>
                         </div>
                       </div>
                     </div>
@@ -962,7 +995,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               </div>
             </div>
 
-            <div className="shrink-0 border-t border-border/60 bg-card/85 backdrop-blur-xl">
+            <div className="shrink-0 border-t border-border/60 bg-card/75 backdrop-blur-xl">
               <div className="mx-auto flex w-full max-w-3xl items-end gap-2 px-2 py-2 sm:gap-3 sm:px-4 sm:py-4">
                 <textarea
                   value={input}
@@ -974,7 +1007,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                     }
                   }}
                   placeholder="Bạn đang nghĩ gì, nói với mình nhé..."
-                  className="flex-1 rounded-[28px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 placeholder-slate-500 focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 dark:placeholder-slate-400 sm:px-4 sm:py-3 sm:text-sm resize-none max-h-40"
+                  className="input-glow flex-1 max-h-40 resize-none rounded-[28px] border border-border bg-background/85 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground sm:px-4 sm:py-3 sm:text-sm"
                   rows={1}
                   disabled={isLoading}
                 />
@@ -983,8 +1016,8 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                   disabled={!canSend}
                   className={`shrink-0 whitespace-nowrap rounded-full px-3 py-2 text-xs font-medium transition-all sm:px-5 sm:py-3 sm:text-sm ${
                     canSend 
-                      ? "bg-blue-600 text-white shadow-md hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 active:scale-95" 
-                      : "cursor-not-allowed bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                      ? "bg-primary text-primary-foreground shadow-[0_18px_36px_-22px_rgba(20,71,230,0.95)] hover:bg-primary/90 active:scale-95" 
+                      : "cursor-not-allowed bg-secondary text-muted-foreground"
                   }`}
                   type="button"
                 >

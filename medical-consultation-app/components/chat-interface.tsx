@@ -1,8 +1,8 @@
-"use client"
+﻿﻿﻿﻿"use client"
 
 import { useState, useRef, useEffect, useLayoutEffect } from "react"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, Plus, RefreshCcw, ChevronLeft, ChevronRight, Search, MessageSquare } from "lucide-react"
+import { AlertTriangle, Bot, User, Sparkles, Volume2, Pause, Play, Square, X, ChevronRight } from "lucide-react"
 // Force refresh - clear cache - v3
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +26,8 @@ import { GoogleGenAI, Modality } from "@google/genai"
 import { ChatSpecialMessage, parseSpecialMessages, type SpecialMessageData } from "@/components/chat-special-message"
 import { VirtualChatList } from "@/components/virtual-chat-list"
 import { OptimizedMessage } from "@/components/optimized-message"
+import { AgentRuntimeBanner } from "@/components/consultation/agent-runtime-banner"
+import { ConversationHistoryPanel } from "@/components/consultation/conversation-history-panel"
 import { useMultiDeviceSync, useLocalSyncListener } from "@/lib/multi-device-sync"
 import {
   buildRuntimeDetailFromMetadata,
@@ -122,7 +124,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   useEffect(() => {
-    toast({ title: "Agent mode", description: agentMode ? "Đã bật" : "Đã tắt" })
+    toast({ title: "Agent mode", description: agentMode ? "ÄÃ£ báº­t" : "ÄÃ£ táº¯t" })
   }, [agentMode, toast])
 
   const toggleTextLiveMode = () => {
@@ -133,7 +135,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   useEffect(() => {
-    toast({ title: "Live text", description: textLiveMode ? "Đã bật" : "Đã tắt" })
+    toast({ title: "Live text", description: textLiveMode ? "ÄÃ£ báº­t" : "ÄÃ£ táº¯t" })
   }, [textLiveMode, toast])
 
   useEffect(() => {
@@ -179,11 +181,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const labelAgentProfile = (id?: string | null) => {
     const v = String(id || "").trim().toLowerCase()
     if (v === "triage") return "Triage"
-    if (v === "medication") return "Thuốc"
-    if (v === "care_plan") return "Kế hoạch"
-    if (v === "therapy") return "Trị liệu"
-    if (v === "doctor_referral") return "Bác sĩ"
-    if (v === "default") return "Tổng quát"
+    if (v === "medication") return "Thuá»‘c"
+    if (v === "care_plan") return "Káº¿ hoáº¡ch"
+    if (v === "therapy") return "Trá»‹ liá»‡u"
+    if (v === "doctor_referral") return "BÃ¡c sÄ©"
+    if (v === "default") return "Tá»•ng quÃ¡t"
     return v ? v : "Auto"
   }
 
@@ -194,13 +196,13 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     const graphInjected = !!(ctx?.graph_injected ?? meta?.graph_injected)
     const graphToolCalled = !!(ctx?.graph_tool_called ?? meta?.graph_tool_called)
     const toolNames = Array.isArray(meta?.mcp_tool_names) ? meta.mcp_tool_names : []
-    const toolsPreview = toolNames.length ? `tools: ${toolNames.slice(0, 3).join(", ")}${toolNames.length > 3 ? "…" : ""}` : ""
-    const graphPreview = graphInjected ? "graph: bật" : graphToolCalled ? "graph: gọi lỗi" : "graph: tắt"
-    const runtimePreview = [provider && `provider: ${provider}`, mode && `mode: ${mode}`, profile && `profile: ${profile}`, graphPreview, toolsPreview].filter(Boolean).join(" · ")
+    const toolsPreview = toolNames.length ? `tools: ${toolNames.slice(0, 3).join(", ")}${toolNames.length > 3 ? "â€¦" : ""}` : ""
+    const graphPreview = graphInjected ? "graph: báº­t" : graphToolCalled ? "graph: gá»i lá»—i" : "graph: táº¯t"
+    const runtimePreview = [provider && `provider: ${provider}`, mode && `mode: ${mode}`, profile && `profile: ${profile}`, graphPreview, toolsPreview].filter(Boolean).join(" Â· ")
     return [
-      "Mình là trợ lý y tế AI. Mình sẽ hỏi thêm thông tin cần thiết, nhắc dấu hiệu nguy hiểm và gợi ý bước tiếp theo (tra cứu, sàng lọc, bác sĩ, kế hoạch…).",
-      runtimePreview ? `Trạng thái: ${runtimePreview}` : "",
-      "Bạn cho mình biết: tuổi/giới, triệu chứng chính, bắt đầu khi nào, mức độ, bệnh nền/thuốc đang dùng?",
+      "MÃ¬nh lÃ  trá»£ lÃ½ y táº¿ AI. MÃ¬nh sáº½ há»i thÃªm thÃ´ng tin cáº§n thiáº¿t, nháº¯c dáº¥u hiá»‡u nguy hiá»ƒm vÃ  gá»£i Ã½ bÆ°á»›c tiáº¿p theo (tra cá»©u, sÃ ng lá»c, bÃ¡c sÄ©, káº¿ hoáº¡châ€¦).",
+      runtimePreview ? `Tráº¡ng thÃ¡i: ${runtimePreview}` : "",
+      "Báº¡n cho mÃ¬nh biáº¿t: tuá»•i/giá»›i, triá»‡u chá»©ng chÃ­nh, báº¯t Ä‘áº§u khi nÃ o, má»©c Ä‘á»™, bá»‡nh ná»n/thuá»‘c Ä‘ang dÃ¹ng?",
     ].filter(Boolean).join("\n")
   }
 
@@ -249,7 +251,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     if (hasSecret()) return true
     if (canUseSystemGemini()) return true
     setAuthOpen(true)
-    toast({ title: "Cần API Key", description: "Bạn đã dùng hết 5 lượt miễn phí. Hãy nhập API key hoặc pass." })
+    toast({ title: "Cáº§n API Key", description: "Báº¡n Ä‘Ã£ dÃ¹ng háº¿t 5 lÆ°á»£t miá»…n phÃ­. HÃ£y nháº­p API key hoáº·c pass." })
     return false
   }
 
@@ -332,7 +334,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       apiKey = String(r.api_key).trim()
     }
     if (!apiKey) {
-      toast({ title: "Live mode", description: "Không lấy được API key để bật Live mode." })
+      toast({ title: "Live mode", description: "KhÃ´ng láº¥y Ä‘Æ°á»£c API key Ä‘á»ƒ báº­t Live mode." })
       return
     }
 
@@ -354,11 +356,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       config: {
         responseModalities: [Modality.AUDIO],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } } },
-        systemInstruction: "Bạn là trợ lý y tế AI. Trả lời ngắn gọn, an toàn và thân thiện.",
+        systemInstruction: "Báº¡n lÃ  trá»£ lÃ½ y táº¿ AI. Tráº£ lá»i ngáº¯n gá»n, an toÃ n vÃ  thÃ¢n thiá»‡n.",
       },
       callbacks: {
         onopen: () => {
-          const aiMessage: Message = { id: (Date.now() + 1).toString(), content: "Đã kết nối Live mode. Bạn có thể nói ngay bây giờ.", isUser: false, timestamp: new Date() }
+          const aiMessage: Message = { id: (Date.now() + 1).toString(), content: "ÄÃ£ káº¿t ná»‘i Live mode. Báº¡n cÃ³ thá»ƒ nÃ³i ngay bÃ¢y giá».", isUser: false, timestamp: new Date() }
           setMessages((prev) => [...prev, aiMessage])
           processor.onaudioprocess = (e) => {
             const inputData = e.inputBuffer.getChannelData(0)
@@ -414,7 +416,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     if (liveMode) {
       await stopLiveMode()
       setLiveMode(false)
-      const aiMessage: Message = { id: (Date.now() + 1).toString(), content: "Đã tắt Live mode.", isUser: false, timestamp: new Date() }
+      const aiMessage: Message = { id: (Date.now() + 1).toString(), content: "ÄÃ£ táº¯t Live mode.", isUser: false, timestamp: new Date() }
       setMessages((prev) => [...prev, aiMessage])
       return
     }
@@ -437,7 +439,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+      content: "Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿ Ä‘Æ°á»£c huáº¥n luyá»‡n chuyÃªn biá»‡t. TÃ´i cÃ³ thá»ƒ giÃºp báº¡n tÃ¬m hiá»ƒu vá» cÃ¡c váº¥n Ä‘á» sá»©c khá»e. Báº¡n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -537,28 +539,28 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     // Advanced suggestions based on conversation context
     const contextualSuggestions = {
       pain: [
-        "Đau đ��u kéo dài bao lâu thì cần đi khám?",
-        "Cách giảm đau tự nhiên không dùng thuốc?",
-        "Phân biệt đau đầu thường và đau đầu nguy hiểm?",
-        "Thuốc giảm đau nào an toàn nhất?"
+        "Äau Ä‘ï¿½ï¿½u kÃ©o dÃ i bao lÃ¢u thÃ¬ cáº§n Ä‘i khÃ¡m?",
+        "CÃ¡ch giáº£m Ä‘au tá»± nhiÃªn khÃ´ng dÃ¹ng thuá»‘c?",
+        "PhÃ¢n biá»‡t Ä‘au Ä‘áº§u thÆ°á»ng vÃ  Ä‘au Ä‘áº§u nguy hiá»ƒm?",
+        "Thuá»‘c giáº£m Ä‘au nÃ o an toÃ n nháº¥t?"
       ],
       mental: [
-        "Làm thế nào để biết mình có trầm cảm?",
-        "Kỹ thuật thở giúp giảm căng thẳng?",
-        "Khi nào cần gặp bác sĩ tâm lý?",
-        "Cách cải thiện giấc ngủ tự nhiên?"
+        "LÃ m tháº¿ nÃ o Ä‘á»ƒ biáº¿t mÃ¬nh cÃ³ tráº§m cáº£m?",
+        "Ká»¹ thuáº­t thá»Ÿ giÃºp giáº£m cÄƒng tháº³ng?",
+        "Khi nÃ o cáº§n gáº·p bÃ¡c sÄ© tÃ¢m lÃ½?",
+        "CÃ¡ch cáº£i thiá»‡n giáº¥c ngá»§ tá»± nhiÃªn?"
       ],
       medication: [
-        "Cách uống thuốc đúng cách?",
-        "Tác dụng phụ của thuốc kháng sinh?",
-        "Thuốc có thể uống cùng thức ăn không?",
-        "Quên uống thuốc thì phải làm sao?"
+        "CÃ¡ch uá»‘ng thuá»‘c Ä‘Ãºng cÃ¡ch?",
+        "TÃ¡c dá»¥ng phá»¥ cá»§a thuá»‘c khÃ¡ng sinh?",
+        "Thuá»‘c cÃ³ thá»ƒ uá»‘ng cÃ¹ng thá»©c Äƒn khÃ´ng?",
+        "QuÃªn uá»‘ng thuá»‘c thÃ¬ pháº£i lÃ m sao?"
       ],
       prevention: [
-        "Chế độ ăn tăng cường miễn dịch?",
-        "Tập thể dục như thế nào để khỏe mạnh?",
-        "Cách phòng ngừa bệnh tim mạch?",
-        "Kiểm tra sức khỏe định kỳ gồm gì?"
+        "Cháº¿ Ä‘á»™ Äƒn tÄƒng cÆ°á»ng miá»…n dá»‹ch?",
+        "Táº­p thá»ƒ dá»¥c nhÆ° tháº¿ nÃ o Ä‘á»ƒ khá»e máº¡nh?",
+        "CÃ¡ch phÃ²ng ngá»«a bá»‡nh tim máº¡ch?",
+        "Kiá»ƒm tra sá»©c khá»e Ä‘á»‹nh ká»³ gá»“m gÃ¬?"
       ]
     }
 
@@ -568,19 +570,19 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const conversationText = recentMessages.join(' ')
 
       // Detect conversation themes
-      if (conversationText.includes('đau') || conversationText.includes('nhức')) {
+      if (conversationText.includes('Ä‘au') || conversationText.includes('nhá»©c')) {
         return contextualSuggestions.pain
       }
-      if (conversationText.includes('lo ����u') || conversationText.includes('stress') || 
-          conversationText.includes('trầm cảm') || conversationText.includes('tâm lý')) {
+      if (conversationText.includes('lo ï¿½ï¿½ï¿½ï¿½u') || conversationText.includes('stress') || 
+          conversationText.includes('tráº§m cáº£m') || conversationText.includes('tÃ¢m lÃ½')) {
         return contextualSuggestions.mental
       }
-      if (conversationText.includes('thuốc') || conversationText.includes('uống') || 
-          conversationText.includes('liều')) {
+      if (conversationText.includes('thuá»‘c') || conversationText.includes('uá»‘ng') || 
+          conversationText.includes('liá»u')) {
         return contextualSuggestions.medication
       }
-      if (conversationText.includes('phòng ngừa') || conversationText.includes('tránh') || 
-          conversationText.includes('ngăn ngừa')) {
+      if (conversationText.includes('phÃ²ng ngá»«a') || conversationText.includes('trÃ¡nh') || 
+          conversationText.includes('ngÄƒn ngá»«a')) {
         return contextualSuggestions.prevention
       }
     }
@@ -724,7 +726,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         if (typeof window !== 'undefined') {
           const serial = messages.map(m => ({ id: String(m.id), content: String(m.content), isUser: !!m.isUser, timestamp: m.timestamp.toISOString() }))
           localStorage.setItem(`conv_messages_${newId}`, JSON.stringify(serial))
-          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại')
+          localStorage.setItem(`conv_title_${newId}`, 'Há»™i thoáº¡i')
         }
         loadLocalConversations()
         return newId
@@ -840,7 +842,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           if (!id) return
           const key = `conv_title_${id}`
           const existing = String(localStorage.getItem(key) || "").trim()
-          if (existing && existing !== "Hội thoại" && existing !== "Hội thoại mới") return
+          if (existing && existing !== "Há»™i thoáº¡i" && existing !== "Há»™i thoáº¡i má»›i") return
           const resp = await fetch("/api/auto-name-conversation", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -934,7 +936,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       // Parse special messages (embeds, music, navigation prompts)
       const { textMessages: parsedTexts, specialMessages: parsedSpecials } = planned 
         ? parseSpecialMessages(planned)
-        : { textMessages: [aiResponse || "Không nhận được phản hồi từ máy trả lời"], specialMessages: [] }
+        : { textMessages: [aiResponse || "KhÃ´ng nháº­n Ä‘Æ°á»£c pháº£n há»“i tá»« mÃ¡y tráº£ lá»i"], specialMessages: [] }
       
       // Add special messages to state (for embeds, music players, etc.)
       if (parsedSpecials.length > 0) {
@@ -943,7 +945,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       
       const deliverList = parsedTexts.length > 0
         ? parsedTexts.map((content, i) => ({ content, delay_ms: i === 0 ? 0 : 450 }))
-        : [{ content: aiResponse || "Không nhận được phản hồi từ máy trả lời", delay_ms: 0 }]
+        : [{ content: aiResponse || "KhÃ´ng nháº­n Ä‘Æ°á»£c pháº£n há»“i tá»« mÃ¡y tráº£ lá»i", delay_ms: 0 }]
 
       let liveTextToDeliver = aiResponse || deliverList.map((x) => x.content).join("\n\n")
       const convForIntro = String(ensuredId || conversationId || "").trim()
@@ -1002,7 +1004,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     } catch {
       const fallbackMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau.",
+        content: "Xin lá»—i, tÃ´i Ä‘ang gáº·p sá»± cá»‘ ká»¹ thuáº­t. Vui lÃ²ng thá»­ láº¡i sau.",
         isUser: false,
         timestamp: new Date(),
       }
@@ -1021,7 +1023,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     const text = String(messageText || "").trim()
     if (!text) return
     if (liveMode) {
-      toast({ title: "Live mode", description: "Hãy tắt Live mode để gửi tin nhắn văn bản." })
+      toast({ title: "Live mode", description: "HÃ£y táº¯t Live mode Ä‘á»ƒ gá»­i tin nháº¯n vÄƒn báº£n." })
       return
     }
     void startConversationIfNeeded()
@@ -1052,11 +1054,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     setInput("")
 
     try {
-      // Nếu có ảnh đã chọn, gửi t���i VLM cùng với văn bản
+      // Náº¿u cÃ³ áº£nh Ä‘Ã£ chá»n, gá»­i tï¿½ï¿½ï¿½i VLM cÃ¹ng vá»›i vÄƒn báº£n
       if (selectedImageBase64) {
         const parts: string[] = []
-        if (currentInput.trim()) parts.push(`Nội dung: ${currentInput}`)
-        if (selectedImageName) parts.push(`Đã đính kèm ảnh: ${selectedImageName}`)
+        if (currentInput.trim()) parts.push(`Ná»™i dung: ${currentInput}`)
+        if (selectedImageName) parts.push(`ÄÃ£ Ä‘Ã­nh kÃ¨m áº£nh: ${selectedImageName}`)
         const userMessage: Message = {
           id: Date.now().toString(),
           content: parts.join('\n'),
@@ -1072,7 +1074,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         })
 
         const data = await resp.json()
-        const aiText = data?.response || 'Không nhận được phản hồi từ VLM.'
+        const aiText = data?.response || 'KhÃ´ng nháº­n Ä‘Æ°á»£c pháº£n há»“i tá»« VLM.'
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
           content: aiText,
@@ -1087,10 +1089,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         setSelectedImageMime(null)
         if (fileInputRef.current) fileInputRef.current.value = ''
       } else if (selectedDocContent) {
-        // Xử lý tài liệu (PDF/DOC)
+        // Xá»­ lÃ½ tÃ i liá»‡u (PDF/DOC)
         const parts: string[] = []
-        if (currentInput.trim()) parts.push(`Nội dung: ${currentInput}`)
-        if (selectedDocName) parts.push(`Đã đính kèm tài liệu: ${selectedDocName}`)
+        if (currentInput.trim()) parts.push(`Ná»™i dung: ${currentInput}`)
+        if (selectedDocName) parts.push(`ÄÃ£ Ä‘Ã­nh kÃ¨m tÃ i liá»‡u: ${selectedDocName}`)
         
         const userMessage: Message = {
           id: Date.now().toString(),
@@ -1107,7 +1109,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         })
 
         const data = await resp.json()
-        const aiText = data?.response || 'Không nhận được phản hồi từ hệ thống.'
+        const aiText = data?.response || 'KhÃ´ng nháº­n Ä‘Æ°á»£c pháº£n há»“i tá»« há»‡ thá»‘ng.'
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
           content: aiText,
@@ -1128,7 +1130,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const fallbackMessage: Message = {
         id: (Date.now() + 1).toString(),
         content:
-          "Xin lỗi, tôi đang gặp sự cố kỹ thuật. Vui lòng thử lại sau hoặc tham khảo ý kiến bác sĩ chuyên khoa để có lời khuyên chính xác nhất.",
+          "Xin lá»—i, tÃ´i Ä‘ang gáº·p sá»± cá»‘ ká»¹ thuáº­t. Vui lÃ²ng thá»­ láº¡i sau hoáº·c tham kháº£o Ã½ kiáº¿n bÃ¡c sÄ© chuyÃªn khoa Ä‘á»ƒ cÃ³ lá»i khuyÃªn chÃ­nh xÃ¡c nháº¥t.",
         isUser: false,
         timestamp: new Date(),
       }
@@ -1140,7 +1142,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   const handleTextToSpeech = async (messageId: string, text: string) => {
     try {
-      // Nếu đang phát audio khác, dừng lại
+      // Náº¿u Ä‘ang phÃ¡t audio khÃ¡c, dá»«ng láº¡i
       if (audioRef.current && !audioRef.current.paused) {
         audioRef.current.pause()
         setIsPlayingAudio(null)
@@ -1149,7 +1151,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
       setIsPlayingAudio(messageId)
 
-      // Ưu tiên phát theo luồng để bắt đầu nghe sớm
+      // Æ¯u tiÃªn phÃ¡t theo luá»“ng Ä‘á»ƒ báº¯t Ä‘áº§u nghe sá»›m
       const sanitized = sanitizeTtsText(String(text), { lang: "vi" })
       const streamUrl = `/api/text-to-speech-stream?text=${encodeURIComponent(sanitized)}&lang=vi`
       const audio = new Audio(streamUrl)
@@ -1162,7 +1164,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       }
 
       audio.onerror = async () => {
-        // Fallback: dùng API thường nếu luồng gặp lỗi
+        // Fallback: dÃ¹ng API thÆ°á»ng náº¿u luá»“ng gáº·p lá»—i
         try {
           const response = await fetch("/api/text-to-speech", {
             method: "POST",
@@ -1248,7 +1250,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           const defaultMsg: Message = {
             id: Date.now().toString(),
             content:
-              "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+              "Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿ Ä‘Æ°á»£c huáº¥n luyá»‡n chuyÃªn biá»‡t. TÃ´i cÃ³ thá»ƒ giÃºp báº¡n tÃ¬m hiá»ƒu vá» cÃ¡c váº¥n Ä‘á» sá»©c khá»e. Báº¡n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?",
             isUser: false,
             timestamp: new Date(),
           }
@@ -1274,7 +1276,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setConversationId(newId)
       const defaultMsg: Message = {
         id: Date.now().toString(),
-        content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+        content: "Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿ Ä‘Æ°á»£c huáº¥n luyá»‡n chuyÃªn biá»‡t. TÃ´i cÃ³ thá»ƒ giÃºp báº¡n tÃ¬m hiá»ƒu vá» cÃ¡c váº¥n Ä‘á» sá»©c khá»e. Báº¡n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?",
         isUser: false,
         timestamp: new Date(),
       }
@@ -1285,7 +1287,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         try {
           const serial = [{ id: defaultMsg.id, content: defaultMsg.content, isUser: false, timestamp: defaultMsg.timestamp.toISOString() }]
           localStorage.setItem(`conv_messages_${newId}`, JSON.stringify(serial))
-          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại mới')
+          localStorage.setItem(`conv_title_${newId}`, 'Há»™i thoáº¡i má»›i')
           loadLocalConversations()
         } catch {}
       }
@@ -1330,7 +1332,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         const audioBlob = new Blob(chunks, { type: mimeType });
         await handleSpeechToText(audioBlob);
         
-        // Dừng tất cả tracks để tắt microphone
+        // Dá»«ng táº¥t cáº£ tracks Ä‘á»ƒ táº¯t microphone
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -1340,7 +1342,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       recorder.start();
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập.');
+      alert('KhÃ´ng thá»ƒ truy cáº­p microphone. Vui lÃ²ng kiá»ƒm tra quyá»n truy cáº­p.');
     }
   };
 
@@ -1369,11 +1371,11 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         setInput("");
       } else {
         console.error('Speech-to-text error:', data.error);
-        alert('Không thể chuyển đổi giọng nói thành văn bản. Vui lòng thử lại.');
+        alert('KhÃ´ng thá»ƒ chuyá»ƒn Ä‘á»•i giá»ng nÃ³i thÃ nh vÄƒn báº£n. Vui lÃ²ng thá»­ láº¡i.');
       }
     } catch (error) {
       console.error('Error processing speech-to-text:', error);
-      alert('Có lỗi xảy ra khi xử lý âm thanh.');
+      alert('CÃ³ lá»—i xáº£y ra khi xá»­ lÃ½ Ã¢m thanh.');
     }
   };
 
@@ -1406,7 +1408,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setSelectedImageMime(file.type)
     } catch (err) {
       console.error('Error reading image:', err)
-      alert('Không thể đọc ảnh. Vui lòng thử lại.')
+      alert('KhÃ´ng thá»ƒ Ä‘á»c áº£nh. Vui lÃ²ng thá»­ láº¡i.')
       setSelectedImageBase64(null)
       setSelectedImageName(null)
       setSelectedImageMime(null)
@@ -1423,7 +1425,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setSelectedDocName(file.name)
     } catch (err) {
       console.error('Error reading doc:', err)
-      alert('Không thể đọc tài liệu.')
+      alert('KhÃ´ng thá»ƒ Ä‘á»c tÃ i liá»‡u.')
     }
   }
   useEffect(() => {
@@ -1474,7 +1476,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const file = e.dataTransfer.files && e.dataTransfer.files[0]
       if (!file) return
       if (!file.type.startsWith('image/')) {
-        alert('Chỉ hỗ trợ kéo-thả ảnh.')
+        alert('Chá»‰ há»— trá»£ kÃ©o-tháº£ áº£nh.')
         return
       }
       const base64 = await fileToBase64(file)
@@ -1483,7 +1485,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setSelectedImageMime(file.type)
     } catch (err) {
       console.error('Error handling drop:', err)
-      alert('Không thể xử lý ảnh được kéo-thả. Vui lòng thử lại.')
+      alert('KhÃ´ng thá»ƒ xá»­ lÃ½ áº£nh Ä‘Æ°á»£c kÃ©o-tháº£. Vui lÃ²ng thá»­ láº¡i.')
     }
   }
 
@@ -1537,7 +1539,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setConversationId(newId)
       const defaultMsg: Message = {
         id: Date.now().toString(),
-        content: "Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?",
+        content: "Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿ Ä‘Æ°á»£c huáº¥n luyá»‡n chuyÃªn biá»‡t. TÃ´i cÃ³ thá»ƒ giÃºp báº¡n tÃ¬m hiá»ƒu vá» cÃ¡c váº¥n Ä‘á» sá»©c khá»e. Báº¡n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?",
         isUser: false,
         timestamp: new Date(),
       }
@@ -1546,7 +1548,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         try {
           const serial = [{ id: defaultMsg.id, content: defaultMsg.content, isUser: false, timestamp: defaultMsg.timestamp.toISOString() }]
           localStorage.setItem(`conv_messages_${newId}`, JSON.stringify(serial))
-          localStorage.setItem(`conv_title_${newId}`, 'Hội thoại mới')
+          localStorage.setItem(`conv_title_${newId}`, 'Há»™i thoáº¡i má»›i')
         } catch {}
       }
     }
@@ -1570,7 +1572,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                 const last = arr[arr.length - 1]
                 lastActive = String(last?.timestamp || lastActive)
                 if (!title) {
-                  title = 'Hội thoại'
+                  title = 'Há»™i thoáº¡i'
                 }
               }
             } catch {}
@@ -1699,7 +1701,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     setMessages([
       {
         id: '1',
-        content: 'Xin chào! Tôi là trợ lý AI y tế. Bạn có câu hỏi gì không?',
+        content: 'Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿. Báº¡n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?',
         isUser: false,
         timestamp: new Date(),
       },
@@ -1711,7 +1713,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setMessages([
         {
           id: '1',
-          content: 'Xin chào! Tôi là trợ lý AI y tế. Bạn có câu hỏi gì không?',
+          content: 'Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿. Báº¡n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?',
           isUser: false,
           timestamp: new Date(),
         },
@@ -1747,7 +1749,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       setMessages([
         {
           id: '1',
-          content: 'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
+          content: 'Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿ Ä‘Æ°á»£c huáº¥n luyá»‡n chuyÃªn biá»‡t. TÃ´i cÃ³ thá»ƒ giÃºp báº¡n tÃ¬m hiá»ƒu vá» cÃ¡c váº¥n Ä‘á» sá»©c khá»e. Báº¡n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?',
           isUser: false,
           timestamp: new Date(),
         },
@@ -1795,7 +1797,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               {
                 id: '1',
                 content:
-                  'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuy��n biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. B��n có câu hỏi gì không?',
+                  'Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿ Ä‘Æ°á»£c huáº¥n luyá»‡n chuyï¿½ï¿½n biá»‡t. TÃ´i cÃ³ thá»ƒ giÃºp báº¡n tÃ¬m hiá»ƒu vá» cÃ¡c váº¥n Ä‘á» sá»©c khá»e. Bï¿½ï¿½n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?',
                 isUser: false,
                 timestamp: new Date(),
               },
@@ -1824,7 +1826,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             {
               id: '1',
               content:
-                'Xin chào! Tôi là trợ lý AI y tế được huấn luyện chuyên biệt. Tôi có thể giúp bạn tìm hiểu về các vấn đề sức khỏe. Bạn có câu hỏi gì không?',
+                'Xin chÃ o! TÃ´i lÃ  trá»£ lÃ½ AI y táº¿ Ä‘Æ°á»£c huáº¥n luyá»‡n chuyÃªn biá»‡t. TÃ´i cÃ³ thá»ƒ giÃºp báº¡n tÃ¬m hiá»ƒu vá» cÃ¡c váº¥n Ä‘á» sá»©c khá»e. Báº¡n cÃ³ cÃ¢u há»i gÃ¬ khÃ´ng?',
               isUser: false,
               timestamp: new Date(),
             },
@@ -1953,7 +1955,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }, [messages, conversationId])
   return (
     <div
-      className="flex flex-1 min-h-0 overflow-hidden hero-gradient dark:hero-gradient-dark"
+      className="relative flex min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-background via-background to-secondary/45"
       suppressHydrationWarning
       style={{
         height: isMobile
@@ -1961,41 +1963,46 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           : "100%",
       }}
     >
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="animate-blob absolute -left-24 top-16 h-72 w-72 rounded-full bg-primary/10 blur-[110px]" />
+        <div className="animate-blob absolute bottom-12 right-0 h-72 w-72 rounded-full bg-teal-accent/10 blur-[120px]" style={{ animationDelay: "5s" }} />
+        <div className="animate-blob absolute left-1/3 top-1/2 h-56 w-56 rounded-full bg-primary/8 blur-[100px]" style={{ animationDelay: "10s" }} />
+      </div>
       <Dialog open={sosOpen} onOpenChange={setSosOpen}>
-        <DialogContent className="border-red-300 bg-red-50">
+        <DialogContent className="border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/50">
           <DialogHeader>
-            <DialogTitle className="text-red-700">Khẩn cấp</DialogTitle>
-            <DialogDescription className="text-red-600">
-              N���u bạn đang có nguy cơ tự làm hại bản thân hoặc người khác, hãy liên hệ hỗ trợ ngay
+            <DialogTitle className="text-red-700 dark:text-red-400">Kháº©n cáº¥p</DialogTitle>
+            <DialogDescription className="text-red-600 dark:text-red-500">
+              Nï¿½ï¿½ï¿½u báº¡n Ä‘ang cÃ³ nguy cÆ¡ tá»± lÃ m háº¡i báº£n thÃ¢n hoáº·c ngÆ°á»i khÃ¡c, hÃ£y liÃªn há»‡ há»— trá»£ ngay
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 text-sm text-slate-800">
+          <div className="space-y-3 text-sm text-foreground">
             <div className="space-y-1">
-              {(sosHotlines.length ? sosHotlines : [{ label: "Cấp cứu", number: "115" }, { label: "Bảo vệ trẻ em", number: "111" }]).map((h) => (
+              {(sosHotlines.length ? sosHotlines : [{ label: "Cáº¥p cá»©u", number: "115" }, { label: "Báº£o vá»‡ tráº» em", number: "111" }]).map((h) => (
                 <div key={`${h.label}-${h.number}`} className="font-medium">{h.label}: {h.number}</div>
               ))}
             </div>
           </div>
-          <p className="text-sm text-slate-800">Nếu bạn ở một mình, hãy gọi người thân/bạn bè và ở nơi an toàn.</p>
+          <p className="text-sm text-foreground">Náº¿u báº¡n á»Ÿ má»™t mÃ¬nh, hÃ£y gá»i ngÆ°á»i thÃ¢n/báº¡n bÃ¨ vÃ  á»Ÿ nÆ¡i an toÃ n.</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSosOpen(false)}>Đã hiểu</Button>
+            <Button variant="outline" onClick={() => setSosOpen(false)}>ÄÃ£ hiá»ƒu</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Đổi tên hội thoại</DialogTitle>
+            <DialogTitle>Äá»•i tÃªn há»™i thoáº¡i</DialogTitle>
           </DialogHeader>
           <DialogDescription className="sr-only">
-            Nhập tiêu đề mới cho hội thoại này
+            Nháº­p tiÃªu Ä‘á» má»›i cho há»™i thoáº¡i nÃ y
           </DialogDescription>
           <div className="space-y-3">
-            <Input value={renameInput} onChange={(e) => setRenameInput(e.target.value)} placeholder="Nhập tiêu đề" />
+            <Input value={renameInput} onChange={(e) => setRenameInput(e.target.value)} placeholder="Nháº­p tiÃªu Ä‘á»" />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsRenameOpen(false); setRenameTargetId(null) }}>Hủy</Button>
-            <Button onClick={async () => { if (renameTargetId && renameInput.trim()) { await renameConversation(renameTargetId, renameInput.trim()); setIsRenameOpen(false); setRenameTargetId(null) } }}>Lưu</Button>
+            <Button variant="outline" onClick={() => { setIsRenameOpen(false); setRenameTargetId(null) }}>Há»§y</Button>
+            <Button onClick={async () => { if (renameTargetId && renameInput.trim()) { await renameConversation(renameTargetId, renameInput.trim()); setIsRenameOpen(false); setRenameTargetId(null) } }}>LÆ°u</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2008,180 +2015,91 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             Demo pass is prefilled for internal testing. You can still replace it with your own API key.
           </DialogDescription>
           <div className="space-y-3">
-            <Input type="password" value={authSecret} onChange={(e) => setAuthSecret(e.target.value)} placeholder="Nhập API key hoặc pass" />
+            <Input type="password" value={authSecret} onChange={(e) => setAuthSecret(e.target.value)} placeholder="Nháº­p API key hoáº·c pass" />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={clearAuth}>Xoá</Button>
-            <Button variant="outline" onClick={() => setAuthOpen(false)}>Đóng</Button>
-            <Button onClick={saveAuth}>Lưu</Button>
+            <Button variant="outline" onClick={clearAuth}>XoÃ¡</Button>
+            <Button variant="outline" onClick={() => setAuthOpen(false)}>ÄÃ³ng</Button>
+            <Button onClick={saveAuth}>LÆ°u</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       {!isMobile && showSidebar && (
-        <div className="w-56 bg-card/95 backdrop-blur-sm p-0 flex-shrink-0 h-full flex flex-col border-r border-border">
-          {/* Compact Header */}
-          <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-xs font-semibold text-foreground">Lịch sử</span>
-              {authToken ? (
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                  systemState.db_ok === true ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300" : systemState.db_ok === false ? "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300" : "bg-secondary text-muted-foreground"
-                }`}>
-                  db: {systemState.db_ok === true ? `ok${typeof systemState.db_latency_ms === "number" ? ` (${systemState.db_latency_ms}ms)` : ""}` : systemState.db_ok === false ? "down" : "…"}
-                </span>
-              ) : null}
-            </div>
-            <div className="flex items-center gap-0.5">
-              <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Tìm kiếm">
-                <Search className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-              <button onClick={beginNewConversation} className="h-7 w-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 transition" title="Mới">
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-              <button onClick={fetchConversations} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Làm mới">
-                <RefreshCcw className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-              <button onClick={() => setShowSidebar(false)} className="h-7 w-7 rounded-lg hover:bg-secondary flex items-center justify-center transition" title="Đóng">
-                <ChevronLeft className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
-          </div>
-          {sidebarSearchOpen && (
-            <div className="px-2 pb-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                <input
-                  value={sidebarSearch}
-                  onChange={(e) => setSidebarSearch(e.target.value)}
-                  placeholder="Tìm kiếm..."
-                  className="w-full pl-7 pr-7 py-1.5 text-xs rounded-lg border border-border focus:border-primary outline-none bg-secondary/50"
-                />
-                {sidebarSearch && (
-                  <button onClick={() => setSidebarSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-          <div className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-2 custom-scrollbar">
-            {isLoadingConversations ? (
-              <div className="text-xs text-muted-foreground px-2 py-4">Đang tải...</div>
-            ) : (
-              serverUnavailable ? (
-                <div className="text-xs text-muted-foreground px-2 py-4">Đang dùng local cache</div>
-              ) : (
-                (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).length
-                  ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
-                    <div key={c.id} className={`group flex items-center gap-1.5 px-2 py-2 rounded-lg cursor-pointer transition-colors ${conversationId === c.id ? 'bg-primary/10 text-primary' : 'hover:bg-secondary text-foreground'}`} onClick={() => openConversation(c.id)}>
-                      <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
-                      <span className="text-xs font-medium flex-1 truncate">{c.title || 'Chưa có tiêu đề'}</span>
-                      <div className="hidden group-hover:flex items-center gap-0.5">
-                        <button className="h-5 w-5 rounded hover:bg-secondary flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setRenameTargetId(c.id); setRenameInput(c.title || ''); setIsRenameOpen(true) }}>
-                          <Sparkles className="h-3 w-3 text-muted-foreground" />
-                        </button>
-                        <button className="h-5 w-5 rounded hover:bg-destructive/10 flex items-center justify-center" onClick={(e) => { e.stopPropagation(); deleteConversation(c.id) }}>
-                          <X className="h-3 w-3 text-destructive" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                  : <div className="text-xs text-muted-foreground px-2 py-4 text-center">Chưa có hội thoại</div>
-              )
-            )}
-          </div>
+        <div className="h-full w-[320px] flex-shrink-0 overflow-hidden p-3">
+          <ConversationHistoryPanel
+            authToken={authToken}
+            systemState={systemState}
+            showSearch={sidebarSearchOpen}
+            search={sidebarSearch}
+            conversations={conversations}
+            conversationId={conversationId}
+            isLoading={isLoadingConversations}
+            serverUnavailable={serverUnavailable}
+            onToggleSearch={() => setSidebarSearchOpen(!sidebarSearchOpen)}
+            onSearchChange={setSidebarSearch}
+            onClearSearch={() => setSidebarSearch("")}
+            onNewConversation={beginNewConversation}
+            onRefresh={fetchConversations}
+            onClose={() => setShowSidebar(false)}
+            onOpenConversation={openConversation}
+            onRenameConversation={(id, title) => {
+              setRenameTargetId(id)
+              setRenameInput(title)
+              setIsRenameOpen(true)
+            }}
+            onDeleteConversation={deleteConversation}
+          />
         </div>
       )}
       {isMobile && (
         <Drawer open={showSidebar} onOpenChange={setShowSidebar} direction="left">
           <DrawerContent className="data-[vaul-drawer-direction=left]:w-full data-[vaul-drawer-direction=left]:max-w-none data-[vaul-drawer-direction=left]:border-r p-0">
-            <DrawerTitle className="sr-only">Lịch sử hội thoại</DrawerTitle>
-            <div className="h-full min-h-0 bg-white flex flex-col">
-              <div className="flex items-center justify-between px-4 py-3 border-b">
-                <span className="text-sm font-semibold text-slate-800">Lịch sử hội thoại</span>
-                <button onClick={() => setShowSidebar(false)} className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button">
-                  <X className="h-4 w-4 text-slate-700" />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 px-4 py-3">
-                <button onClick={() => setSidebarSearchOpen(!sidebarSearchOpen)} className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button">
-                  <Search className="h-4 w-4 text-slate-700" />
-                </button>
-                <button onClick={beginNewConversation} className="h-9 w-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow" type="button">
-                  <Plus className="h-4 w-4" />
-                </button>
-                <button onClick={fetchConversations} className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" type="button">
-                  <RefreshCcw className="h-4 w-4 text-slate-700" />
-                </button>
-              </div>
-
-              {sidebarSearchOpen && (
-                <div className="px-4 pb-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      value={sidebarSearch}
-                      onChange={(e) => setSidebarSearch(e.target.value)}
-                      placeholder="L���c hội thoại..."
-                      className="w-full pl-9 pr-9 py-2 text-sm rounded-2xl border border-gray-200 focus:border-blue-400 outline-none bg-white"
-                    />
-                    {sidebarSearch && (
-                      <button onClick={() => setSidebarSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500" type="button">
-                        x
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex-1 space-y-2 overflow-y-auto px-4 pb-6">
-                {isLoadingConversations ? (
-                  <div className="text-sm text-gray-500">Đang tải...</div>
-                ) : (
-                  serverUnavailable ? (
-                    <div className="text-sm text-slate-500">Đang dùng local cache</div>
-                  ) : (
-                    (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).length
-                      ? (sidebarSearch ? conversations.filter(c => (c.title || '').toLowerCase().includes(sidebarSearch.toLowerCase())) : conversations).map((c) => (
-                        <div key={c.id} className={`flex items-center justify-between p-3 rounded-2xl border ${conversationId === c.id ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'}`}>
-                          <button className="text-left text-sm flex-1 pr-2" onClick={() => { openConversation(c.id); setShowSidebar(false) }} type="button">
-                            <div className="font-medium text-slate-800">{c.title || 'Chưa có tiêu ��ề'}</div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">{c.last_active ? new Date(c.last_active).toLocaleString('vi-VN') : ''}</div>
-                          </button>
-                          <div className="flex items-center gap-2">
-                            <button className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center" onClick={() => { setRenameTargetId(c.id); setRenameInput(c.title || ''); setIsRenameOpen(true) }} type="button">
-                              <Sparkles className="h-4 w-4 text-slate-700" />
-                            </button>
-                            <button className="h-9 w-9 rounded-full bg-red-600 text-white flex items-center justify-center" onClick={() => deleteConversation(c.id)} type="button">
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                      : <div className="text-sm text-gray-500">Chưa có hội thoại</div>
-                  )
-                )}
-              </div>
-            </div>
+            <DrawerTitle className="sr-only">Lá»‹ch sá»­ há»™i thoáº¡i</DrawerTitle>
+            <ConversationHistoryPanel
+              mobile
+              authToken={authToken}
+              systemState={systemState}
+              showSearch={sidebarSearchOpen}
+              search={sidebarSearch}
+              conversations={conversations}
+              conversationId={conversationId}
+              isLoading={isLoadingConversations}
+              serverUnavailable={serverUnavailable}
+              onToggleSearch={() => setSidebarSearchOpen(!sidebarSearchOpen)}
+              onSearchChange={setSidebarSearch}
+              onClearSearch={() => setSidebarSearch("")}
+              onNewConversation={beginNewConversation}
+              onRefresh={fetchConversations}
+              onClose={() => setShowSidebar(false)}
+              onOpenConversation={(id) => {
+                openConversation(id)
+                setShowSidebar(false)
+              }}
+              onRenameConversation={(id, title) => {
+                setRenameTargetId(id)
+                setRenameInput(title)
+                setIsRenameOpen(true)
+              }}
+              onDeleteConversation={deleteConversation}
+            />
           </DrawerContent>
         </Drawer>
       )}
-      <div className="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden h-full">
+      <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {!showSidebar && !isMobile && (
-          <div className="absolute top-20 left-3 z-20" suppressHydrationWarning={true}>
-            <button onClick={() => setShowSidebar(true)} className="h-8 w-8 rounded-lg bg-card border border-border shadow-sm hover:bg-secondary flex items-center justify-center transition-colors" title="Mở lịch sử">
+          <div className="absolute left-3 top-20 z-20" suppressHydrationWarning={true}>
+            <button onClick={() => setShowSidebar(true)} className="glass-panel dark:glass-panel-dark flex h-10 w-10 items-center justify-center rounded-2xl border border-border/70 text-muted-foreground transition hover:text-foreground" title="Má»Ÿ lá»‹ch sá»­">
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
           </div>
         )}
-        <div className="mx-auto flex w-full max-w-5xl min-w-0 flex-col flex-1 min-h-0">
-      {!disclaimerDismissed && (
-            <div className="mx-3 my-2 sm:mx-4 flex-shrink-0">
-              <div className="mx-auto flex w-full max-w-3xl items-center justify-between rounded-2xl border border-amber-200/50 bg-amber-50/80 px-3 py-2 dark:border-amber-800/50 dark:bg-amber-950/30">
+        <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col px-3 pb-3 pt-3 sm:px-4">
+          {!disclaimerDismissed && (
+            <div className="mb-3 flex-shrink-0">
+              <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[1.35rem] border border-amber-200/50 bg-amber-50/85 px-3 py-2.5 shadow-[0_18px_36px_-28px_rgba(217,119,6,0.5)] dark:border-amber-800/50 dark:bg-amber-950/30">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span className="text-xs text-amber-800 dark:text-amber-200">Thông tin chỉ mang tính tham khảo. Hãy tham khảo ý kiến bác sĩ.</span>
+                  <span className="text-xs text-amber-800 dark:text-amber-200">ThÃ´ng tin chá»‰ mang tÃ­nh tham kháº£o. HÃ£y tham kháº£o Ã½ kiáº¿n bÃ¡c sÄ©.</span>
                 </div>
                 <button
                   onClick={() => { setDisclaimerDismissed(true); try { localStorage.setItem('dismiss_disclaimer', '1') } catch {} }}
@@ -2194,120 +2112,92 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           )}
 
           {agentMode && (
-            <div className="mx-3 mb-2 sm:mx-4 flex-shrink-0">
-              <div className="mx-auto w-full max-w-3xl rounded-2xl border border-border bg-card/70 px-3 py-2 backdrop-blur-sm">
-                <div className="text-xs font-semibold text-foreground">Trợ lý AI (Agent)</div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
-                    profile: {labelAgentProfile(agentStatus?.agent_profile)}
-                  </span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
-                    mode: {String(agentStatus?.mode || "auto")}
-                  </span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
-                    provider: {String(agentStatus?.provider || "auto")}
-                  </span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
-                    graph: {(() => {
-                      const reason = systemState.graph_reason
-                      if (systemState.graph_injected) return "bật"
-                      if (reason === "graph_disabled_no_cpu_url") return "tắt (chưa cấu hình CPU)"
-                      if (reason === "graph_404") return "lỗi 404"
-                      if (reason === "graph_timeout") return "timeout"
-                      if (reason === "graph_empty") return "không có dữ liệu"
-                      if (reason === "graph_down") return "down"
-                      if (systemState.graph_connected) return `ok${typeof systemState.graph_latency_ms === "number" ? ` (${systemState.graph_latency_ms}ms)` : ""}`
-                      if (agentStatus?.graph_tool_called) return "lỗi/tắt"
-                      return "tắt"
-                    })()}
-                  </span>
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
-                    tools: {String(agentStatus?.mcp_tool_calls_count ?? 0)}
-                  </span>
-                </div>
-              </div>
-            </div>
+            <AgentRuntimeBanner
+              agentStatus={agentStatus}
+              systemState={systemState}
+              labelAgentProfile={labelAgentProfile}
+            />
           )}
 
-      <div
-        ref={messagesContainerRef}
-            className="flex-1 min-h-0 overflow-y-auto custom-scrollbar"
-        style={{ 
-          WebkitOverflowScrolling: 'touch',
-          overscrollBehavior: 'contain'
-        }}
-        onScroll={refreshIsAtBottom}
-      >
-        {messages.length > 250 ? (
+          <div className="glass-panel dark:glass-panel-dark flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.85rem] border border-border/60 shadow-[0_28px_80px_-38px_rgba(15,20,25,0.45)]">
+            <div
+              ref={messagesContainerRef}
+              className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden"
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain',
+                height: '100%'
+              }}
+              onScroll={refreshIsAtBottom}
+            >
+              {messages.length > 250 ? (
           // Use virtual scroll for large message lists
-          <VirtualChatList
-            messages={messages}
+                <VirtualChatList
+                  messages={messages}
                 contentClassName="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6 sm:py-6"
-            renderMessage={(msg, idx) => {
-              return (
-              <div
-                key={msg.id || idx}
-                className={`flex items-end gap-3 animate-message-in ${
-                  msg.isUser ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                {!msg.isUser && (
-                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
-                    <Bot className="h-4 w-4 text-white" />
-                  </div>
-                )}
-                
-                <div
-                  className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 ${
-                    msg.isUser
-                      ? 'chat-bubble-user'
-                      : 'chat-bubble-bot border border-border/50'
-                  }`}
-                  style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-                >
-                  {msg.isUser ? (
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed font-medium">{msg.content}</p>
-                  ) : (
-                    <div className="text-sm prose prose-sm dark:prose-invert leading-relaxed prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                    </div>
-                  )}
-                  {!msg.isUser && (
-                    <div className="flex justify-end mt-3 pt-2 border-t border-border/30 gap-1.5">
-                      {isPlayingAudio === msg.id ? (
-                        <button onClick={() => handlePauseAudio(msg.id)} className="p-1.5 rounded-full bg-primary text-primary-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Tạm dừng">
-                          <Pause className="h-3.5 w-3.5" />
-                        </button>
-                      ) : isPausedAudio === msg.id ? (
-                        <button onClick={() => handleResumeAudio(msg.id)} className="p-1.5 rounded-full bg-accent text-accent-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Tiếp tục">
-                          <Play className="h-3.5 w-3.5" />
-                        </button>
-                      ) : (
-                        <button onClick={() => handleTextToSpeech(msg.id, msg.content)} className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200" title="Nghe tin nhắn">
-                          <Volume2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {(isPlayingAudio === msg.id || isPausedAudio === msg.id) && (
-                        <button onClick={handleStopAudio} className="p-1.5 rounded-full bg-destructive text-destructive-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Dừng">
-                          <Square className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {msg.isUser && (
-                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
-                    <User className="h-4 w-4 text-white" />
-                  </div>
-                )}
-              </div>
-            )
-            }}
-            itemHeight={140}
-            overscan={5}
-          />
-        ) : (
+                  renderMessage={(msg, idx) => {
+                    return (
+                      <div
+                        key={msg.id || idx}
+                        className={`flex items-end gap-3 animate-message-in ${
+                          msg.isUser ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        {!msg.isUser && (
+                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                            <Bot className="h-4 w-4 text-white" />
+                          </div>
+                        )}
+                        <div
+                          className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 ${
+                            msg.isUser
+                              ? 'chat-bubble-user'
+                              : 'chat-bubble-bot border border-border/50'
+                          }`}
+                          style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                        >
+                          {msg.isUser ? (
+                            <p className="text-sm whitespace-pre-wrap leading-relaxed font-medium">{msg.content}</p>
+                          ) : (
+                            <div className="text-sm prose prose-sm dark:prose-invert leading-relaxed prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                            </div>
+                          )}
+                          {!msg.isUser && (
+                            <div className="flex justify-end mt-3 pt-2 border-t border-border/30 gap-1.5">
+                              {isPlayingAudio === msg.id ? (
+                                <button onClick={() => handlePauseAudio(msg.id)} className="p-1.5 rounded-full bg-primary text-primary-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Táº¡m dá»«ng">
+                                  <Pause className="h-3.5 w-3.5" />
+                                </button>
+                              ) : isPausedAudio === msg.id ? (
+                                <button onClick={() => handleResumeAudio(msg.id)} className="p-1.5 rounded-full bg-accent text-accent-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Tiáº¿p tá»¥c">
+                                  <Play className="h-3.5 w-3.5" />
+                                </button>
+                              ) : (
+                                <button onClick={() => handleTextToSpeech(msg.id, msg.content)} className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200" title="Nghe tin nháº¯n">
+                                  <Volume2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              {(isPlayingAudio === msg.id || isPausedAudio === msg.id) && (
+                                <button onClick={handleStopAudio} className="p-1.5 rounded-full bg-destructive text-destructive-foreground transition-all duration-200 hover:opacity-90 shadow-sm" title="Dá»«ng">
+                                  <Square className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {msg.isUser && (
+                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                            <User className="h-4 w-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }}
+                  itemHeight={140}
+                  overscan={5}
+                />
+              ) : (
           // Normal rendering for small message lists
               <div className="mx-auto w-full max-w-3xl space-y-4 px-3 py-4 sm:px-6 sm:py-6">
             {messages.map((message, index) => (
@@ -2344,7 +2234,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                         <button
                           onClick={() => handlePauseAudio(message.id)}
                           className="p-1.5 rounded-full bg-primary text-primary-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
-                          title="Tạm dừng"
+                          title="Táº¡m dá»«ng"
                         >
                           <Pause className="h-3.5 w-3.5" />
                         </button>
@@ -2352,7 +2242,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                         <button
                           onClick={() => handleResumeAudio(message.id)}
                           className="p-1.5 rounded-full bg-accent text-accent-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
-                          title="Tiếp tục"
+                          title="Tiáº¿p tá»¥c"
                         >
                           <Play className="h-3.5 w-3.5" />
                         </button>
@@ -2360,7 +2250,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                         <button
                           onClick={() => handleTextToSpeech(message.id, message.content)}
                           className="p-1.5 rounded-full bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200"
-                          title="Nghe tin nhắn"
+                          title="Nghe tin nháº¯n"
                         >
                           <Volume2 className="h-3.5 w-3.5" />
                         </button>
@@ -2370,7 +2260,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                         <button
                           onClick={handleStopAudio}
                           className="p-1.5 rounded-full bg-destructive text-destructive-foreground transition-all duration-200 hover:opacity-90 shadow-sm"
-                          title="Dừng"
+                          title="Dá»«ng"
                         >
                           <Square className="h-3.5 w-3.5" />
                         </button>
@@ -2387,10 +2277,10 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               </div>
             ))}
           </div>
-        )}
+              )}
 
         {/* Special Messages (Embeds, Music Players, Navigation Prompts) */}
-            <div className="mx-auto w-full max-w-3xl px-3 pb-2 sm:px-6 sm:pb-3">
+              <div className="mx-auto w-full max-w-3xl px-3 pb-2 sm:px-6 sm:pb-3">
         {specialMessages.map((specialMsg) => (
           <ChatSpecialMessage 
             key={specialMsg.id} 
@@ -2419,59 +2309,60 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                 </div>
         )}
         <div ref={messagesEndRef} />
-      </div>
-      </div>
+              </div>
+            </div>
 
-      <div ref={composerWrapperRef} className="flex-shrink-0 border-t border-border/60 bg-background/85 backdrop-blur-xl">
-        <UnifiedComposer
-          value={input}
-          onValueChange={setInput}
-          onSubmit={handleSubmit}
-          isLoading={isLoading}
-          suggestedQuestions={aiSuggestions.length > 0 ? aiSuggestions : suggestedQuestions}
-          onSuggestedQuestion={handleSuggestedQuestion}
-          showTools={showTools}
-          onToggleTools={() => setShowTools(!showTools)}
-          fileInputRef={fileInputRef}
-          docInputRef={docInputRef}
-          onImageChange={handleImageChange}
-          onDocChange={handleDocChange}
-          selectedImage={
-            selectedImageBase64
-              ? { base64: selectedImageBase64, name: selectedImageName, mime: selectedImageMime }
-              : null
-          }
-          onRemoveImage={handleRemoveImage}
-          selectedDocName={selectedDocName}
-          onRemoveDoc={handleRemoveDoc}
-          selectedModel={selectedModel}
-          onSelectedModelChange={setSelectedModel}
-          onStartNewConversation={startNewConversation}
-          isRecording={isRecording}
-          onToggleRecording={() => (isRecording ? stopRecording() : startRecording())}
-          onGotoSpeechChat={() => router.push("/speech-chat")}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-          agentMode={agentMode}
-          onToggleAgentMode={toggleAgentMode}
-          hasContext={agentMode}
-          onShowContext={() => setLlmContextOpen(true)}
-          isLiveMode={liveMode}
-          onToggleLiveMode={toggleLiveMode}
-          isTextLiveMode={textLiveMode}
-          onToggleTextLiveMode={toggleTextLiveMode}
-          onManageKey={() => setAuthOpen(true)}
-        />
-      </div>
+            <div ref={composerWrapperRef} className="flex-shrink-0 border-t border-border/60 bg-background/80 backdrop-blur-xl">
+              <UnifiedComposer
+                value={input}
+                onValueChange={setInput}
+                onSubmit={handleSubmit}
+                isLoading={isLoading}
+                suggestedQuestions={aiSuggestions.length > 0 ? aiSuggestions : suggestedQuestions}
+                onSuggestedQuestion={handleSuggestedQuestion}
+                showTools={showTools}
+                onToggleTools={() => setShowTools(!showTools)}
+                fileInputRef={fileInputRef}
+                docInputRef={docInputRef}
+                onImageChange={handleImageChange}
+                onDocChange={handleDocChange}
+                selectedImage={
+                  selectedImageBase64
+                    ? { base64: selectedImageBase64, name: selectedImageName, mime: selectedImageMime }
+                    : null
+                }
+                onRemoveImage={handleRemoveImage}
+                selectedDocName={selectedDocName}
+                onRemoveDoc={handleRemoveDoc}
+                selectedModel={selectedModel}
+                onSelectedModelChange={setSelectedModel}
+                onStartNewConversation={startNewConversation}
+                isRecording={isRecording}
+                onToggleRecording={() => (isRecording ? stopRecording() : startRecording())}
+                onGotoSpeechChat={() => router.push("/speech-chat")}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                agentMode={agentMode}
+                onToggleAgentMode={toggleAgentMode}
+                hasContext={agentMode}
+                onShowContext={() => setLlmContextOpen(true)}
+                isLiveMode={liveMode}
+                onToggleLiveMode={toggleLiveMode}
+                isTextLiveMode={textLiveMode}
+                onToggleTextLiveMode={toggleTextLiveMode}
+                onManageKey={() => setAuthOpen(true)}
+              />
+            </div>
+          </div>
         </div>
       <Dialog open={llmContextOpen} onOpenChange={setLlmContextOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Context gửi cho LLM</DialogTitle>
-            <DialogDescription>Dùng để demo: SystemState, graph reason và fallback chain từ backend</DialogDescription>
+            <DialogTitle>Context gá»­i cho LLM</DialogTitle>
+            <DialogDescription>DÃ¹ng Ä‘á»ƒ demo: SystemState, graph reason vÃ  fallback chain tá»« backend</DialogDescription>
           </DialogHeader>
           <div className="max-h-[70vh] overflow-auto rounded-md border border-border bg-muted/20 p-3 text-xs">
-            {/* Diagnostic errors — shown only when present */}
+            {/* Diagnostic errors â€” shown only when present */}
             {(agentStatus?.cpu_proxy_error || agentStatus?.gemini_error) && (
               <div className="mb-2 rounded border border-destructive/40 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
                 {agentStatus?.cpu_proxy_error && <div><strong>cpu_proxy_error:</strong> {agentStatus.cpu_proxy_error}</div>}
@@ -2489,7 +2380,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           </div>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setLlmContextOpen(false)}>
-              Đóng
+              ÄÃ³ng
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2498,3 +2389,4 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     </div>
   )
 }
+

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
+import { BrainCircuit, HeartPulse, NotebookText, Sparkles } from "lucide-react"
 import { readLocal, writeLocal } from "@/lib/local-store"
 import { getUserState, upsertUserState } from "@/lib/user-state-client"
 import { getCarePlan, getLastScreening, getScreeningHistory } from "@/lib/screening-store"
@@ -13,6 +14,8 @@ import { appendTherapyEvent, createPlanFromCarePlan, getTherapyPlan, isTaskDone,
 import { getDeviceId } from "@/lib/device-id"
 import { getDailyCard, redrawToday, type TherapeuticCard } from "@/lib/therapeutic-cards"
 import { PageAiInsight } from "@/components/page-ai-insight"
+import PortalShell from "@/components/portal-shell"
+import { StatCard } from "@/components/ui/stat-card"
 
 type MoodEntry = {
   id: string
@@ -275,13 +278,51 @@ export function DtxTriLieu() {
     return t
   }
 
+  const latestMood = moodItems[0]
+  const completedTasks = therapyPlan?.tasks.filter((t) => isTaskDone(t.id)).length || 0
+  const totalTasks = therapyPlan?.tasks.length || 0
+  const wheelAverage = wheelDims.length
+    ? Math.round(
+        wheelDims.reduce((sum, item) => sum + getWheelValue(item.key), 0) / wheelDims.length
+      )
+    : 0
+
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-4">
-      <div className="rounded-2xl border bg-white/80 backdrop-blur-xl shadow-sm p-4">
-        <div className="text-lg font-semibold">Trị liệu kỹ thuật số</div>
-        <div className="text-sm text-muted-foreground">
-          Theo dõi tâm trạng và ghi chép để tăng nhận thức và tuân thủ thói quen.
+    <PortalShell
+      eyebrow="Digital Therapy"
+      title="Trị liệu kỹ thuật số"
+      description="Theo dõi tâm trạng, nhật ký, bài tập và lộ trình phục hồi trong một workspace thống nhất, dễ đọc và phù hợp với design system mới."
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="rounded-xl">Tiếp tục hôm nay</Button>
+          <Button variant="outline" className="rounded-xl" onClick={() => { try { window.location.href = "/tam-su" } catch {} }}>
+            Tâm sự với AI
+          </Button>
         </div>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          label="Mood gần nhất"
+          value={latestMood ? `${moodEmoji(latestMood.mood)} ${moodLabel(latestMood.mood)}` : "Chưa có"}
+          helper={latestMood ? new Date(latestMood.ts).toLocaleString("vi-VN") : "Hãy lưu cảm xúc đầu tiên"}
+          icon={<HeartPulse size={20} />}
+          tone="teal"
+        />
+        <StatCard
+          label="Tiến độ kế hoạch"
+          value={therapyPlan ? `${completedTasks}/${totalTasks}` : "0/0"}
+          helper={therapyPlan ? therapyPlan.focus : "Chưa có plan trị liệu"}
+          icon={<BrainCircuit size={20} />}
+          tone="primary"
+        />
+        <StatCard
+          label="Nhật ký & bánh xe"
+          value={`${journalItems.length} entries`}
+          helper={`Điểm cân bằng trung bình ${wheelAverage}/10`}
+          icon={<NotebookText size={20} />}
+          tone="neutral"
+        />
       </div>
 
       {/* AI Insight */}
@@ -291,9 +332,12 @@ export function DtxTriLieu() {
       />
 
       {carePlan || lastScreening ? (
-        <Card className="border-0 shadow-sm">
+        <Card className="app-surface border-0 bg-card/90 shadow-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Gợi ý theo sàng lọc</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Gợi ý theo sàng lọc
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {lastScreening ? (
@@ -346,7 +390,7 @@ export function DtxTriLieu() {
       ) : null}
 
       <Tabs defaultValue="plan">
-        <TabsList className="w-full justify-between">
+        <TabsList className="h-auto w-full justify-between rounded-2xl bg-secondary/70 p-1">
           <TabsTrigger value="plan" className="flex-1">Kế hoạch</TabsTrigger>
           <TabsTrigger value="cards" className="flex-1">Thẻ</TabsTrigger>
           <TabsTrigger value="wheel" className="flex-1">Bánh xe</TabsTrigger>
@@ -356,7 +400,7 @@ export function DtxTriLieu() {
         </TabsList>
 
         <TabsContent value="plan" className="space-y-4">
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Kế hoạch điều trị cá nhân</CardTitle>
             </CardHeader>
@@ -405,7 +449,7 @@ export function DtxTriLieu() {
           </Card>
 
           {therapyPlan ? (
-            <Card className="border-0 shadow-sm">
+            <Card className="app-surface border-0 bg-card/90 shadow-none">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Hoạt động hôm nay</CardTitle>
               </CardHeader>
@@ -447,7 +491,7 @@ export function DtxTriLieu() {
             </Card>
           ) : null}
 
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Lịch sử điều trị</CardTitle>
             </CardHeader>
@@ -473,7 +517,7 @@ export function DtxTriLieu() {
         </TabsContent>
 
         <TabsContent value="cards" className="space-y-4">
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Thẻ trị liệu mỗi ngày</CardTitle>
             </CardHeader>
@@ -508,7 +552,7 @@ export function DtxTriLieu() {
         </TabsContent>
 
         <TabsContent value="wheel" className="space-y-4">
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Bánh xe Cuộc đời</CardTitle>
             </CardHeader>
@@ -575,7 +619,7 @@ export function DtxTriLieu() {
         </TabsContent>
 
         <TabsContent value="insight" className="space-y-4">
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Hành trình Tâm trí</CardTitle>
             </CardHeader>
@@ -620,7 +664,7 @@ export function DtxTriLieu() {
         </TabsContent>
 
         <TabsContent value="mood" className="space-y-4">
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Mood tracker</CardTitle>
             </CardHeader>
@@ -677,7 +721,7 @@ export function DtxTriLieu() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">7 lần gần nhất</CardTitle>
             </CardHeader>
@@ -721,7 +765,7 @@ export function DtxTriLieu() {
         </TabsContent>
 
         <TabsContent value="journal" className="space-y-4">
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Journaling</CardTitle>
             </CardHeader>
@@ -744,7 +788,7 @@ export function DtxTriLieu() {
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-sm">
+          <Card className="app-surface border-0 bg-card/90 shadow-none">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Gần đây</CardTitle>
             </CardHeader>
@@ -775,6 +819,6 @@ export function DtxTriLieu() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PortalShell>
   )
 }

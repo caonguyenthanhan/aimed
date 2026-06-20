@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Book Appointment | MedConsult</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e1e3e4",
+                        "primary-fixed": "#dde1ff",
+                        "inverse-surface": "#2e3132",
+                        "surface-container": "#eceeef",
+                        "error": "#ba1a1a",
+                        "muted-blue": "#E8F0FF",
+                        "surface-container-highest": "#e1e3e4",
+                        "secondary-fixed": "#dfe3ea",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed-variant": "#0035be",
+                        "on-tertiary-container": "#bcd4ff",
+                        "tertiary": "#004383",
+                        "destructive": "#E63946",
+                        "secondary-container": "#dfe3ea",
+                        "inverse-primary": "#b9c3ff",
+                        "on-primary-container": "#c9d0ff",
+                        "on-secondary-container": "#60656b",
+                        "surface-container-low": "#f2f4f5",
+                        "on-surface": "#191c1d",
+                        "outline": "#747687",
+                        "on-tertiary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed": "#d5e3ff",
+                        "surface-dim": "#d8dadb",
+                        "dark-bg": "#0F1419",
+                        "surface": "#f8fafb",
+                        "on-secondary-fixed-variant": "#42474d",
+                        "on-surface-variant": "#434655",
+                        "dark-card": "#1A1F2E",
+                        "primary": "#0032b6",
+                        "background": "#f8fafb",
+                        "surface-container-high": "#e6e8e9",
+                        "secondary": "#5a5f65",
+                        "surface-tint": "#1c4bea",
+                        "tertiary-container": "#005aac",
+                        "secondary-fixed-dim": "#c2c7cd",
+                        "primary-fixed-dim": "#b9c3ff",
+                        "surface-bright": "#f8fafb",
+                        "on-tertiary-fixed": "#001b3c",
+                        "on-primary-fixed": "#001356",
+                        "surface-container-lowest": "#ffffff",
+                        "outline-variant": "#c4c5d8",
+                        "on-secondary-fixed": "#171c21",
+                        "tertiary-fixed-dim": "#a8c8ff",
+                        "on-background": "#191c1d",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#004689",
+                        "primary-container": "#1447e6",
+                        "inverse-on-surface": "#eff1f2",
+                        "teal-accent": "#14B8A6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "margin-mobile": "1rem",
+                        "header-height": "4.5rem",
+                        "stack-gap": "1rem",
+                        "container-max": "1280px",
+                        "gutter": "1.5rem"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "button-text": ["Inter"],
+                        "headline-xl": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "label-mono": ["Geist"],
+                        "body-sm": ["Inter"],
+                        "headline-lg-mobile": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                        "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                        "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f8fafb;
+        }
+        .scroll-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: #c4c5d8;
+            border-radius: 10px;
+        }
+        .scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #747687;
+        }
+        .glass-panel {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .active-step-indicator {
+            width: 32px;
+            height: 4px;
+            background: #0032b6;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        .inactive-step-indicator {
+            width: 12px;
+            height: 4px;
+            background: #dfe3ea;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        @keyframes blob-float {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+        .bg-blob {
+            position: absolute;
+            filter: blur(120px);
+            z-index: -1;
+            animation: blob-float 20s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-background selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Atmospheric Background Blobs -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+<div class="bg-blob w-[500px] h-[500px] bg-primary/10 top-[-100px] left-[-100px]"></div>
+<div class="bg-blob w-[600px] h-[600px] bg-tertiary-fixed/20 bottom-[-200px] right-[-100px]" style="animation-delay: -5s;"></div>
+</div>
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-outline-variant/30 shadow-sm h-header-height flex items-center">
+<nav class="flex justify-between items-center w-full px-gutter max-w-container-max mx-auto">
+<div class="flex items-center gap-8">
+<span class="font-headline-md text-headline-md font-bold text-primary">MedConsult</span>
+<div class="hidden md:flex gap-6 items-center">
+<a class="text-secondary hover:text-primary transition-colors font-body-md text-body-md" href="#">Directory</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md" href="#">My Appointments</a>
+<a class="text-secondary hover:text-primary transition-colors font-body-md text-body-md" href="#">Messages</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="hidden md:flex items-center gap-2 text-primary font-button-text text-button-text py-2 px-4 rounded-lg hover:bg-surface-container-low transition-all">
+<span class="material-symbols-outlined text-[20px]">emergency</span>
+                    Emergency
+                </button>
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up professional headshot of a female doctor with a kind expression, wearing a stethoscope over her white lab coat. The setting is a brightly lit, clean, modern medical clinic with soft blue and white tones and a glassmorphic background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXaRlYtVN-wnyic-KyEC58zhuhdO3cIA6OfwnhZNc8MSx8ME-2Ky8cQpx2FICFypNUaK2Erl93iHDdKvNCXWC4pqFfKDZi-pGnv2dAK6BdXSwJbGFQQMEQNz3wuXc3xlrSHwGDfKo3oVIL-SbtPpG1WuIe863P-mAwBnOnO4VSM363caagI58O6ph_st8ce6zj0Ko76X-FMBXBKrFCUQQdHrn9G0UzLAsU14fGReOux3G2NeE4oQWGrtfUGxwwe83BTGok3jkFK4Z7"/>
+</div>
+</div>
+</nav>
+</header>
+<!-- Main Content Area -->
+<main class="pt-[header-height] h-screen flex flex-col md:flex-row overflow-hidden max-w-container-max mx-auto w-full px-gutter gap-8 py-8">
+<!-- Left: Booking Form (Scrollable) -->
+<section class="flex-1 flex flex-col gap-6 overflow-hidden">
+<!-- Step Navigation -->
+<div class="flex items-center justify-between">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Book an Appointment</h1>
+<p class="text-on-surface-variant font-body-sm text-body-sm">Complete the steps below to secure your consultation.</p>
+</div>
+<div class="flex gap-2 items-center">
+<div class="active-step-indicator" id="step-1-dot"></div>
+<div class="inactive-step-indicator" id="step-2-dot"></div>
+<div class="inactive-step-indicator" id="step-3-dot"></div>
+</div>
+</div>
+<!-- Booking Cards Container -->
+<div class="scroll-container overflow-y-auto pr-2 pb-12 flex flex-col gap-6">
+<!-- Step 1: Select Date -->
+<div class="glass-panel rounded-xl p-6 border border-outline-variant/30 shadow-sm" id="step-1">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg">calendar_month</span>
+<h2 class="font-headline-md text-headline-md">Select Date</h2>
+</div>
+<!-- Simplified Calendar -->
+<div class="grid grid-cols-7 gap-2 text-center">
+<!-- Days Header -->
+<div class="text-label-mono font-label-mono text-secondary py-2">MON</div>
+<div class="text-label-mono font-label-mono text-secondary py-2">TUE</div>
+<div class="text-label-mono font-label-mono text-secondary py-2">WED</div>
+<div class="text-label-mono font-label-mono text-secondary py-2">THU</div>
+<div class="text-label-mono font-label-mono text-secondary py-2">FRI</div>
+<div class="text-label-mono font-label-mono text-secondary py-2">SAT</div>
+<div class="text-label-mono font-label-mono text-secondary py-2">SUN</div>
+<!-- Calendar Days (Mockup) -->
+<button class="p-3 rounded-lg text-surface-dim font-body-md pointer-events-none">28</button>
+<button class="p-3 rounded-lg text-surface-dim font-body-md pointer-events-none">29</button>
+<button class="p-3 rounded-lg text-surface-dim font-body-md pointer-events-none">30</button>
+<button class="p-3 rounded-lg text-surface-dim font-body-md pointer-events-none">31</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">1</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">2</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">3</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">4</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">5</button>
+<button class="p-3 rounded-lg bg-primary text-white font-bold transition-all shadow-md">6</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">7</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">8</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">9</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">10</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">11</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">12</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">13</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">14</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">15</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">16</button>
+<button class="p-3 rounded-lg text-on-surface font-body-md hover:bg-muted-blue hover:text-primary transition-all">17</button>
+</div>
+</div>
+<!-- Step 2: Select Time -->
+<div class="glass-panel rounded-xl p-6 border border-outline-variant/30 shadow-sm opacity-60 transition-opacity" id="step-2">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg">schedule</span>
+<h2 class="font-headline-md text-headline-md">Time Slot</h2>
+</div>
+<div class="space-y-6">
+<div>
+<span class="font-label-mono text-label-mono text-secondary mb-3 block">MORNING SESSIONS</span>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+<button class="py-2 px-4 rounded-lg border border-outline-variant text-on-surface font-body-sm hover:bg-muted-blue hover:border-primary transition-all">08:00 AM</button>
+<button class="py-2 px-4 rounded-lg border border-outline-variant text-on-surface font-body-sm hover:bg-muted-blue hover:border-primary transition-all">09:15 AM</button>
+<button class="py-2 px-4 rounded-lg border border-outline-variant text-on-surface font-body-sm hover:bg-muted-blue hover:border-primary transition-all">10:30 AM</button>
+<button class="py-2 px-4 rounded-lg border border-outline-variant text-on-surface font-body-sm hover:bg-muted-blue hover:border-primary transition-all">11:45 AM</button>
+</div>
+</div>
+<div>
+<span class="font-label-mono text-label-mono text-secondary mb-3 block">AFTERNOON SESSIONS</span>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+<button class="py-2 px-4 rounded-lg border border-primary bg-primary text-white font-bold transition-all shadow-md">02:00 PM</button>
+<button class="py-2 px-4 rounded-lg border border-outline-variant text-on-surface font-body-sm hover:bg-muted-blue hover:border-primary transition-all">03:15 PM</button>
+<button class="py-2 px-4 rounded-lg border border-outline-variant text-on-surface font-body-sm hover:bg-muted-blue hover:border-primary transition-all">04:30 PM</button>
+<button class="py-2 px-4 rounded-lg bg-surface-container-low text-surface-dim font-body-sm cursor-not-allowed">05:45 PM</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Step 3: Appointment Details -->
+<div class="glass-panel rounded-xl p-6 border border-outline-variant/30 shadow-sm opacity-60 transition-opacity" id="step-3">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg">description</span>
+<h2 class="font-headline-md text-headline-md">Reason for Visit</h2>
+</div>
+<div class="space-y-4">
+<div class="flex flex-col gap-2">
+<label class="font-label-mono text-label-mono text-secondary">CHOOSE CATEGORY</label>
+<select class="w-full bg-white border border-outline-variant rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-primary outline-none">
+<option>Routine Checkup</option>
+<option>Symptom Consultation</option>
+<option>Follow-up Appointment</option>
+<option>Vaccination / Immunization</option>
+</select>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-mono text-label-mono text-secondary">ADDITIONAL NOTES</label>
+<textarea class="w-full bg-white border border-outline-variant rounded-lg p-3 text-on-surface focus:ring-2 focus:ring-primary outline-none resize-none font-label-mono text-label-mono" placeholder="Briefly describe your symptoms or reason for the visit..." rows="4"></textarea>
+</div>
+</div>
+</div>
+<!-- Bottom Actions -->
+<div class="flex items-center justify-between pt-4">
+<button class="px-6 py-3 rounded-lg text-primary font-button-text hover:bg-surface-container-low transition-all">Back</button>
+<button class="px-10 py-3 rounded-lg bg-primary text-white font-button-text shadow-lg hover:translate-y-[-2px] transition-all active:scale-95">Confirm Booking</button>
+</div>
+</div>
+</section>
+<!-- Right: Doctor Summary Sidebar -->
+<aside class="hidden lg:block w-[360px]">
+<div class="glass-panel rounded-xl p-6 border border-outline-variant/30 shadow-md flex flex-col gap-6 sticky top-0">
+<div class="flex flex-col items-center text-center gap-4">
+<div class="relative">
+<div class="w-32 h-32 rounded-full border-4 border-primary-fixed overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close up professional headshot of a female doctor with a kind expression, wearing a stethoscope over her white lab coat. The setting is a brightly lit, clean, modern medical clinic with soft blue and white tones and a glassmorphic background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCS5MQk8kCV2zvcQRxkCyo_RDl5VOKYhw2yVEvbHjvxlHq9P_j46wc3Sdjh_7za8H5d5-WmSa9soHKXecGw6StVaU1vN5cehHTedrY55e2PLzoO0wimILbYGAWKdMCN1VYQZ2klXE25igNjca6vVsleP7stCq7pK-FHUr1uQizA7eSuA3d_bUxVY2horfffrAya1z-mEnIhCsj8YpLBH3reRBv13dinTLXPtcZsg1hCNaHDErNFo7PHTYtl5-J_0IcPGrPHRBLuGnvq"/>
+</div>
+<div class="absolute bottom-2 right-2 w-6 h-6 bg-teal-accent border-2 border-white rounded-full"></div>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-primary">Dr. Sarah Elizabeth</h3>
+<p class="text-on-surface-variant font-body-sm text-body-sm">Senior Cardiologist • 12+ Years Exp.</p>
+</div>
+</div>
+<div class="divider border-t border-outline-variant/30"></div>
+<div class="space-y-4">
+<h4 class="font-label-mono text-label-mono text-secondary uppercase tracking-wider">Appointment Summary</h4>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary-container">event</span>
+<div>
+<p class="font-body-md text-body-md font-bold">Friday, Dec 6th, 2024</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Selected Date</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary-container">alarm</span>
+<div>
+<p class="font-body-md text-body-md font-bold">02:00 PM - 02:45 PM</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Selected Slot</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<span class="material-symbols-outlined text-primary-container">payments</span>
+<div>
+<p class="font-body-md text-body-md font-bold">$120.00</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Consultation Fee</p>
+</div>
+</div>
+</div>
+<div class="bg-primary-fixed/30 rounded-lg p-4 flex gap-3 items-start border border-primary-fixed">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">info</span>
+<p class="font-body-sm text-body-sm text-on-primary-fixed-variant">Cancellations must be made 24h prior to the appointment for a full refund.</p>
+</div>
+</div>
+</aside>
+</main>
+<!-- Footer (Simplified for the Booking Flow) -->
+<footer class="fixed bottom-0 w-full bg-surface-container-high py-4 border-t border-outline-variant z-50">
+<div class="max-w-container-max mx-auto px-gutter flex flex-col md:flex-row justify-between items-center text-on-surface-variant font-body-sm text-body-sm">
+<span>© 2024 MedConsult Clinical Systems. All rights reserved.</span>
+<div class="flex gap-6 mt-2 md:mt-0">
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-primary transition-colors" href="#">Contact Support</a>
+</div>
+</div>
+</footer>
+<script>
+        // Simple Interaction logic for steps
+        const steps = [
+            document.getElementById('step-1'),
+            document.getElementById('step-2'),
+            document.getElementById('step-3')
+        ];
+        const dots = [
+            document.getElementById('step-1-dot'),
+            document.getElementById('step-2-dot'),
+            document.getElementById('step-3-dot')
+        ];
+
+        // Function to handle scroll and update indicator focus
+        const scrollContainer = document.querySelector('.scroll-container');
+        scrollContainer.addEventListener('scroll', () => {
+            const scrollTop = scrollContainer.scrollTop;
+            const stepHeight = steps[0].offsetHeight + 24; // Including gap
+
+            if (scrollTop < stepHeight * 0.5) {
+                updateIndicator(0);
+            } else if (scrollTop < stepHeight * 1.5) {
+                updateIndicator(1);
+            } else {
+                updateIndicator(2);
+            }
+        });
+
+        function updateIndicator(index) {
+            dots.forEach((dot, i) => {
+                if(i === index) {
+                    dot.className = 'active-step-indicator';
+                    steps[i].classList.remove('opacity-60');
+                } else {
+                    dot.className = 'inactive-step-indicator';
+                    steps[i].classList.add('opacity-60');
+                }
+            });
+        }
+    </script>
+</body></html>

@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Filter, Phone, Mail, Calendar, FileText } from 'lucide-react'
+import { CalendarDays, Filter, Mail, Phone, Search, ShieldCheck, Users } from 'lucide-react'
 import { demoPatients } from "@/lib/doctor-demo"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 export default function DoctorPatientsPage() {
   const router = useRouter()
@@ -28,115 +33,151 @@ export default function DoctorPatientsPage() {
     .filter((p) => (!activeOnly ? true : p.status === "Hoạt động"))
     .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.email.toLowerCase().includes(searchQuery.toLowerCase()))
 
+  const activeCount = demoPatients.filter((patient) => patient.status === "Hoạt động").length
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50 mb-2">
-          Danh sách bệnh nhân
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Quản lý và theo dõi bệnh nhân của bạn
-        </p>
-      </div>
-
-      {/* Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="flex-1 relative">
-          <Search size={20} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-          <input
-            type="text"
-            placeholder="Tìm kiếm bệnh nhân..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-lg text-slate-900 dark:text-slate-50 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+    <PortalShell
+      eyebrow="Patient Directory"
+      title="Danh sách bệnh nhân"
+      description="Quản lý hồ sơ bệnh nhân theo cùng shell doctor portal, giữ nguyên dataset demo và route detail hiện có."
+      actions={
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[260px]">
+            <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Tìm theo tên hoặc email..."
+              className="input-glow rounded-full border-border/70 bg-card pl-10"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-xl"
+            onClick={() => setActiveOnly((v) => !v)}
+          >
+            <Filter size={16} className="mr-2" />
+            {activeOnly ? "Chỉ hoạt động" : "Tất cả"}
+          </Button>
         </div>
-        <button
-          type="button"
-          onClick={() => setActiveOnly((v) => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-        >
-          <Filter size={18} />
-          {activeOnly ? "Chỉ hoạt động" : "Tất cả"}
-        </button>
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Trạng thái danh mục" description="Luồng này hiện đang chạy bằng data demo doctor portal.">
+            <div className="rounded-[1.2rem] bg-primary px-5 py-5 text-primary-foreground">
+              <div className="mb-2 flex items-center gap-2 text-primary-foreground/90">
+                <ShieldCheck className="h-5 w-5" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Demo-backed</span>
+              </div>
+              <p className="text-sm leading-6 text-primary-foreground/85">
+                Khi cần nối data thật, màn này có thể giữ nguyên shell và chỉ thay nguồn danh sách + detail route.
+              </p>
+            </div>
+          </SectionCard>
+        </div>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          label="Tổng hồ sơ"
+          value={demoPatients.length}
+          helper="Directory hiện có"
+          icon={<Users size={20} />}
+          tone="primary"
+        />
+        <StatCard
+          label="Đang hoạt động"
+          value={activeCount}
+          helper="Bệnh nhân có tương tác gần đây"
+          icon={<ShieldCheck size={20} />}
+          tone="teal"
+        />
+        <StatCard
+          label="Đang hiển thị"
+          value={filteredPatients.length}
+          helper="Theo bộ lọc hiện tại"
+          icon={<Search size={20} />}
+          tone="neutral"
+        />
       </div>
 
-      {/* Patients Table */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-50">Bệnh nhân</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-50 hidden sm:table-cell">Liên hệ</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-50 hidden md:table-cell">Lần cuối</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-50 hidden lg:table-cell">Tình trạng</th>
-                <th className="text-right px-6 py-4 text-sm font-semibold text-slate-900 dark:text-slate-50">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPatients.map((patient) => (
-                <tr
-                  key={patient.id}
-                  className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
-                >
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-slate-50">{patient.name}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Tuổi: {patient.age}</p>
+      <SectionCard
+        title="Patient Table"
+        description="Danh sách hồ sơ bệnh nhân theo phong cách directory của mockup FE mới."
+        badge={
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            {filteredPatients.length} rows
+          </span>
+        }
+        contentClassName="space-y-4"
+      >
+        {filteredPatients.length === 0 ? (
+          <div className="rounded-xl bg-secondary/55 px-4 py-10 text-center text-muted-foreground">
+            Không tìm thấy bệnh nhân nào
+          </div>
+        ) : null}
+
+        <div className="space-y-4">
+          {filteredPatients.map((patient) => (
+            <div key={patient.id} className="app-surface hover-lift rounded-[1.35rem] bg-card/90 p-5">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)_minmax(0,0.9fr)_auto] xl:items-center">
+                <div className="min-w-0">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Users className="h-5 w-5" />
                     </div>
-                  </td>
-                  <td className="px-6 py-4 hidden sm:table-cell">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <Phone size={16} />
-                        {patient.phone}
+                    <div className="min-w-0">
+                      <div className="truncate text-base font-semibold text-foreground">{patient.name}</div>
+                      <div className="mt-1 text-sm text-muted-foreground">Tuổi: {patient.age} • {patient.primaryConcern}</div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground">{patient.sessions} sessions</span>
+                        <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                          patient.status === 'Hoạt động'
+                            ? 'bg-teal-accent/10 text-teal-accent'
+                            : 'bg-secondary text-muted-foreground'
+                        }`}>
+                          {patient.status}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <Mail size={16} />
-                        {patient.email}
-                      </div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 hidden md:table-cell">
-                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                      <Calendar size={16} />
-                      {new Date(patient.lastVisit).toLocaleDateString('vi-VN')}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 hidden lg:table-cell">
-                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                      patient.status === 'Hoạt động'
-                        ? 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300'
-                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                    }`}>
-                      {patient.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/doctor/patients/${patient.id}`)}
-                      className="text-sm px-4 py-2 rounded-lg bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-950/50 transition"
-                    >
-                      Xem chi tiết
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  </div>
+                </div>
 
-      {/* Empty State */}
-      {filteredPatients.length === 0 && (
-        <div className="text-center py-12">
-          <FileText size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-4" />
-          <p className="text-slate-600 dark:text-slate-400 font-medium">Không tìm thấy bệnh nhân nào</p>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Phone size={15} />
+                    <span>{patient.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail size={15} />
+                    <span className="truncate">{patient.email}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <CalendarDays size={15} />
+                    <span>Lần cuối</span>
+                  </div>
+                  <div className="font-medium text-foreground">{new Date(patient.lastVisit).toLocaleDateString('vi-VN')}</div>
+                </div>
+
+                <div className="flex flex-wrap gap-3 xl:justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => router.push(`/doctor/patients/${patient.id}`)}
+                  >
+                    Xem chi tiết
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-    </div>
+      </SectionCard>
+    </PortalShell>
   )
 }

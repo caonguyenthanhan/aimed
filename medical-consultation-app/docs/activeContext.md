@@ -1,6 +1,48 @@
 ## Trạng thái hiện tại
 
 - Đã có kế hoạch phát triển toàn vẹn + checklist xây dựng theo phase (P0→P4) tại `_workspace/DEVELOPMENT_PLAN.md` và `_workspace/BUILD_CHECKLIST.md`, dựa trên kết quả audit hệ thống (auth không an toàn là điểm chặn production hàng đầu).
+- **UI upgrade GĐ1 (2026-06-18):** đã chuẩn hoá lại design tokens trong `app/globals.css` theo Clinical Clarity (primary/accent/teal, outline, radius, header/mobile-nav safe zone), đồng thời refresh shared shell `site-header`, `mobile-bottom-nav`, `floating-quick-menu`.
+- **UI primitives mới (2026-06-18):** đã thêm `components/ui/section-card.tsx`, `components/ui/stat-card.tsx`, `components/portal-shell.tsx` để làm nền cho các màn dashboard/doctor/admin ở phase tiếp theo mà không phải copy layout.
+- **UI upgrade GĐ2.1 (2026-06-18):** `components/landing-page.tsx` đã được nâng cấp theo mockup FE mới: hero mới, feature grid, quick access, technology highlight, CTA/footer; đã dùng trực tiếp `SectionCard` và `StatCard` để chuẩn bị cho các page patient tiếp theo.
+- **UI upgrade GĐ2.2 (2026-06-18):** `components/chat-interface.tsx` đã được polish theo FE mới nhưng giữ nguyên logic chat: tách panel lịch sử hội thoại và banner runtime/agent thành component con, làm mới shell glassmorphic của trang `/tu-van`, giữ nguyên `UnifiedComposer`, luồng conversation, TTS/STT, live mode và agent mode.
+- **UI upgrade GĐ2.3 (2026-06-18):** `components/tam-su-minimal.tsx` đã được nâng cấp shell MindCare mềm hơn theo mockup FE mới: nền blob, glass shell, sidebar/history mềm hơn, header therapeutic, chips và input area đồng bộ design system nhưng vẫn giữ nguyên logic local/remote conversation, voice mode, music recommendations và SOS flow.
+- **UI upgrade GĐ2.4 (2026-06-18):** `components/dtx-tri-lieu.tsx` được dashboard-hoá bằng `PortalShell` + `StatCard`, bổ sung hero/stats/tabs shell thống nhất mà không đổi logic mood tracker, journaling, wheel of life, therapeutic cards, therapy plan và reminder wiring.
+- **UI upgrade GĐ2.5 (2026-06-18):** `components/psychological-screening.tsx` đã được đưa về shell dashboard/app-like theo mockup FE mới cho cả 3 trạng thái: chọn bộ test, làm bài, xem kết quả. Phần UI metadata được tách sang `components/screening/screening-ui.tsx` để giảm độ phình file và tái sử dụng card/option style; logic scoring, history, PDF, pending screening context và điều hướng `/tam-su` vẫn giữ nguyên.
+- **UI upgrade GĐ2.6 (2026-06-18):** `app/speech-chat/page.tsx` đã được kéo về design system chung: bỏ header nội bộ hardcode, dùng glass shell/app-like layout, thêm left/right support panels, waveform presentation mới và control dock được tách khỏi file chính. Đã tạo `components/speech/voice-wave-visualizer.tsx` và `components/speech/speech-control-dock.tsx`; toàn bộ logic STT/TTS, ghi âm, camera/upload, vision-chat và SOS flow vẫn giữ nguyên.
+- **UI upgrade GĐ3.1 (2026-06-18):** flow public `bac-si` đã được đồng bộ theo mockup FE mới: `app/bac-si/page.tsx` đổi sang doctor directory kiểu dashboard có search/stats/filter chips; `app/bac-si/[doctorId]/page.tsx` thành profile hero + info grid công khai; `app/bac-si/[doctorId]/hen/page.tsx` thành booking workspace có summary sidebar và 3 step sections. Tất cả giữ nguyên fetch/list/public profile/appointment submit logic và offline fallback.
+- **UI upgrade GĐ3.2 (2026-06-18):** `app/doctor/appointments/page.tsx` đã được refresh theo cùng design language với flow booking công khai để bác sĩ xem booking ở dạng dashboard/list rõ hơn, giữ nguyên auth gate, refresh logic, PATCH status và fallback local khi DB chưa sẵn sàng.
+- **UI upgrade GĐ3.3 (2026-06-18):** `app/doctor/page.tsx` đã được nâng lên dashboard shell theo mockup doctor portal mới với stats, AI clinical alerts, upcoming schedule và quick routes; `app/doctor/patients/page.tsx` được đưa về patient directory shell có search/filter, stat cards và patient cards. Cả hai màn vẫn giữ nguyên auth gate localStorage, dataset demo từ `lib/doctor-demo.ts`, và route điều hướng chi tiết hiện có.
+- **UI upgrade GĐ3.4 (2026-06-18):** `app/doctor/patients/[id]/page.tsx`, `app/doctor/reports/page.tsx` và `app/doctor/reports/new/page.tsx` đã được chuyển sang shell doctor portal mới. Patient detail giờ có stats/summary/contact/actions đồng bộ; reports list có stat cards + report cards; report creation thành 3-step workspace với summary sidebar. Toàn bộ logic demo/localStorage (`getDemoPatient`, merge `mcs_doctor_reports_v1`, save local report, download txt) vẫn giữ nguyên.
+- **UI upgrade GĐ3.5 (2026-06-18):** `app/doctor/forum/page.tsx`, `app/doctor/forum/[id]/page.tsx` và `app/doctor/profile/page.tsx` đã được migrate sang cùng `PortalShell` doctor portal. Forum list có stats/search/trending sidebar + composer mới; forum detail dùng shell detail page; profile manager chuyển thành editor workspace với `public/private/preview` tabs ở shell mới. Logic quét PII, fetch/offline fallback forum, save profile, share URL và preview public profile vẫn giữ nguyên.
+- **UI upgrade GĐ4.1 làm sớm (2026-06-18):** `app/thong-ke/page.tsx` đã được nâng cấp từ placeholder thành dashboard hoàn chỉnh dùng `PortalShell`, `SectionCard`, `StatCard`, với các khối mood/activity/sleep/AI insights và vẫn giữ dữ liệu demo tĩnh.
+- **UI upgrade GĐ5.1 (2026-06-19):** `app/admin/server/page-client.tsx` đã được retrofit sang cùng design language admin bằng `PortalShell`, `SectionCard`, `StatCard`, thêm stats/runtime panels/danger zone rõ hơn nhưng vẫn giữ nguyên toàn bộ luồng vận hành cũ: auth gate admin qua `/api/backend/v1/user`, server registry `/api/servers`, logs `/api/servers/logs`, runtime events `/api/runtime/events`, cập nhật GPU URL/runtime mode, health-check, sync Colab, clear runtime events và purge hội thoại local+backend.
+- **UI upgrade GĐ5.2 (2026-06-19):** `app/quan-ly/page.tsx` đã được chuyển từ placeholder grid sang admin hub theo cùng design language với `PortalShell`, `SectionCard`, `StatCard`. Trang hiện đóng vai trò entrypoint cho `user`, `data`, `config` và `admin/server`; `RoleGuard` và các route đích giữ nguyên, chỉ shell/trình bày được nâng cấp.
+- **UI upgrade GĐ5.3 (2026-06-19):** các màn `app/quan-ly/user/page.tsx`, `app/quan-ly/data/page.tsx`, `app/quan-ly/config/page.tsx` đã được đưa lên cùng admin shell. Cả ba vẫn là workspace tĩnh/định hướng, chưa thêm API hay state mới; `RoleGuard` tiếp tục là lớp bảo vệ chính, còn phần nâng cấp chỉ tập trung vào structure, stat blocks, operational notes và placeholder sections có ý nghĩa hơn cho admin.
+- **UI upgrade GĐ5.4 (2026-06-19):** `app/agent-hub/page.tsx` đã được nâng về shell dashboard chung bằng `PortalShell`, `SectionCard`, `StatCard`. Logic profile list, copy prompt, bộ demo 1-click và hành vi bật Agent mode rồi mở `/tu-van` vẫn giữ nguyên; thay đổi chỉ nằm ở layout, summary stats và khối hướng dẫn demo.
+- **UI upgrade GĐ5.5 (2026-06-19):** `app/account/page.tsx` đã được refactor khỏi trạng thái oversized bằng cách tách logic trình bày sang cụm `components/account/*` rồi đưa màn này về shell `PortalShell` + `SectionCard` + `StatCard`. Toàn bộ hành vi cũ vẫn giữ nguyên: load profile/consent, avatar worker, save profile, đổi mật khẩu, logout/logout-all, consent save, offboarding và account switcher theo query `?tab=accounts`.
+- **UI upgrade GĐ5.6 (2026-06-19):** `app/tin-tuc-y-khoa/page.tsx` đã được refactor thành route orchestrator `PortalShell` + `SectionCard` + `StatCard`, còn logic được tách sang `components/medical-news/use-medical-news-controller.ts` và các subcomponents `medical-news-*`. Hành vi web-search, nhúng bài viết, resize panel, load knowledge references và gợi ý theo screening/care plan vẫn giữ nguyên.
+- **UI upgrade GĐ5.7 (2026-06-19):** `app/tra-cuu/page.tsx` đã được đưa vào shell chung bằng `PortalShell`, `SectionCard`, `StatCard` trong khi tiếp tục giữ nguyên `HealthLookup` dynamic component và toàn bộ logic tra cứu hiện tại. Đây là bước route-level alignment trước khi cân nhắc tách tiếp `components/health-lookup.tsx` vốn còn khá lớn.
+- **Structural refactor post-GĐ5 (2026-06-19):** `components/health-lookup.tsx` đã được tách thành wrapper mỏng + controller hook + panels con. Logic tra cứu `/api/health-lookup`, suggestions từ `/api/health-db/*`, local history `healthLookupHistory`, category modal, copy/share, knowledge references `/api/backend/v1/knowledge/search` và `PageAiInsight` đều được giữ nguyên; thay đổi chỉ nằm ở phân tách trách nhiệm để giảm độ phình component.
+- **QA hardening GĐ6.1 (2026-06-19):** đã chạy `npm run build` và `npm run test` xanh, đồng thời smoke test browser cho `tra-cuu`, `tin-tuc-y-khoa`, `agent-hub`, `account`. QA đã phát hiện regression hook-order trong `components/site-header.tsx` trên localhost; lỗi được fix bằng cách đảm bảo mọi `useMemo` luôn chạy trước nhánh `return null`, sau đó các route render lại bình thường.
+- **QA limitation hiện tại:** `npm run lint` toàn repo vẫn còn 3 warning nền trong `coverage/*` (`Unused eslint-disable directive`), nên mục lint “xanh hoàn toàn” của GĐ6 chưa thể tick. `admin/server` trên local browser đang trả về `/` theo trạng thái auth hiện tại, nên smoke test phần admin cần thực hiện lại trong bối cảnh có phiên admin hợp lệ.
+- **QA hardening GĐ6.2 (2026-06-19):** đã xác nhận dark mode trước đó không có state manager thật vì `app/layout.tsx` chưa mount `ThemeProvider` dù project đã có `components/theme-provider.tsx`. Đã fix bằng cách bọc toàn app trong `ThemeProvider` và thêm `components/theme-toggle.tsx` vào `components/site-header.tsx` để shared shell có điểm đổi theme rõ ràng.
+- **Dark mode verification GĐ6.2:** local preview xác nhận `document.documentElement.className` đổi `dark -> light` khi bấm toggle trên `/account`; cùng lúc các route như `/tin-tuc-y-khoa` cũng phản ánh trạng thái mới bằng label `Chuyển sang giao diện tối`, cho thấy theme state đang propagate đúng qua shell chung.
+- **QA hardening GĐ6.3 (2026-06-19):** smoke test scroll/overflow cho `/tra-cuu`, `/tin-tuc-y-khoa`, `/account` xác nhận `window.scrollY` tăng bình thường dù `body` dùng `overflow: hidden`; phần scrolling thực tế đi qua `HTML`, nên chưa thấy bug khóa cuộn ở các route public chính.
+- **Responsive/auth guard verification GĐ6.3:** side-panel browser cho thấy shell co lại đúng với header gọn + `MobileBottomNav`/menu trên các route public. Các route có guard như `/quan-ly`, `/admin/server`, `/doctor` đang bị đưa về `/vi` theo session hiện tại; đây khớp với `RoleGuard` khi token/role không đạt điều kiện, chưa có dấu hiệu regression riêng của route.
+- **Next step sau GĐ6.3:** tiếp tục QA responsive thật ở các breakpoint chuẩn và smoke test authenticated flows với session admin/doctor hợp lệ để xác nhận nội dung bên trong các portal route.
+- **QA hardening GĐ6.4 (2026-06-19):** `components/medical-news/medical-news-workspace.tsx` đã được bổ sung loading/empty states rõ hơn cho cả 3 vùng `results`, `embed`, `reference` bằng `Skeleton` và dashed placeholder cards, nhưng không đổi controller `useMedicalNewsController()` hay hợp đồng gọi `/api/web-search` và `/api/backend/v1/knowledge/search`.
+- **Route loading fix GĐ6.4:** đã thêm `app/tin-tuc-y-khoa/loading.tsx` để route có shell chờ nhất quán trong lúc chuyển trang/compile/hydrate, thay cho việc phụ thuộc vào `app/loading.tsx` vốn đang `return null`.
+- **Verification GĐ6.4:** diagnostics sạch cho `medical-news-workspace.tsx` và `app/tin-tuc-y-khoa/loading.tsx`; `npx eslint components/medical-news/medical-news-workspace.tsx app/tin-tuc-y-khoa/loading.tsx` pass; local browser snapshot của `/tin-tuc-y-khoa` vẫn render đủ shell, kết quả và controls sau khi vá loading UX.
+- **QA portal GĐ6.5 (2026-06-19):** đã xác nhận `doctor` portal vào được bằng test account `doctor.tuan / Demo123!`; `http://localhost:3000/doctor` và `http://localhost:3000/doctor/patients` đều render đúng shell doctor, heading chính và controls nội bộ sau khi đăng nhập.
+- **Admin QA unblock GĐ6.5:** đã thêm admin demo account `admin.aleian / Demo123!` trong `lib/test-accounts.ts`, cập nhật login flow dev để route `admin -> /quan-ly`, và xác nhận `http://localhost:3000/quan-ly` cùng `http://localhost:3000/admin/server` đều vào được bằng phiên `ADMIN` thật ở local preview.
+- **Stub contract fix GĐ6.5:** `app/api/backend/[...path]/route.ts` ở nhánh demo giờ suy ra `user_id`, `role`, `username`, `full_name` từ bearer token (`test_token_*` hoặc JWT local) khi trả `/api/backend/v1/user`; nhờ đó các route guard/page client không còn bị kẹt vì stub profile thiếu `role`.
+- **Admin shell alignment GĐ6.5:** `components/site-header.tsx` và `components/account-menu.tsx` đã được cập nhật để session `admin` hiển thị đúng nhãn `Admin Console`, điều hướng admin routes, và role badge `Quản trị viên` thay vì rơi về shell patient.
+- **Responsive role-shell fix GĐ6.5:** `components/mobile-bottom-nav.tsx` và `components/floating-quick-menu.tsx` nay chọn item theo `userRole` (`patient/doctor/admin`) thay vì luôn render patient tools; đồng thời `lib/account-manager.ts` + `components/account-switcher.tsx` đã route về home đúng theo role khi chuyển phiên (`/`, `/doctor`, `/quan-ly`).
+- **Account hydration fix GĐ6.5:** `components/account/use-account-page-controller.ts` không còn đọc `authToken` trực tiếp trong render bằng `useMemo`; token/session giờ được hydrate trong `useEffect` với `sessionReady`, và `account-settings-section.tsx` + `account-special-section.tsx` dùng trạng thái này để tránh mismatch `disabled` giữa SSR và client ở trang `/account`.
+- **Per-user demo stub fix GĐ6.5:** `app/api/backend/[...path]/route.ts` nay tách `profile` và `consent` theo `user_id` bằng `Map`, nên demo account `admin/doctor/patient` không còn rò `nickname`, `bio`, avatar hay consent của nhau khi dùng chung local preview.
+- **Verification GĐ6.5d:** `npm run build` pass toàn app; `npm run test` cũng xanh lại sau khi cập nhật `app/api/backend/[...path]/route.test.ts` cho contract auth mới của `/api/backend/v1/user` trong demo mode. Browser smoke sau vòng này tiếp tục xác nhận `/account`, `/quan-ly`, `/admin/server` render ổn trên session `admin`.
+- **Optional Sentry warning fix GĐ6.5e:** `lib/error-tracker.ts` không còn dùng `import("@sentry/nextjs")` tĩnh bên trong `forwardToSentry()`. Module hiện tải Sentry qua loader gián tiếp (`new Function(... import(specifier) ...)`) để Turbopack không cố resolve package khi project không cài `@sentry/nextjs`; `npm run build` sau patch không còn warning `Can't resolve '@sentry/nextjs'`.
+- **Responsive QA limitation hiện tại:** browser automation hiện chỉ cho viewport desktop trung bình (~`1022px`) thay vì emulation chuẩn `360 / 768 / 1024 / 1440`, nên trạng thái breakpoint thật vẫn còn mở và cần rà lại bằng viewport tooling đầy đủ ở vòng tiếp theo.
 - UI có chế độ Agent (toggle) ở trang /tu-van, gọi /api/agent-chat khi bật (Next.js proxy sang CPU `/v1/agent-chat` nếu CPU_SERVER_URL được cấu hình).
 - UI không còn dropdown chọn Agent Profile; client luôn gửi `agent_id=auto` và backend tự suy luận profile theo ngữ nghĩa.
 - /api/agent-chat hoạt động như gateway/proxy, trả về contract {response, actions, metadata} để frontend thực thi điều hướng.
@@ -81,6 +123,19 @@
   - Root cause của fallback `langgraph_failed` trên local `/api/agent-chat` là `cpu_server/langgraph_agent/triage_router.py` dùng `ChatPromptTemplate` với JSON schema literal chưa escape `{}`.
   - Vì LangChain mặc định format prompt theo kiểu `f-string`, prompt semantic router nổ lỗi `Invalid format specifier in f-string template. Nested replacement fields are not allowed.` trước khi gọi FOZA.
   - Đã escape schema braces thành `{{` `}}`, restart CPU server local, và xác minh lại bằng smoke + browser: câu `Tôi bị đau đầu, có phải cảm cúm không?` giờ trả follow-up triage bình thường thay vì fallback lỗi.
+- **FOZA env sync + Vercel redeploy (2026-06-14):**
+  - Local `.env` đã có `FOZA_TOKEN`, `FOZA_TOKEN_2`, `LLM_MODEL_NAME`, `FOZA_BASE_URL`; verify lại `POST /api/llm-chat` với `provider=foza` trả `200`, không còn `Missing FOZA_TOKEN`.
+  - Vercel `Development` đã được sync `FOZA_TOKEN`, `LLM_MODEL_NAME`, `FOZA_BASE_URL`.
+  - Vercel `Preview` đã cleanup typo `FOZA_BASE_UR` và add lại đúng `FOZA_BASE_URL` bằng Vercel REST API dùng cùng auth với CLI; verify qua `vercel env pull --environment=preview` cho thấy `FOZA_BASE_URL`, `FOZA_TOKEN`, `LLM_MODEL_NAME` đều đang có.
+  - Vercel CLI deploy trực tiếp từ monorepo fail với `ERR_FS_FILE_TOO_LARGE` vì detect repo root và quét `_models/`; production deploy được chốt bằng workspace tạm ngoài repo giữ cấu trúc `temp-root/medical-consultation-app/`.
+  - Production mới đã `Ready` tại `https://aimed-one.vercel.app`.
+  - Project phụ `aimed-vercel-deploy` đã bị xoá khỏi Vercel sau khi dùng xong cho bước thử deploy tạm.
+- **System QA snapshot (2026-06-14):**
+  - Frontend `lint` pass với warning-only; `build` pass với warning-only.
+  - Frontend `vitest` hiện đã pass toàn bộ `199` tests (`4` skipped) sau khi fix fallback red-flag doctor navigation cho case `đau ngực + khó thở` với `agent_id=default`.
+  - Backend `cpu_server/tests/test_langgraph_triage.py` pass `3/3`.
+  - Local runtime smoke pass cho `db_ping`, `conversations save/list/load`, `graph.status`, `Next /api/agent-chat`, và direct `CPU /v1/agent-chat`.
+  - Báo cáo chi tiết nằm ở `_workspace/SYSTEM_TEST_REPORT_2026-06-14_DETAILED.md`.
 
 ## P3 — Hoàn thành (2026-06-10)
 
@@ -98,3 +153,35 @@
 
 
 - **P1.1 Tests:** Thêm 7 test files mới (jwt, api-schemas, safety, rate-limiter, appointments, auth-server, pii-scan). Tổng 194 tests pass. Coverage: 36.8% stmts / 26.2% branches.
+
+- **UI Upgrade Plan completion (GĐ6.6 - 2026-06-19):**
+  - GĐ2 `nhac-nho` page polish: refactored `components/dtx-reminders.tsx` để loại bỏ hard-code colors (`bg-blue-600`, `text-slate-800`, etc.), thêm dark mode support với `dark:bg-card/50`, dùng shadcn/ui `Switch` thay cho custom toggle button, dùng `Textarea` component thay cho raw textarea, và align với design tokens (teal-accent gradient, glassmorphic card `bg-card/80 backdrop-blur-xl`).
+  - Build verification: `npm run build` pass sau refactor, `/nhac-nho` route render thành công với full design system compliance.
+  - UI Upgrade Plan status: GĐ0GĐ5 hoàn tất 100%; GĐ6 QA hardening còn thiếu responsive breakpoint thật (360/768/1024/1440), lint warning cleanup (baseline-browser-mapping), và final Memory Bank sync.
+  - Component refactor details: `dtx-reminders.tsx` giảm từ hard-coded hex colors xuống 0, tăng dark mode coverage từ 0 lên ~15 variants, cải thiện accessibility với labeled Switch control, và maintain 100% logic compatibility (notification timing, reminder CRUD, sync với remote storage qua `getUserState`/`upsertUserState`).
+
+- **Speech-chat polish (GĐ2.7 - 2026-06-19):**
+  - Refactored app/speech-chat/page.tsx để loại bỏ 8 hard-code colors trong camera modal (bg-blue-600, bg-gray-600, bg-gray-800, bg-white, text-gray-900).
+  - Thay bằng design tokens: bg-primary, bg-secondary, bg-card, text-foreground, text-muted-foreground.
+  - Cải thiện dark mode với bg-card/95, border-border cho modal container.
+  - Build verification pass, /speech-chat route compiled thành công.
+
+- **Critical Layout Fixes (2026-06-19 17:30):**
+  - Fixed duplicate html/body tags: app/[locale]/layout.tsx simplified to return children only, root layout provides all structure
+  - Fixed h-screen  h-dvh in root layout for mobile address bar stability
+  - Resolved React error: mounting new body component when previous one has not unmounted
+  - Fixes scroll issues at /tu-van and all pages
+  - Build verification pass, all routes compiled successfully
+
+
+- **Dark Mode Fixes (2026-06-19 17:35):**
+  - Fixed chat-interface.tsx dark mode contrast issues
+  - SOS dialog: added dark:border-red-800 dark:bg-red-950/50, dark:text-red-400/500
+  - Text colors: text-slate-800  text-foreground (semantic color)
+  - Build verification pass
+
+
+- **Module Registry Update (2026-06-19 17:40):**
+  - Populated _workspace/01_module_registry.md with core_lib/ modules
+  - Indexed RAGAS eval pipeline, grounding policy, and config modules
+  - Added metadata: inputs/outputs/descriptions for reusable components

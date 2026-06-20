@@ -44,14 +44,33 @@ export const TEST_ACCOUNTS = {
       avatar: "👩‍💼",
     },
   ],
-};
+  admins: [
+    {
+      id: "admin_001",
+      username: "admin.aleian",
+      email: "admin@aimed.vn",
+      password: "Demo123!",
+      fullName: "Aleian Admin",
+      role: "admin",
+      scope: "Runtime & system control",
+      avatar: "🛡️",
+    },
+  ],
+}
 
-export type TestAccount = (typeof TEST_ACCOUNTS.doctors[0]) | (typeof TEST_ACCOUNTS.patients[0]);
+export type TestAccount =
+  | (typeof TEST_ACCOUNTS.doctors)[number]
+  | (typeof TEST_ACCOUNTS.patients)[number]
+  | (typeof TEST_ACCOUNTS.admins)[number]
+
+export function getAllTestAccounts(): TestAccount[] {
+  return [...TEST_ACCOUNTS.doctors, ...TEST_ACCOUNTS.patients, ...TEST_ACCOUNTS.admins]
+}
 
 export const findTestAccount = (username: string, password: string): TestAccount | null => {
-  const allAccounts = [...TEST_ACCOUNTS.doctors, ...TEST_ACCOUNTS.patients];
+  const allAccounts = getAllTestAccounts()
   const account = allAccounts.find(
     (acc) => (acc.username === username || acc.email === username) && acc.password === password
-  );
-  return account || null;
-};
+  )
+  return account || null
+}

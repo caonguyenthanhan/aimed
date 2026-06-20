@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tâm sự &amp; Trị liệu - MindCare AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#434655",
+                    "error": "#ba1a1a",
+                    "surface-bright": "#f8fafb",
+                    "dark-bg": "#0F1419",
+                    "background": "#f8fafb",
+                    "outline-variant": "#c4c5d8",
+                    "muted-blue": "#E8F0FF",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-fixed": "#d5e3ff",
+                    "tertiary": "#004383",
+                    "surface": "#f8fafb",
+                    "on-surface": "#191c1d",
+                    "on-tertiary-fixed-variant": "#004689",
+                    "on-primary-container": "#c9d0ff",
+                    "surface-container": "#eceeef",
+                    "secondary": "#5a5f65",
+                    "surface-container-low": "#f2f4f5",
+                    "on-secondary": "#ffffff",
+                    "teal-accent": "#14B8A6",
+                    "on-tertiary-container": "#bcd4ff",
+                    "surface-variant": "#e1e3e4",
+                    "on-secondary-container": "#60656b",
+                    "inverse-surface": "#2e3132",
+                    "on-secondary-fixed": "#171c21",
+                    "surface-dim": "#d8dadb",
+                    "secondary-container": "#dfe3ea",
+                    "dark-card": "#1A1F2E",
+                    "surface-tint": "#1c4bea",
+                    "primary-container": "#1447e6",
+                    "surface-container-highest": "#e1e3e4",
+                    "secondary-fixed-dim": "#c2c7cd",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed-dim": "#a8c8ff",
+                    "destructive": "#E63946",
+                    "inverse-primary": "#b9c3ff",
+                    "on-tertiary-fixed": "#001b3c",
+                    "primary": "#0032b6",
+                    "on-primary-fixed-variant": "#0035be",
+                    "on-error-container": "#93000a",
+                    "on-tertiary": "#ffffff",
+                    "outline": "#747687",
+                    "on-background": "#191c1d",
+                    "surface-container-high": "#e6e8e9",
+                    "inverse-on-surface": "#eff1f2",
+                    "tertiary-container": "#005aac",
+                    "secondary-fixed": "#dfe3ea",
+                    "primary-fixed": "#dde1ff",
+                    "primary-fixed-dim": "#b9c3ff",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#42474d",
+                    "on-primary-fixed": "#001356",
+                    "on-primary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "header-height": "4.5rem",
+                    "gutter": "1.5rem",
+                    "container-max": "1280px",
+                    "stack-gap": "1rem",
+                    "margin-mobile": "1rem"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "button-text": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-mono": ["Geist"],
+                    "body-sm": ["Inter"],
+                    "headline-lg-mobile": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            background-color: #f8fafb;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .bg-blobs {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            overflow: hidden;
+            background: #f8fafb;
+        }
+
+        .blob {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(28, 75, 234, 0.08) 0%, rgba(20, 184, 166, 0.05) 50%, transparent 100%);
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: move 20s infinite alternate ease-in-out;
+        }
+
+        @keyframes move {
+            from { transform: translate(-10%, -10%); }
+            to { transform: translate(20%, 20%); }
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c4c5d8;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #747687;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        .chat-bot-bubble {
+            border-bottom-left-radius: 2px;
+        }
+        
+        .chat-user-bubble {
+            border-bottom-right-radius: 2px;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- Background Blobs -->
+<div class="bg-blobs">
+<div class="blob" style="top: -10%; left: -5%;"></div>
+<div class="blob" style="bottom: -10%; right: -5%; animation-delay: -5s;"></div>
+<div class="blob" style="top: 30%; left: 40%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(20, 184, 166, 0.06) 0%, transparent 70%); animation-delay: -10s;"></div>
+</div>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm h-header-height flex items-center px-gutter">
+<div class="flex justify-between items-center w-full max-w-container-max mx-auto">
+<div class="flex items-center gap-4">
+<span class="font-headline-md text-headline-md font-bold text-primary">MindCare AI</span>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<nav class="flex gap-6">
+<a class="text-on-surface-variant hover:bg-surface-variant/50 transition-all px-3 py-1 rounded-lg" href="#">Home</a>
+<a class="text-primary font-semibold border-b-2 border-primary px-3 py-1" href="#">Tâm sự</a>
+<a class="text-on-surface-variant hover:bg-surface-variant/50 transition-all px-3 py-1 rounded-lg" href="#">Explore</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-variant/50 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-variant/50 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+</button>
+<div class="w-10 h-10 rounded-full bg-primary-container overflow-hidden border-2 border-surface">
+<img class="w-full h-full object-cover" data-alt="A professional medical profile headshot of a friendly user for a healthcare application, soft studio lighting, clean background, high quality portraiture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDdFm9w7fxu0w01mTMJcON7Q_P1xO08TsI90MCQg-WcpcQw8CpwaX5-VmYneaU3kSWXyTLmrlaGBok2HF224YrzdyQwieJV8Oj-PxPT514z9cIRXY470fDQLfkUwC67VfJOwOLO-w_21HVjikmUHodXI3Ew6B-FesFI0IuP1FJ9zzDY2hlrcCbvDNZL3TgiCU-h-R01Z-tQImj1N0a615YR9oXkTnGQl7qe6s7njsPDl-yJnl3_l6EzVZ64Vn9swzjhRsRBu1BsifIn"/>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 hidden lg:flex flex-col bg-surface-container-low border-r border-outline-variant/30 pt-header-height z-40">
+<div class="flex flex-col h-full py-6 px-4 gap-stack-gap">
+<div class="mb-4">
+<div class="flex items-center gap-3 p-3">
+<div class="w-10 h-10 rounded-xl bg-teal-accent/20 flex items-center justify-center text-teal-accent">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<div>
+<p class="font-label-mono text-label-mono uppercase tracking-wider text-on-surface-variant">Therapeutic Assistant</p>
+<p class="font-headline-md text-sm font-bold text-primary">MindCare Companion</p>
+</div>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="bg-secondary-container text-primary rounded-xl px-4 py-3 flex items-center gap-3 transition-all active:scale-98" href="#">
+<span class="material-symbols-outlined">medical_services</span>
+<span class="font-label-mono text-label-mono">Consultations</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant/30 px-4 py-3 rounded-xl flex items-center gap-3 transition-all hover:translate-y-[-2px] active:scale-98" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-mono text-label-mono">Health Records</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant/30 px-4 py-3 rounded-xl flex items-center gap-3 transition-all hover:translate-y-[-2px] active:scale-98" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-label-mono text-label-mono">AI Analysis</span>
+</a>
+<a class="text-on-surface-variant hover:bg-surface-variant/30 px-4 py-3 rounded-xl flex items-center gap-3 transition-all hover:translate-y-[-2px] active:scale-98" href="#">
+<span class="material-symbols-outlined">biotech</span>
+<span class="font-label-mono text-label-mono">Lab Results</span>
+</a>
+</nav>
+<div class="mt-auto space-y-4">
+<button class="w-full bg-primary text-white font-button-text py-3 rounded-xl shadow-md hover:translate-y-[-4px] transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">self_improvement</span>
+                    Start Meditation
+                </button>
+<div class="pt-4 border-t border-outline-variant/30 space-y-1">
+<a class="text-on-surface-variant hover:bg-surface-variant/30 px-4 py-2 rounded-xl flex items-center gap-3 text-sm" href="#">
+<span class="material-symbols-outlined text-sm">shield</span>
+                        Privacy
+                    </a>
+<a class="text-on-surface-variant hover:bg-surface-variant/30 px-4 py-2 rounded-xl flex items-center gap-3 text-sm" href="#">
+<span class="material-symbols-outlined text-sm">help</span>
+                        Support
+                    </a>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="lg:ml-64 pt-header-height h-full overflow-hidden flex flex-col">
+<!-- Chat Header Section -->
+<div class="flex-none px-gutter py-6 max-w-4xl mx-auto w-full">
+<div class="flex items-center justify-between mb-2">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary">Tâm sự &amp; Trị liệu</h1>
+<p class="text-on-surface-variant font-body-sm">Cùng MindCare AI tháo gỡ những áp lực tinh thần</p>
+</div>
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-muted-blue flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xs">favorite</span>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-teal-accent/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-teal-accent text-xs">energy_savings_leaf</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Scrollable Chat Container -->
+<div class="flex-grow overflow-y-auto px-gutter pb-8 custom-scrollbar">
+<div class="max-w-4xl mx-auto space-y-8">
+<!-- Bot Message 1 -->
+<div class="flex items-start gap-4 animate-in slide-in-from-left duration-500">
+<div class="w-10 h-10 rounded-2xl bg-teal-accent/10 flex items-center justify-center flex-shrink-0 shadow-sm border border-teal-accent/20">
+<span class="material-symbols-outlined text-teal-accent" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div class="flex flex-col gap-2 max-w-[85%]">
+<div class="glass-panel p-4 rounded-3xl chat-bot-bubble shadow-sm text-on-surface">
+<p class="font-body-md">Chào bạn, hôm nay bạn cảm thấy thế nào? Tôi ở đây để lắng nghe và chia sẻ cùng bạn mọi điều.</p>
+</div>
+<span class="text-[11px] text-outline ml-2 font-label-mono">MINDCARE AI • 09:15 AM</span>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-start gap-4 flex-row-reverse animate-in slide-in-from-right duration-500">
+<div class="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center flex-shrink-0 shadow-md">
+<span class="material-symbols-outlined text-white">person</span>
+</div>
+<div class="flex flex-col gap-2 items-end max-w-[85%]">
+<div class="bg-primary p-4 rounded-3xl chat-user-bubble shadow-md text-white">
+<p class="font-body-md">Mình cảm thấy hơi mệt mỏi và áp lực công việc trong tuần này.</p>
+</div>
+<span class="text-[11px] text-outline mr-2 font-label-mono">YOU • 09:16 AM</span>
+</div>
+</div>
+<!-- Bot Message 2 + Options -->
+<div class="flex items-start gap-4 animate-in slide-in-from-left duration-700">
+<div class="w-10 h-10 rounded-2xl bg-teal-accent/10 flex items-center justify-center flex-shrink-0 shadow-sm border border-teal-accent/20">
+<span class="material-symbols-outlined text-teal-accent" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+</div>
+<div class="flex flex-col gap-4 max-w-[85%]">
+<div class="glass-panel p-4 rounded-3xl chat-bot-bubble shadow-sm text-on-surface">
+<p class="font-body-md">Tôi hiểu mà. Đôi khi áp lực từ công việc có thể khiến chúng ta kiệt sức. Bạn có muốn thử một bài tập thở ngắn 2 phút để thư giãn không, hay chỉ muốn tiếp tục chia sẻ thêm?</p>
+</div>
+<!-- Inline Action Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+<button class="flex items-center gap-4 p-4 rounded-2xl glass-panel hover:bg-teal-accent/5 hover:translate-y-[-4px] transition-all group border border-teal-accent/20">
+<div class="w-10 h-10 rounded-full bg-teal-accent/10 flex items-center justify-center text-teal-accent group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">air</span>
+</div>
+<div class="text-left">
+<p class="font-button-text text-sm">Luyện thở thư giãn</p>
+<p class="text-[11px] text-outline uppercase tracking-wider">2 Phút • Calm</p>
+</div>
+</button>
+<button class="flex items-center gap-4 p-4 rounded-2xl glass-panel hover:bg-primary/5 hover:translate-y-[-4px] transition-all group border border-outline-variant/30">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined">edit_note</span>
+</div>
+<div class="text-left">
+<p class="font-button-text text-sm">Ghi nhật ký tâm trạng</p>
+<p class="text-[11px] text-outline uppercase tracking-wider">Journaling</p>
+</div>
+</button>
+</div>
+<span class="text-[11px] text-outline ml-2 font-label-mono">MINDCARE AI • 09:17 AM</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Input Area Section -->
+<div class="flex-none p-gutter border-t border-outline-variant/30 bg-surface/40 backdrop-blur-md">
+<div class="max-w-4xl mx-auto relative">
+<div class="relative flex items-center gap-3">
+<div class="flex-grow relative">
+<input class="w-full h-14 pl-6 pr-14 rounded-full border-2 border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface-bright/80 shadow-inner font-body-md transition-all outline-none" placeholder="Chia sẻ cảm xúc của bạn tại đây..." type="text"/>
+<button class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mic</span>
+</button>
+</div>
+<button class="h-14 w-14 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:translate-y-[-4px] hover:shadow-xl active:scale-95 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">send</span>
+</button>
+</div>
+<div class="mt-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-[12px] text-on-surface-variant font-label-mono whitespace-nowrap cursor-pointer hover:bg-primary/10 transition-colors">Áp lực công việc</span>
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-[12px] text-on-surface-variant font-label-mono whitespace-nowrap cursor-pointer hover:bg-primary/10 transition-colors">Mất ngủ</span>
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-[12px] text-on-surface-variant font-label-mono whitespace-nowrap cursor-pointer hover:bg-primary/10 transition-colors">Lo âu</span>
+<span class="px-3 py-1 bg-surface-container-high rounded-full text-[12px] text-on-surface-variant font-label-mono whitespace-nowrap cursor-pointer hover:bg-primary/10 transition-colors">Cảm ơn</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Bottom Navigation (Visible on mobile only) -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface/90 backdrop-blur-lg flex justify-around items-center border-t border-outline-variant/20 z-50">
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-label-mono">Home</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">psychology</span>
+<span class="text-[10px] font-label-mono">Tâm sự</span>
+</button>
+<div class="relative -top-6">
+<button class="w-14 h-14 bg-primary text-white rounded-full shadow-xl flex items-center justify-center">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-[10px] font-label-mono">Explore</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="text-[10px] font-label-mono">Profile</span>
+</button>
+</nav>
+<script>
+        // Simple micro-interactions for input focus
+        const chatInput = document.querySelector('input');
+        chatInput.addEventListener('focus', () => {
+            chatInput.parentElement.classList.add('scale-[1.01]');
+        });
+        chatInput.addEventListener('blur', () => {
+            chatInput.parentElement.classList.remove('scale-[1.01]');
+        });
+
+        // Auto-scroll to bottom of chat
+        const chatContainer = document.querySelector('.overflow-y-auto');
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    </script>
+</body></html>

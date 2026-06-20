@@ -1,0 +1,349 @@
+# Change Log
+
+## 2026-06-19
+
+- Updated `_workspace/docs/UI_UPGRADE_PLAN.md`
+  - Marked `admin/server` as completed in phase GĐ5 checklist.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added current-context note for UI upgrade phase 5.1 on `app/admin/server/page-client.tsx`.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended implementation and verification notes for the `admin/server` UI refactor.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded that `app/admin/server/page-client.tsx` now follows the shared admin/portal shell pattern while keeping the same runtime/admin APIs.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the rule that admin runtime pages may change shell/presentation only and must preserve operations contracts.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT logic for `/admin/server`, including auth gate, load/update/check/sync flows, and cleanup behavior.
+- Updated `medical-consultation-app/app/quan-ly/page.tsx`
+  - Replaced the placeholder admin grid with a shared-shell admin hub that links `user`, `data`, `config`, and `admin/server`.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added context note for UI upgrade phase 5.2 on `app/quan-ly/page.tsx`.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended implementation and verification notes for the `quan-ly` admin hub refactor.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded that the admin hub now follows the same `PortalShell`/`SectionCard`/`StatCard` pattern.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the admin hub/index page pattern for dashboard-style workspace routing.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT logic for `/quan-ly` as the admin workspace router.
+- Updated `medical-consultation-app/app/quan-ly/user/page.tsx`
+  - Replaced the placeholder cards with a structured admin-user readiness workspace using the shared shell primitives.
+- Updated `medical-consultation-app/app/quan-ly/data/page.tsx`
+  - Replaced the placeholder cards with a structured admin-data readiness workspace using the shared shell primitives.
+- Updated `medical-consultation-app/app/quan-ly/config/page.tsx`
+  - Replaced the placeholder cards with a structured admin-config readiness workspace using the shared shell primitives.
+- Updated `_workspace/docs/UI_UPGRADE_PLAN.md`
+  - Marked `quan-ly + user + data + config` as completed in phase GĐ5 checklist.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added context note for UI upgrade phase 5.3 on the admin child workspaces.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended implementation and verification notes for `quan-ly/user`, `quan-ly/data`, and `quan-ly/config`.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded that the admin child workspaces now use the same shell pattern and remain static readiness dashboards.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the readiness-workspace pattern for admin child pages without real data sources.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT logic for the current presentation-only behavior of `quan-ly/user`, `quan-ly/data`, and `quan-ly/config`.
+- Updated `medical-consultation-app/app/agent-hub/page.tsx`
+  - Migrated the agent showcase page to the shared dashboard shell while preserving profile/demo/localStorage behavior.
+- Updated `_workspace/docs/UI_UPGRADE_PLAN.md`
+  - Marked `agent-hub` as completed in phase GĐ5 checklist.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added context note for UI upgrade phase 5.4 and recorded the `account` file-size blocker.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended implementation and verification notes for `agent-hub` plus the current `account` blocker.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded that `agent-hub` now follows the same shell primitives and keeps the same demo handoff logic.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the shell-preserving pattern for agent showcase pages.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT logic for `/agent-hub` and the current constraint on `/account`.
+- Updated `medical-consultation-app/app/account/page.tsx`
+  - Split the oversized page into a route orchestrator and moved section presentation into dedicated account components while upgrading the page to the shared shell.
+- Added `medical-consultation-app/components/account/account-page-types.ts`
+  - Extracted account profile type and helper functions for join info, initials, and phone masking.
+- Added `medical-consultation-app/components/account/account-section-nav.tsx`
+  - Added account section navigation for the new shell layout.
+- Added `medical-consultation-app/components/account/account-profile-section.tsx`
+  - Extracted the profile editing section from the account page.
+- Added `medical-consultation-app/components/account/account-security-section.tsx`
+  - Extracted the security section from the account page.
+- Added `medical-consultation-app/components/account/account-settings-section.tsx`
+  - Extracted the settings/consent section from the account page.
+- Added `medical-consultation-app/components/account/account-special-section.tsx`
+  - Extracted the subscription/offboarding section from the account page.
+- Added `medical-consultation-app/components/account/account-messages.tsx`
+  - Extracted shared success/error alert rendering from the account page.
+- Added `medical-consultation-app/components/account/account-switcher-section.tsx`
+  - Wrapped the dynamic account switcher inside the new shell section.
+- Added `medical-consultation-app/components/account/use-account-page-controller.ts`
+  - Extracted the account page state/effects/handlers into a dedicated controller hook so the route file stays under the project size limit.
+- Updated `medical-consultation-app/app/tin-tuc-y-khoa/page.tsx`
+  - Split the oversized medical news page into a route orchestrator and moved state/presentation into dedicated medical-news components while upgrading the page to the shared shell.
+- Added `medical-consultation-app/components/medical-news/medical-news-types.ts`
+  - Extracted shared medical-news and knowledge-reference types plus constants.
+- Added `medical-consultation-app/components/medical-news/use-medical-news-controller.ts`
+  - Extracted medical-news state, effects, search handlers, and reference loading into a dedicated controller hook.
+- Added `medical-consultation-app/components/medical-news/medical-news-search-panel.tsx`
+  - Extracted the medical news search controls and topic chips from the page.
+- Added `medical-consultation-app/components/medical-news/medical-news-workspace.tsx`
+  - Extracted the split-pane results/embed/reference workspace from the page.
+- Updated `medical-consultation-app/app/tra-cuu/page.tsx`
+  - Added route-level shell alignment around the existing `HealthLookup` dynamic component using shared dashboard primitives.
+- Updated `_workspace/docs/UI_UPGRADE_PLAN.md`
+  - Marked `tra-cuu` and `tin-tuc-y-khoa` as completed in phase GĐ5 checklist.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added context notes for GĐ5.6 and GĐ5.7 plus the follow-up note about `components/health-lookup.tsx`.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended implementation and verification notes for `tin-tuc-y-khoa` and `tra-cuu`.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the new `components/medical-news/*` structure and the route-level shell alignment for `tra-cuu`.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the route/content page split patterns used for news and lookup pages.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT logic for `/tin-tuc-y-khoa` and `/tra-cuu` after the phase 5 refactor.
+- Updated `medical-consultation-app/components/health-lookup.tsx`
+  - Reduced the legacy lookup component to a thin wrapper wired to the new controller and panels.
+- Added `medical-consultation-app/components/health-lookup/health-lookup-types.ts`
+  - Extracted shared types for lookup results, suggestions, history, and knowledge references.
+- Added `medical-consultation-app/components/health-lookup/health-lookup-utils.tsx`
+  - Extracted pure helpers for query classification, badge/icon styling, and copy/share actions.
+- Added `medical-consultation-app/components/health-lookup/use-health-lookup-controller.ts`
+  - Extracted lookup state, effects, search handlers, history, category loading, and knowledge-reference loading into a controller hook.
+- Added `medical-consultation-app/components/health-lookup/health-lookup-search-panel.tsx`
+  - Extracted the lookup input, suggestions, history, and category modal UI.
+- Added `medical-consultation-app/components/health-lookup/health-lookup-results-panel.tsx`
+  - Extracted result cards, markdown rendering, reference panel, and disclaimer UI.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Recorded the post-GĐ5 structural refactor for `health-lookup` and shifted next-step focus to cross-route QA.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended implementation, verification, and structural-size notes for the `health-lookup` refactor.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the new `components/health-lookup/*` module layout.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the thin-wrapper + controller + panels split pattern for oversized legacy components.
+- Updated `_workspace/00_logic.md`
+  - Replaced the old `health-lookup` blocker note with the new SSOT after the refactor.
+- Updated `medical-consultation-app/components/site-header.tsx`
+  - Fixed a shared-shell hook-order regression by moving the early return below all hook declarations.
+- Updated `_workspace/docs/UI_UPGRADE_PLAN.md`
+  - Marked GĐ6 `build` and `test` checks as completed while leaving `lint` open due to baseline warnings.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added QA phase 6.1 notes, the `site-header` runtime fix, and current authenticated-route QA limitations.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended build/test/browser smoke results and the `site-header` hook-order regression fix.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the shared-header hook-order invariant for future shell work.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the invariant that shared header hooks must be declared before any early return.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT notes for the shared header invariant discovered during QA.
+- Added `medical-consultation-app/components/theme-toggle.tsx`
+  - Added a shared header theme toggle wired to `next-themes` so users can switch between light and dark mode.
+- Updated `medical-consultation-app/app/layout.tsx`
+  - Mounted `ThemeProvider` at the root layout so `dark:*` styles are controlled by real app-wide theme state.
+- Updated `medical-consultation-app/components/site-header.tsx`
+  - Added the new theme toggle to the shared header controls next to language/runtime toggles.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Recorded the dark-mode wiring fix and the latest QA verification notes.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended the root-cause, implementation, and verification notes for the theme-system fix.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the mounted provider configuration and the new `theme-toggle` shared component.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the invariant that dark mode requires both a mounted provider and an exposed shared-shell control.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT notes for the mounted theme provider and verified toggle behavior.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added QA 6.3 notes for scroll behavior, side-panel responsive smoke testing, and authenticated route guard findings.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended responsive/overflow verification notes and clarified that portal redirects currently match `RoleGuard` behavior.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT notes for `RoleGuard` redirect order and the verified scroll model (`body: hidden` + `HTML` as scrolling element) on public routes.
+- Updated `_workspace/docs/UI_UPGRADE_PLAN.md`
+  - Marked `account` as completed in phase GĐ5 checklist.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added context note for UI upgrade phase 5.5 and shifted the next-step focus to `tra-cuu` and `tin-tuc-y-khoa`.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended implementation and verification notes for the account page refactor and shell upgrade.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the new `components/account/*` structure and preserved account behaviors.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the oversized-page refactor pattern based on the account page split.
+- Updated `_workspace/00_logic.md`
+  - Replaced the `account` blocker note with the new SSOT logic after the refactor.
+- Updated `medical-consultation-app/components/medical-news/medical-news-workspace.tsx`
+  - Added structured skeletons and clearer empty states for results, embedded article area, and knowledge-reference panel without changing controller/API logic.
+- Added `medical-consultation-app/app/tin-tuc-y-khoa/loading.tsx`
+  - Added a route-level loading shell so `/tin-tuc-y-khoa` no longer depends on the global null loading state during transition/compile/hydrate.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Recorded phase GĐ6.4 loading-state hardening and its verification status.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended implementation and verification notes for the `tin-tuc-y-khoa` loading/empty-state fix.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded reuse of `Skeleton` and the new route-specific loading file for medical news.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the content-loading pattern for auto-search pages and the rule for route-specific loading shells.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT invariants for medical-news loading and empty-state behavior.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Recorded doctor-portal authenticated QA, the missing admin demo account limitation, and the current viewport-emulation limitation for responsive verification.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Appended portal QA results for `doctor`/`doctor/patients`, admin guard behavior with doctor session, and the remaining responsive/admin QA blockers.
+- Updated `medical-consultation-app/lib/test-accounts.ts`
+  - Added `admin.aleian` demo credentials and centralized `getAllTestAccounts()` for role-complete dev authentication.
+- Updated `medical-consultation-app/lib/auth-server.ts`
+  - Switched dev test-account lookup to the shared all-accounts helper so admin demo tokens resolve the same way as doctor/patient.
+- Updated `medical-consultation-app/app/api/backend/[...path]/route.ts`
+  - Fixed demo `/api/backend/v1/user` to derive `user_id`, `role`, `username`, and `full_name` from bearer auth instead of returning a role-less stub profile.
+- Updated `medical-consultation-app/app/login/page.tsx`
+  - Added admin demo card and role-based post-login routing so local admin QA can start from the login screen without manual URL edits.
+- Updated `medical-consultation-app/components/site-header.tsx`
+  - Added admin shell branding/navigation so admin sessions no longer render patient labels or links in the shared header.
+- Updated `medical-consultation-app/components/account-menu.tsx`
+  - Added admin badge/shortcut support in the shared account dropdown.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Replaced the previous admin-auth limitation note with the new local admin QA path and stub-contract fix.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Recorded the demo-auth invariant for `/api/backend/v1/user` and the role-based demo account routing rule.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Logged the admin demo account, stub user contract fix, and admin shell alignment verification.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the new demo-auth helpers and backend-proxy behavior for local role-aware QA.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT invariants for local admin demo auth and admin shell behavior.
+- Updated `medical-consultation-app/lib/account-manager.ts`
+  - Added `admin` support to stored account sessions plus a shared `getRoleHomePath()` helper for role-aware redirects.
+- Updated `medical-consultation-app/components/account-switcher.tsx`
+  - Switched account restoration to use role-aware home routing instead of always redirecting to `/`.
+- Updated `medical-consultation-app/components/mobile-bottom-nav.tsx`
+  - Made the mobile shell role-aware so patient, doctor, and admin sessions render different navigation sets.
+- Updated `medical-consultation-app/components/floating-quick-menu.tsx`
+  - Made the desktop floating quick menu role-aware so admin/doctor no longer inherit patient shortcuts.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Added the responsive role-shell fix covering mobile nav, quick menu, and role-aware account switching.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Recorded the shared role-shell invariant across header, mobile nav, floating quick menu, and account switcher.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Logged the role-aware shell fix and verification status after lint/browser checks.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the new role-aware dependencies in mobile shell and account session utilities.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT rules for role-aware mobile/quick navigation and role-based home redirects.
+- Updated `medical-consultation-app/components/account/use-account-page-controller.ts`
+  - Moved token/session hydration behind a post-mount `sessionReady` flow to remove SSR/client disabled-state mismatch on `/account`.
+- Updated `medical-consultation-app/components/account/account-settings-section.tsx`
+  - Made consent action state wait for `sessionReady` before enabling or showing failure text.
+- Updated `medical-consultation-app/components/account/account-special-section.tsx`
+  - Made offboarding action wait for `sessionReady` to avoid hydration drift.
+- Updated `medical-consultation-app/app/account/page.tsx`
+  - Passed `sessionReady` into account action sections so SSR and hydrated client stay aligned.
+- Updated `medical-consultation-app/app/api/backend/[...path]/route.ts`
+  - Isolated demo `profile` and `consent` state by `user_id`, preventing admin/doctor demo sessions from inheriting patient nickname/bio/consent.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Recorded the account hydration hardening and per-user demo stub isolation fixes.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added invariants for account hydration safety and per-user demo stub isolation.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Logged the removal of the account hydration mismatch and the user-scoped stub verification.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the new `sessionReady` contract and per-user backend proxy behavior.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT rules for account hydration timing and demo user isolation.
+- Updated `medical-consultation-app/app/api/backend/[...path]/route.test.ts`
+  - Aligned demo-mode tests with the new auth-required `/api/backend/v1/user` contract and added an explicit `401 Unauthorized` case.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Recorded the app-wide build/test verification and the post-fix browser smoke status for `account`, `quan-ly`, and `admin/server`.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Logged `build` pass, `test` re-green after route-test alignment, and the remaining warning scope as verification notes.
+- Updated `medical-consultation-app/lib/error-tracker.ts`
+  - Replaced the static optional Sentry import with an indirect loader so `@sentry/nextjs` no longer triggers a build-time module resolution warning.
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Recorded that the optional Sentry build warning has been removed and only the baseline-browser-mapping warning remains.
+- Updated `medical-consultation-app/docs/systemPatterns.md`
+  - Added the invariant that optional SDKs must not be loaded through static import strings if they are meant to remain uncoupled from the build.
+- Updated `medical-consultation-app/docs/progress.md`
+  - Logged the removal of the `@sentry/nextjs` warning from the build verification path.
+- Updated `medical-consultation-app/docs/techContext.md`
+  - Recorded the new indirect-loader pattern for optional runtime SDKs.
+- Updated `_workspace/00_logic.md`
+  - Added SSOT guidance for optional dependency loading in `lib/error-tracker.ts`.
+
+## 2026-06-19 16:15 - UI Upgrade GĐ6.6 (nhac-nho)
+
+- Updated `medical-consultation-app/components/dtx-reminders.tsx`
+  - Loại bỏ hard-code colors, thêm dark mode với dark:bg-card/50
+  - Dùng Switch component thay custom toggle
+  - Dùng Textarea component thay raw textarea
+  - Align glassmorphic design: bg-card/80 backdrop-blur-xl
+- Updated `medical-consultation-app/docs/activeContext.md`
+  - Ghi nhận GĐ6.6 completion cho nhac-nho page polish
+- Updated `medical-consultation-app/docs/progress.md`
+  - Log refactor details và verification status
+
+
+## 2026-06-19 16:44 - UI Upgrade GĐ2.7 (speech-chat)
+
+- Updated medical-consultation-app/app/speech-chat/page.tsx
+  - Refactored camera modal với design tokens
+  - 8 hard-code colors  0
+  - Dark mode coverage improved
+
+
+## 2026-06-19 17:01 - Scroll & Fit Screen Fix
+
+- Updated medical-consultation-app/app/layout.tsx
+  - h-screen  h-dvh (dynamic viewport height)
+  - Fixes mobile address bar layout issues
+- Created _workspace/docs/SCROLL_FIT_ANALYSIS.md
+  - Analysis report với recommendations
+- Verified scroll containers in 5 critical pages
+
+## 2026-06-19 17:30 - Critical Layout Fixes
+
+- Fixed medical-consultation-app/app/layout.tsx
+  - h-screen  h-dvh (dynamic viewport height)
+- Fixed medical-consultation-app/app/[locale]/layout.tsx
+  - Removed duplicate html/body tags (React error)
+  - Simplified to return children only
+- Fixes issues:
+  - Scroll & fit screen 
+  - Multiple body components error 
+  - Mobile address bar layout stability 
+
+## 2026-06-19 17:35 - Dark Mode Fixes
+
+- Fixed medical-consultation-app/components/chat-interface.tsx
+  - SOS dialog dark mode variants
+  - Text color semantic tokens
+  - Improved contrast in dark mode
+
+
+## 2026-06-19 17:40 - Module Registry
+
+- Updated _workspace/01_module_registry.md
+  - Indexed 9 core_lib modules
+  - RAGAS eval + grounding policy
+
+## 2026-06-19 17:57 - Chat Interface Scroll Fix
+
+- Fixed medical-consultation-app/components/chat-interface.tsx
+  - Removed min-h-0 causing flex conflicts
+  - Added overflow-x-hidden to prevent horizontal scroll
+  - Added height: '100%' inline style for proper scrolling
+  - Changed: className="flex-1 min-h-0 overflow-y-auto" → className="flex-1 overflow-y-auto overflow-x-hidden"
+- Enhanced medical-consultation-app/app/globals.css
+  - Improved .custom-scrollbar styling
+  - Added scrollbar-width: thin for Firefox
+  - Added scrollbar-color for Firefox theming
+  - Increased width: 6px → 8px for better visibility
+  - Added transition on hover for smooth UX
+  - Added :active state with primary color
+- Updated _workspace/docs/UI_UPGRADE_PLAN.md
+  - Marked "Overflow / scroll lock / safe-zone" as completed in GĐ6
+- Verification:
+  - Messages container now scrolls smoothly
+  - No horizontal overflow
+  - Proper scrollbar visibility (8px, themed)
+  - Works in both light/dark mode
+

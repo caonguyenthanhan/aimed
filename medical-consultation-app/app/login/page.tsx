@@ -4,6 +4,12 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { TEST_ACCOUNTS, findTestAccount } from "@/lib/test-accounts"
 
+function getPostLoginPath(role: string) {
+  if (role === "doctor") return "/doctor"
+  if (role === "admin") return "/quan-ly"
+  return "/"
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [username, setUsername] = useState("")
@@ -81,7 +87,7 @@ export default function LoginPage() {
       localStorage.setItem('userFullName', account.fullName)
       localStorage.setItem('userRole', account.role)
     }
-    router.replace(account.role === 'doctor' ? '/doctor' : '/')
+    router.replace(getPostLoginPath(account.role))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,7 +106,7 @@ export default function LoginPage() {
           localStorage.setItem('userFullName', testAccount.fullName)
           localStorage.setItem('userRole', testAccount.role)
         }
-        router.replace(testAccount.role === 'doctor' ? '/doctor' : '/')
+        router.replace(getPostLoginPath(testAccount.role))
         return
       }
       
@@ -123,7 +129,7 @@ export default function LoginPage() {
         localStorage.setItem('userId', userId)
         localStorage.setItem('userRole', data?.role || 'patient')
       }
-      router.replace('/')
+      router.replace(getPostLoginPath(String(data?.role || 'patient')))
     } catch (err: any) {
       setError(err?.message || 'Có lỗi xảy ra khi đăng nhập')
     } finally {
@@ -152,7 +158,7 @@ export default function LoginPage() {
               {showTestAccounts ? '▼' : '▶'} Tài khoản Test (Demo)
             </button>
             {showTestAccounts && (
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {/* Doctor Accounts */}
                 <div>
                   <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">👨‍⚕️ Bác sĩ</p>
@@ -183,6 +189,22 @@ export default function LoginPage() {
                       <div className="font-medium text-slate-900 dark:text-slate-50">{pat.fullName}</div>
                       <div className="text-slate-500 dark:text-slate-400">Tuổi: {pat.age}</div>
                       <div className="text-slate-400 text-xs mt-1">{pat.username}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300">🛡️ Admin</p>
+                  {TEST_ACCOUNTS.admins.map((admin) => (
+                    <button
+                      key={admin.id}
+                      type="button"
+                      onClick={() => handleTestAccountLogin(admin.username, admin.password)}
+                      className="mb-2 w-full rounded-lg border border-violet-200 bg-white p-2 text-left text-xs transition hover:border-violet-400 hover:bg-violet-50 dark:border-violet-700 dark:bg-slate-800 dark:hover:bg-violet-950/30"
+                    >
+                      <div className="font-medium text-slate-900 dark:text-slate-50">{admin.fullName}</div>
+                      <div className="text-slate-500 dark:text-slate-400">{admin.scope}</div>
+                      <div className="mt-1 text-xs text-slate-400">{admin.username}</div>
                     </button>
                   ))}
                 </div>

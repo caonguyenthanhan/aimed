@@ -25,6 +25,23 @@ export interface ErrorEvent {
 const DATA_DIR = path.join(process.cwd(), "data")
 const ERRORS_PATH = path.join(DATA_DIR, "runtime-errors.jsonl")
 const MAX_STACK_LEN = 2000
+type SentryModule = {
+  withScope: (fn: (scope: any) => void) => void
+  captureException: (error: Error) => void
+  captureMessage: (message: string, level?: "warning" | "error") => void
+}
+let sentryLoader: ((specifier: string) => Promise<SentryModule | null>) | null = null
+
+function getOptionalImportLoader() {
+  if (sentryLoader) return sentryLoader
+
+  sentryLoader = new Function(
+    "specifier",
+    "return import(specifier).catch(() => null)"
+  ) as (specifier: string) => Promise<SentryModule | null>
+
+  return sentryLoader
+}
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -44,8 +61,8 @@ async function forwardToSentry(event: ErrorEvent, originalError?: unknown) {
   if (!dsn) return
 
   try {
-    // WHY: dynamic import keeps Sentry optional — no bundle cost when DSN not set
-    const Sentry = await import("@sentry/nextjs").catch(() => null)
+    // WHY: indirect import keeps Sentry optional at bundler level too.
+    const Sentry = await getOptionalImportLoader()("@sentry/nextjs")
     if (!Sentry) return
 
     Sentry.withScope((scope: any) => {

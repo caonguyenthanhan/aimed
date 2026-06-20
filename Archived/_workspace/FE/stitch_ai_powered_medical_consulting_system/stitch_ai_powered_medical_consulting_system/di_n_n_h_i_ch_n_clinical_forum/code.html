@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Doctor Forum | MedPortal Professional</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom Scrollbar for the App-like feel */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e1e3e4;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #c4c5d8;
+        }
+        /* Glassmorphism utility */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        /* Layout Lock */
+        body, html {
+            height: 100%;
+            overflow: hidden;
+            background-color: #f8fafb;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "inverse-on-surface": "#eff1f2",
+                      "secondary": "#5a5f65",
+                      "surface-container": "#eceeef",
+                      "tertiary-fixed": "#d5e3ff",
+                      "tertiary-container": "#005aac",
+                      "background": "#f8fafb",
+                      "surface-variant": "#e1e3e4",
+                      "on-primary-container": "#c9d0ff",
+                      "on-secondary-fixed": "#171c21",
+                      "surface-dim": "#d8dadb",
+                      "primary-container": "#1447e6",
+                      "on-primary": "#ffffff",
+                      "on-primary-fixed-variant": "#0035be",
+                      "on-background": "#191c1d",
+                      "primary": "#0032b6",
+                      "on-surface-variant": "#434655",
+                      "surface": "#f8fafb",
+                      "surface-container-high": "#e6e8e9",
+                      "on-tertiary-fixed-variant": "#004689",
+                      "error-container": "#ffdad6",
+                      "on-tertiary-fixed": "#001b3c",
+                      "tertiary-fixed-dim": "#a8c8ff",
+                      "dark-bg": "#0F1419",
+                      "primary-fixed-dim": "#b9c3ff",
+                      "surface-container-low": "#f2f4f5",
+                      "on-error-container": "#93000a",
+                      "error": "#ba1a1a",
+                      "secondary-container": "#dfe3ea",
+                      "on-secondary-container": "#60656b",
+                      "dark-card": "#1A1F2E",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-primary": "#b9c3ff",
+                      "secondary-fixed-dim": "#c2c7cd",
+                      "tertiary": "#004383",
+                      "surface-container-highest": "#e1e3e4",
+                      "muted-blue": "#E8F0FF",
+                      "primary-fixed": "#dde1ff",
+                      "on-error": "#ffffff",
+                      "secondary-fixed": "#dfe3ea",
+                      "on-primary-fixed": "#001356",
+                      "outline": "#747687",
+                      "destructive": "#E63946",
+                      "on-tertiary": "#ffffff",
+                      "teal-accent": "#14B8A6",
+                      "outline-variant": "#c4c5d8",
+                      "on-secondary-fixed-variant": "#42474d",
+                      "inverse-surface": "#2e3132",
+                      "on-tertiary-container": "#bcd4ff",
+                      "surface-bright": "#f8fafb",
+                      "surface-tint": "#1c4bea",
+                      "on-secondary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-gap": "1rem",
+                      "gutter": "1.5rem",
+                      "container-max": "1280px",
+                      "header-height": "4.5rem",
+                      "margin-mobile": "1rem"
+              },
+              "fontFamily": {
+                      "button-text": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "label-mono": ["Geist"],
+                      "headline-xl": ["Inter"]
+              },
+              "fontSize": {
+                      "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+</head>
+<body class="bg-background font-body-md text-on-surface overflow-hidden">
+<!-- Animated Background Blobs -->
+<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+<div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] animate-pulse"></div>
+<div class="absolute top-[60%] -right-[5%] w-[30%] h-[30%] bg-tertiary-container/5 rounded-full blur-[100px]" style="animation-delay: 2s;"></div>
+</div>
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-low shadow-md flex flex-col py-6 px-4 z-40">
+<div class="mb-8 px-4">
+<h1 class="font-headline-md text-headline-md font-bold text-primary">Clinical Suite</h1>
+<p class="font-label-mono text-label-mono text-secondary uppercase tracking-widest">General Hospital</p>
+</div>
+<nav class="flex-1 space-y-1">
+<!-- Consultations -->
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-all duration-200 hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="medical_services">medical_services</span>
+<span class="font-label-mono text-label-mono">Consultations</span>
+</a>
+<!-- Patients -->
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-all duration-200 hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-mono text-label-mono">Patients</span>
+</a>
+<!-- Appointments -->
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-all duration-200 hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-label-mono text-label-mono">Appointments</span>
+</a>
+<!-- Reports -->
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-3 hover:bg-surface-variant transition-all duration-200 hover:translate-x-1" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-mono text-label-mono">Reports</span>
+</a>
+<!-- Forum (ACTIVE) -->
+<a class="bg-primary-container text-on-primary-container rounded-xl flex items-center gap-3 px-4 py-3 transition-all duration-200 shadow-sm" href="#">
+<span class="material-symbols-outlined" data-icon="forum">forum</span>
+<span class="font-label-mono text-label-mono">Forum</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-outline-variant pt-4 space-y-1">
+<button class="w-full bg-primary text-on-primary rounded-xl py-3 font-button-text text-button-text shadow-lg active:scale-95 transition-transform mb-4">
+                Emergency Call
+            </button>
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-2 hover:bg-surface-variant rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="font-label-mono text-label-mono">Help Center</span>
+</a>
+<a class="text-on-surface-variant flex items-center gap-3 px-4 py-2 hover:bg-surface-variant rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-label-mono text-label-mono">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="ml-64 flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar Anchor -->
+<header class="h-header-height flex justify-between items-center px-gutter glass-panel shadow-sm z-30">
+<div class="flex items-center gap-6 flex-1">
+<div class="relative w-full max-w-xl group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container rounded-full border-none focus:ring-2 focus:ring-primary/20 text-body-sm transition-all outline-none" placeholder="Search clinical keywords, case IDs, or specialists..." type="text"/>
+</div>
+<nav class="hidden lg:flex items-center gap-6">
+<a class="font-body-md text-body-md text-secondary hover:text-primary transition-colors" href="#">Resources</a>
+<a class="font-body-md text-body-md text-secondary hover:text-primary transition-colors" href="#">Support</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="relative p-2 text-secondary hover:bg-surface-variant rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-outline-variant">
+<div class="text-right hidden sm:block">
+<p class="font-button-text text-[14px] text-on-surface">Dr. Julian Smith</p>
+<p class="font-label-mono text-[11px] text-secondary">Cardiologist</p>
+</div>
+<img class="w-10 h-10 rounded-full border-2 border-primary-fixed-dim object-cover" data-alt="A professional headshot of a middle-aged male doctor with a warm, confident expression. He is wearing a white lab coat and a stethoscope around his neck, set against a clean, softly blurred clinical office background. The lighting is professional and high-key, reflecting a modern medical portal aesthetic with cool blue and white tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBopDRHzchFBFlqQQTtAkL-iU0giKmn-QsT5Yxu3GT8BpJIgltzqszsrHrn_IhPHaDaAtw04BQn1bmiQ6XzCkXhMvZN3WbA0jDxvU3WlJOBmBgRU6hgGSwTouAzul-fGiIl5NzXz32EE8y2MphQ0asZ2QwISPVxMSI4Zg1fVCcfSY3LhsRb9jvLMD71qHzc_Xxj5hCKmFgmj3lPWasHIwt_h4XrqVIYLXtYVE1bZIZdG2dvo8-Me_cCO0SOeKh8kzRbJQqHu9MoPDkY"/>
+</div>
+</div>
+</header>
+<!-- Forum Feed Area -->
+<div class="flex-1 flex flex-row overflow-hidden">
+<!-- Main List (Scrollable) -->
+<section class="flex-1 overflow-y-auto custom-scrollbar p-gutter space-y-6">
+<!-- Forum Header Content -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Medical Case Forum</h2>
+<p class="text-secondary font-body-md">Collaborative clinical discussions and peer consultations</p>
+</div>
+<button class="flex items-center gap-2 bg-primary text-on-primary px-6 py-3 rounded-xl font-button-text text-button-text shadow-md hover:translate-y-[-2px] hover:shadow-xl transition-all duration-300">
+<span class="material-symbols-outlined">add_circle</span>
+                        New Case Discussion
+                    </button>
+</div>
+<!-- Filters/Tabs -->
+<div class="flex gap-2 pb-2 border-b border-surface-variant">
+<button class="px-4 py-2 bg-primary-container text-on-primary-container rounded-full text-label-mono font-label-mono">All Cases</button>
+<button class="px-4 py-2 text-on-surface-variant hover:bg-surface-container rounded-full text-label-mono font-label-mono transition-colors">My Discussions</button>
+<button class="px-4 py-2 text-on-surface-variant hover:bg-surface-container rounded-full text-label-mono font-label-mono transition-colors">Cardiology</button>
+<button class="px-4 py-2 text-on-surface-variant hover:bg-surface-container rounded-full text-label-mono font-label-mono transition-colors">Neurology</button>
+</div>
+<!-- Case Threads -->
+<div class="grid grid-cols-1 gap-4">
+<!-- Card 1 -->
+<div class="group bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-all duration-300 hover:shadow-lg flex gap-6">
+<div class="flex flex-col items-center gap-1 min-w-[60px] pt-1">
+<span class="material-symbols-outlined text-primary text-4xl" data-weight="fill">medical_information</span>
+<div class="bg-primary/5 px-2 py-1 rounded text-primary font-label-mono text-[10px] mt-2">ID: #4429</div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<span class="px-3 py-1 bg-muted-blue text-primary text-[11px] font-bold rounded-full uppercase tracking-wider">Cardiology</span>
+<span class="flex items-center gap-1.5 px-3 py-1 bg-teal-accent/10 text-teal-accent text-[11px] font-bold rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-teal-accent"></span>
+                                    Open for Consultation
+                                </span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors cursor-pointer mb-2">Complex Hypertension in Elderly Patient with Stage 3 CKD</h3>
+<p class="text-secondary text-body-sm line-clamp-2 mb-4">Patient presents with refractory hypertension despite triple therapy. Seeking alternative pharmacological approaches considering renal impairment and recent electrolyte imbalances...</p>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-surface-variant/50">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A professional medical headshot of a female doctor in her 30s. She is smiling gently and wearing a clean blue scrub top with a subtle hospital logo. The image is bright with cool natural lighting coming from a nearby window in a modern medical center. The style is clean, sharp, and highly professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5v1Rx64P9avvOMj-Aoi_TT4uHjsBBZzCVenWSAWc3eb3Z08ur5cpPDbWRhl8Sp415bDTL7BKN4jPJjmmlUUNLmJwYcW646pI3hPLNPXJ06CzrHk4p1M6FSkVku1a-KxGiV3i52YwTeOdkcA3xTpPt5QvljkD6gxyKNU3kheKO9eKgZjV0SxrVUfcYPIZBiwkREdaRuuu897509RKnh4s-ZRuOdZN8Y1y5HfNlrrk3pS3EtuHG9bPdVB5x-9RcJdcVConYMar28U4I"/>
+<span class="text-body-sm font-medium">Dr. Sarah Jenkins</span>
+<span class="text-outline text-body-sm">• 2 hours ago</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">chat_bubble</span>
+<span>24 replies</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">verified</span>
+<span class="font-bold text-primary">8 Peer Reviews</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">visibility</span>
+<span>1.2k</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-all duration-300 hover:shadow-lg flex gap-6">
+<div class="flex flex-col items-center gap-1 min-w-[60px] pt-1">
+<span class="material-symbols-outlined text-secondary/40 text-4xl">psychiatry</span>
+<div class="bg-surface-container px-2 py-1 rounded text-secondary font-label-mono text-[10px] mt-2">ID: #4381</div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<span class="px-3 py-1 bg-muted-blue text-primary text-[11px] font-bold rounded-full uppercase tracking-wider">Neurology</span>
+<span class="flex items-center gap-1.5 px-3 py-1 bg-surface-variant text-secondary text-[11px] font-bold rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                    Case Resolved
+                                </span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors cursor-pointer mb-2">Atypical Presentation of Early-Onset Parkinson's Disease</h3>
+<p class="text-secondary text-body-sm line-clamp-2 mb-4">Initial screening showed no tremors but significant gait instability. MRI findings included...</p>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-surface-variant/50">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A portrait of an experienced male medical professional in his late 50s. He is wearing formal attire with a white doctor's coat and glasses. He has a wise, reassuring demeanor. The lighting is warm and soft, emphasizing a trustworthy and expert clinical presence. High-end medical office setting with bookshelves in the background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAo_5m3nFzxA0Co2oegsSD04LFm8jZoe1qj8k4VWPW7U9hF1owjGuZNAnrOwmMg12IDBfApU9V_QebljSeGdmX6j24LPjhMG7pyw_BHUk_7BQCtR8VVO8Io26zHeugnifRf6QAzPaUGIFpo-IJTFFxAejTSqu08YUPMvWSrkLlV6jXPYzCMt8Us38qw8r2LEGfWZEHqMig06Mq505DoU_Rb8eMN1QT4gz6JjtAAHvBb0q713xgVosrOJTIlcTw8OuQIXaCD1JfeiR3a"/>
+<span class="text-body-sm font-medium">Dr. Michael Chen</span>
+<span class="text-outline text-body-sm">• 5 hours ago</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">chat_bubble</span>
+<span>42 replies</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">verified</span>
+<span class="font-bold text-primary">15 Peer Reviews</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">visibility</span>
+<span>2.8k</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-all duration-300 hover:shadow-lg flex gap-6">
+<div class="flex flex-col items-center gap-1 min-w-[60px] pt-1">
+<span class="material-symbols-outlined text-primary text-4xl">oncology</span>
+<div class="bg-primary/5 px-2 py-1 rounded text-primary font-label-mono text-[10px] mt-2">ID: #4402</div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start mb-2">
+<span class="px-3 py-1 bg-muted-blue text-primary text-[11px] font-bold rounded-full uppercase tracking-wider">Oncology</span>
+<span class="flex items-center gap-1.5 px-3 py-1 bg-teal-accent/10 text-teal-accent text-[11px] font-bold rounded-full">
+<span class="w-1.5 h-1.5 rounded-full bg-teal-accent"></span>
+                                    Open for Consultation
+                                </span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-primary transition-colors cursor-pointer mb-2">Management of Rare Soft Tissue Sarcoma in Pediatric Patient</h3>
+<p class="text-secondary text-body-sm line-clamp-2 mb-4">Requesting input on the latest genomic-guided therapies for this specific mutation subtype. Previous rounds of chemo have shown limited efficacy...</p>
+<div class="flex items-center justify-between mt-auto pt-4 border-t border-surface-variant/50">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A professional headshot of a younger female physician with a kind, attentive gaze. She is wearing a stethoscope and a light grey medical uniform. The lighting is bright and airy, suggesting a modern, clean pediatric ward. The overall aesthetic is one of empathetic professionalism and technological integration." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1I2zcHOumZa-Cw3KZ69qE_rTJdT5zTaYAC-h6sG51SMx_vOhIs05ubeiBs9pzt8Ntrj7JW3ELi6_gk8ZT-TJoMLi7NG2cAPueTMImd3pNyF7DIYhMAfDopenVp15StccO2j43K6YOQ5IgxK2ZLoM8mM3e5HWfGrxbWGx4RVixCeAQZK8xG3tpAnn0ge5pLYnNRTdYbhLk4S9HFxBG28cuiygzFz_jvfl5MKP7Wgozd6EUo9mTERygVzr45jQr04qxAfVX3g85x0ms"/>
+<span class="text-body-sm font-medium">Dr. Elena Rodriguez</span>
+<span class="text-outline text-body-sm">• 8 hours ago</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">chat_bubble</span>
+<span>12 replies</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">verified</span>
+<span class="font-bold text-primary">3 Peer Reviews</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary text-body-sm">
+<span class="material-symbols-outlined text-lg">visibility</span>
+<span>850</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination Placeholder -->
+<div class="flex justify-center py-8">
+<button class="px-6 py-2 border border-outline-variant text-primary font-button-text text-button-text rounded-full hover:bg-muted-blue transition-colors">
+                        Load More Discussions
+                    </button>
+</div>
+</section>
+<!-- Right Sidebar -->
+<aside class="w-[340px] bg-surface-container-low/50 border-l border-outline-variant/30 p-6 space-y-8 overflow-y-auto custom-scrollbar">
+<!-- Trending Topics -->
+<div>
+<h4 class="font-label-mono text-label-mono text-secondary uppercase tracking-widest mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">trending_up</span>
+                        Trending Topics
+                    </h4>
+<div class="space-y-3">
+<div class="p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/20 hover:shadow-md transition-all cursor-pointer group">
+<p class="text-primary font-button-text text-[14px]">#LongCovidPediatrics</p>
+<p class="text-secondary text-[12px] mt-1">156 active discussions this week</p>
+</div>
+<div class="p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/20 hover:shadow-md transition-all cursor-pointer group">
+<p class="text-primary font-button-text text-[14px]">#AI_Diagnostics_Radiology</p>
+<p class="text-secondary text-[12px] mt-1">89 active discussions this week</p>
+</div>
+<div class="p-4 bg-surface-container-lowest rounded-xl border border-outline-variant/20 hover:shadow-md transition-all cursor-pointer group">
+<p class="text-primary font-button-text text-[14px]">#ImmunoOncology_Update</p>
+<p class="text-secondary text-[12px] mt-1">42 active discussions this week</p>
+</div>
+</div>
+</div>
+<!-- Top Contributors -->
+<div>
+<h4 class="font-label-mono text-label-mono text-secondary uppercase tracking-widest mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">workspace_premium</span>
+                        Top Contributors
+                    </h4>
+<div class="space-y-4">
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional portrait of a senior male doctor with grey hair, exuding authority and wisdom. He wears a dark tie under his white lab coat. The lighting is sophisticated and directional, creating a sense of professional depth and clinical mastery. Background shows a blurred high-end medical research lab." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPHdFkStplP_MesbWS8VeA1t2nu5gzu9L7AMitExJZyqC1Gg7ONstOO8aNynmWrflaWgVLL-nqEg8c3YRds1U9E4eAE6Yzfi-nTmYem-RdrnF8hgtPSWu5O6TuAyqlUb5y5_8EmRHdurzuz1DDgr3ak109uXFkhqyIMxEUpmRDyaYGiDym0tHMi-dttzDn0pOn3ObK1X27DRi2L6KWhDE5_3LPNUDAVa4bbJTpvmNNKsHXS5WaYsDHx7odPE60GupmZs8Nrlx20p3E"/>
+<div class="flex-1">
+<p class="text-body-sm font-bold text-on-surface">Dr. Anthony Vane</p>
+<p class="text-[11px] text-secondary">Infectious Disease • 420 reviews</p>
+</div>
+<span class="material-symbols-outlined text-primary" data-weight="fill">verified</span>
+</div>
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Portrait of a young medical professional woman with dark hair tied back, looking focused and professional. She is wearing blue clinical scrubs. Soft-key studio lighting with a clean off-white background, embodying the clinical clarity and modern aesthetic of a top-tier medical application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVR1cJ-PTvZW37zqS29E8s4cJpz66ihqL0gK977LViNVoseEM5p5z26w-3rWRIe_nLvyB32-NNh2ZdFGJTkRnp_pflptluYaLge5c2GhSFM27Ve06pQmAXxi8aBZrEnVYfoXQhJKFQhE0d1SoR9yf-TA1s-GtPiEpx64wYSx0zk9W-gcaxCL8oIdME81xeuZMLTIokCRK5UGH6Zy1o1XSvZwiCjmYPvjeSPedr7waa3_E3ru92M02eJtIIFr-_ZBtw3aCzCXKcC6lW"/>
+<div class="flex-1">
+<p class="text-body-sm font-bold text-on-surface">Dr. Lisa Halloway</p>
+<p class="text-[11px] text-secondary">Pediatrics • 385 reviews</p>
+</div>
+<span class="material-symbols-outlined text-primary" data-weight="fill">verified</span>
+</div>
+<div class="flex items-center gap-3">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A focused headshot of a diverse male doctor in a modern healthcare setting. He is wearing black-rimmed glasses and a white coat, looking directly at the camera with an expression of professional care. The background is a clean, bright hospital hallway with soft blue and white colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_ERylCMK64jvflkIqpwZSoJsIKaqvKFe9W4je2HWHNKLPJ_zvn7cxHj0T3ifHj4RcMjBLtE47NmWWeS6-oqPX6oVcoaXoYhnm-Ig92bQStgmF6B_3-0XgzpB4EYTVwliSf1Be-WNTOP0CFWgrVzePB-dKVVTalCJagLtL1h-vSpX6iROt9BI8uHdESuofJAYY01vgVwrcts_C2PPNXTrt0-jij7uq9x2e53nXkzeitPKDcY7_UGXjVqz0djSuuiKdDUe5dKSvZl7z"/>
+<div class="flex-1">
+<p class="text-body-sm font-bold text-on-surface">Dr. James Park</p>
+<p class="text-[11px] text-secondary">Internal Medicine • 310 reviews</p>
+</div>
+<span class="material-symbols-outlined text-primary" data-weight="fill">verified</span>
+</div>
+</div>
+<button class="w-full mt-4 text-center py-2 text-primary font-label-mono text-[12px] hover:underline transition-all">View All Rankings</button>
+</div>
+<!-- Guidelines Card -->
+<div class="p-6 bg-primary-container/10 rounded-2xl border border-primary/20 relative overflow-hidden group">
+<span class="material-symbols-outlined absolute -right-4 -bottom-4 text-8xl text-primary/10 group-hover:rotate-12 transition-transform duration-500">security</span>
+<h5 class="font-button-text text-primary mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">info</span>
+                        HIPAA Compliance
+                    </h5>
+<p class="text-on-surface-variant text-[12px] leading-relaxed relative z-10">
+                        Ensure all case discussions are fully de-identified. Remove names, exact birth dates, and specific geographic identifiers before posting any clinical media or text.
+                    </p>
+</div>
+</aside>
+</div>
+</main>
+<!-- Floating Action Button for Mobile / Quick Case (Suppressed as per rules on Detail screens, but this is a Dashboard so it fits) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center lg:hidden hover:scale-110 active:scale-95 transition-all z-50">
+<span class="material-symbols-outlined">add</span>
+</button>
+<script>
+        // Simple Interaction: Search bar focus effect
+        const searchInput = document.querySelector('input[type="text"]');
+        const searchContainer = searchInput.parentElement;
+        
+        searchInput.addEventListener('focus', () => {
+            searchContainer.classList.add('shadow-lg', 'scale-[1.01]');
+        });
+        
+        searchInput.addEventListener('blur', () => {
+            searchContainer.classList.remove('shadow-lg', 'scale-[1.01]');
+        });
+
+        // Hover lift for cards
+        const cards = document.querySelectorAll('.group');
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('translate-y-[-4px]');
+            });
+            card.addEventListener('mouseleave', () => {
+                card.classList.remove('translate-y-[-4px]');
+            });
+        });
+    </script>
+</body></html>

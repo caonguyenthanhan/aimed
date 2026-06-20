@@ -4,47 +4,49 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Blue Color Palette - Primary */
   --background: #f8fafb;
-  --foreground: #1a1a1a;
+  --foreground: #191c1d;
   --card: #ffffff;
-  --card-foreground: #1a1a1a;
+  --card-foreground: #191c1d;
   --popover: #ffffff;
-  --popover-foreground: #1a1a1a;
-  --primary: #1447E6;
+  --popover-foreground: #191c1d;
+  --primary: #1447e6;
+  --primary-deep: #0032b6;
   --primary-foreground: #ffffff;
   --secondary: #f0f4fb;
-  --secondary-foreground: #1a1a1a;
+  --secondary-foreground: #191c1d;
   --muted: #e8f0ff;
-  --muted-foreground: #5a6b7d;
-  --accent: #0088FF;
+  --muted-foreground: #434655;
+  --accent: #0088ff;
   --accent-foreground: #ffffff;
+  --teal-accent: #14b8a6;
   --destructive: #e63946;
   --destructive-foreground: #ffffff;
-  --border: #d4e3ff;
+  --border: #c4c5d8;
+  --outline: #747687;
   --input: #ffffff;
-  --ring: #1447E6;
-  --chart-1: #1447E6;
-  --chart-2: #006FFF;
-  --chart-3: #0088FF;
-  --chart-4: #009AE2;
-  --chart-5: #00A8B3;
-  --radius: 0.75rem;
+  --ring: #1447e6;
+  --chart-1: #1447e6;
+  --chart-2: #0088ff;
+  --chart-3: #14b8a6;
+  --chart-4: #005aac;
+  --chart-5: #0032b6;
+  --radius: 0.5rem;
+  --header-height: 4.5rem;
+  --mobile-nav-height: 4rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #1a1a1a;
+  --sidebar-foreground: #191c1d;
   --sidebar-primary: #f0f4fb;
-  --sidebar-primary-foreground: #1a1a1a;
-  --sidebar-accent: #1447E6;
+  --sidebar-primary-foreground: #191c1d;
+  --sidebar-accent: #1447e6;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #d4e3ff;
-  --sidebar-ring: #1447E6;
-  
-  /* Chat specific colors */
-  --chat-user-bg: #1447E6;
+  --sidebar-border: #c4c5d8;
+  --sidebar-ring: #1447e6;
+  --chat-user-bg: #1447e6;
   --chat-user-text: #ffffff;
   --chat-bot-bg: #f0f4fb;
-  --chat-bot-text: #1a1a1a;
-  --chat-accent: #0088FF;
+  --chat-bot-text: #191c1d;
+  --chat-accent: #0088ff;
 }
 
 .dark {
@@ -60,18 +62,20 @@
   --secondary-foreground: #f5f5f5;
   --muted: #2d3748;
   --muted-foreground: #a0aec0;
-  --accent: #0088FF;
+  --accent: #0088ff;
   --accent-foreground: #0f1419;
+  --teal-accent: #14b8a6;
   --destructive: #ff6b6b;
   --destructive-foreground: #f5f5f5;
   --border: #2d3f5f;
+  --outline: #747687;
   --input: #1f2937;
   --ring: #3d7ee6;
   --chart-1: #3d7ee6;
-  --chart-2: #0088FF;
-  --chart-3: #00c2ff;
-  --chart-4: #009AE2;
-  --chart-5: #00A8B3;
+  --chart-2: #0088ff;
+  --chart-3: #14b8a6;
+  --chart-4: #00c2ff;
+  --chart-5: #005aac;
   --sidebar: #1a1f2e;
   --sidebar-foreground: #f5f5f5;
   --sidebar-primary: #1f2937;
@@ -80,13 +84,11 @@
   --sidebar-accent-foreground: #0f1419;
   --sidebar-border: #2d3f5f;
   --sidebar-ring: #3d7ee6;
-  
-  /* Chat specific colors */
-  --chat-user-bg: #0088FF;
+  --chat-user-bg: #0088ff;
   --chat-user-text: #f5f5f5;
   --chat-bot-bg: #1f2937;
   --chat-bot-text: #f5f5f5;
-  --chat-accent: #0088FF;
+  --chat-accent: #0088ff;
 }
 
 @theme inline {
@@ -106,9 +108,12 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-teal-accent: var(--teal-accent);
+  --color-primary-deep: var(--primary-deep);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-outline: var(--outline);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);
@@ -147,13 +152,15 @@
 .glass-panel {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 18px 40px -24px rgba(15, 20, 25, 0.32);
 }
 
 .glass-panel-dark {
   background: rgba(30, 41, 59, 0.8);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.5);
 }
 
 .hero-gradient {
@@ -197,18 +204,26 @@ html::-webkit-scrollbar {
 }
 
 /* Custom scrollbar for message areas only */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: var(--primary);
 }
 
 /* Message animation */
@@ -231,13 +246,45 @@ html::-webkit-scrollbar {
   background: linear-gradient(135deg, var(--card) 0%, var(--secondary) 100%);
 }
 
+.app-surface {
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow: 0 18px 40px -24px rgba(15, 20, 25, 0.24);
+}
+
+.dark .app-surface {
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.45);
+}
+
+.hover-lift {
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 48px -24px rgba(20, 71, 230, 0.28);
+}
+
 /* Input focus glow */
 .input-glow:focus {
-  box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.15);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 75%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .text-glow {
   text-shadow: 0 0 20px rgba(0, 119, 190, 0.45);
+}
+
+.gradient-heading {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--teal-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @keyframes blob {

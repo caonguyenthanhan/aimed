@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server"
-import { TEST_ACCOUNTS } from "@/lib/test-accounts"
+import { getAllTestAccounts } from "@/lib/test-accounts"
 import { verifyJWT } from "@/lib/jwt"
 
 export type AuthedUser = { user_id: string; role: string; username?: string; full_name?: string }
@@ -12,7 +12,7 @@ function parseBearerToken(authHeader: string): string {
 }
 
 function findTestAccountById(id: string) {
-  const all: any[] = [...TEST_ACCOUNTS.doctors, ...TEST_ACCOUNTS.patients]
+  const all: any[] = getAllTestAccounts()
   return all.find((x) => String(x?.id || "").trim() === id) || null
 }
 

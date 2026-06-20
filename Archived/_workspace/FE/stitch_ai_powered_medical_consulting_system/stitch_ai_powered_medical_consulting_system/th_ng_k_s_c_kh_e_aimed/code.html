@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIMed | Health Statistics</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#eceeef",
+                    "on-surface-variant": "#434655",
+                    "secondary": "#5a5f65",
+                    "inverse-on-surface": "#eff1f2",
+                    "on-secondary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#a8c8ff",
+                    "surface-container-low": "#f2f4f5",
+                    "primary-container": "#1447e6",
+                    "error": "#ba1a1a",
+                    "dark-card": "#1A1F2E",
+                    "on-primary-container": "#c9d0ff",
+                    "surface-container-high": "#e6e8e9",
+                    "surface-tint": "#1c4bea",
+                    "surface-container-lowest": "#ffffff",
+                    "on-background": "#191c1d",
+                    "on-secondary-container": "#60656b",
+                    "tertiary": "#004383",
+                    "teal-accent": "#14B8A6",
+                    "surface": "#f8fafb",
+                    "on-tertiary-fixed-variant": "#004689",
+                    "surface-bright": "#f8fafb",
+                    "tertiary-fixed": "#d5e3ff",
+                    "outline-variant": "#c4c5d8",
+                    "background": "#f8fafb",
+                    "on-secondary-fixed": "#171c21",
+                    "surface-dim": "#d8dadb",
+                    "secondary-fixed-dim": "#c2c7cd",
+                    "primary-fixed-dim": "#b9c3ff",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed": "#001b3c",
+                    "surface-variant": "#e1e3e4",
+                    "on-surface": "#191c1d",
+                    "destructive": "#E63946",
+                    "on-primary-fixed": "#001356",
+                    "on-secondary-fixed-variant": "#42474d",
+                    "on-primary-fixed-variant": "#0035be",
+                    "primary": "#0032b6",
+                    "on-tertiary-container": "#bcd4ff",
+                    "dark-bg": "#0F1419",
+                    "inverse-surface": "#2e3132",
+                    "primary-fixed": "#dde1ff",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-error": "#ffffff",
+                    "secondary-fixed": "#dfe3ea",
+                    "inverse-primary": "#b9c3ff",
+                    "outline": "#747687",
+                    "tertiary-container": "#005aac",
+                    "muted-blue": "#E8F0FF",
+                    "secondary-container": "#dfe3ea",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "1rem",
+                    "gutter": "1.5rem",
+                    "header-height": "4.5rem",
+                    "stack-gap": "1rem",
+                    "container-max": "1280px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "button-text": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-mono": ["Geist"],
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            overflow: hidden;
+            height: 100vh;
+            background-color: #f8fafb;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c4c5d8;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #747687;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .asymmetric-user { border-bottom-right-radius: 2px; }
+        .asymmetric-ai { border-bottom-left-radius: 2px; }
+        
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .animate-float { animation: float 10s ease-in-out infinite; }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- Atmospheric Background -->
+<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-float"></div>
+<div class="absolute bottom-[-5%] right-[-5%] w-[35%] h-[35%] bg-teal-accent/10 rounded-full blur-[120px] animate-float" style="animation-delay: -3s;"></div>
+</div>
+<!-- TopNavBar -->
+<header class="bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md shadow-sm docked full-width top-0 sticky z-50">
+<div class="flex justify-between items-center h-header-height px-gutter max-w-container-max mx-auto">
+<div class="flex items-center gap-8">
+<span class="font-headline-md text-headline-md font-bold text-primary">AIMed</span>
+<nav class="hidden md:flex gap-6">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95 transition-transform" href="#">Dashboard</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95 transition-transform" href="#">Emergency</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95 transition-transform" href="#">Pharmacy</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95 transition-transform" href="#">Appointments</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img class="w-full h-full object-cover" data-alt="Close-up professional headshot of Dr. Julian Vance, a middle-aged male medical practitioner with a warm, empathetic expression. He is wearing a clean white clinical coat and a stethoscope is visible around his neck. The background is a soft-focus modern medical office with blue and white tones, matching the AIMed corporate clinical aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSpIFq1cv_JeEOlKU96tUUW61mgpGPIhogrdTrlKW4_Dy_dVpKXgZanTX41SHSZyLFDG3kyWxtDokYp4GxrufE6EScJMusnzU7gvPsIl1qD2GF7XphqL9aU3mfhk5ThfazM2gSY9fAudgZcDRx4KaxdzBb-VMeKakvIbeHSI2VuzuUDL4HO4Gc-Mkijj1ZpdIu0fFlvJAYbDmOMkXiEEzxNuXySRZIEEjmIn6hScE-UwzfuEqAqFzuI0f9357V2E9bluA4Q_nv23LV"/>
+</div>
+</div>
+</div>
+</header>
+<div class="flex h-[calc(100vh-theme(spacing.header-height))]">
+<!-- SideNavBar -->
+<aside class="h-full w-64 flex flex-col p-4 gap-stack-gap border-r border-outline-variant bg-surface-container-low/90 backdrop-blur-xl shrink-0 hidden md:flex">
+<div class="mb-6 px-4">
+<div class="font-body-sm text-body-sm font-bold text-primary">Dr. Julian Vance</div>
+<div class="font-body-sm text-body-sm text-on-surface-variant">General Practitioner</div>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-container-high rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-body-sm text-body-sm">Consultations</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-3 hover:bg-surface-container-high rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">medical_services</span>
+<span class="font-body-sm text-body-sm">Health Records</span>
+</a>
+<a class="flex items-center gap-3 bg-primary-container text-on-primary-container rounded-xl px-4 py-3 hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="font-body-sm text-body-sm">AI Analysis</span>
+</a>
+</nav>
+<button class="bg-primary text-white py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-button-text text-button-text hover:shadow-lg transition-all active:scale-95">
+<span class="material-symbols-outlined">add</span>
+                New Consultation
+            </button>
+<div class="mt-auto border-t border-outline-variant pt-4 flex flex-col gap-2">
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-2 hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-2 hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-hidden flex flex-col">
+<div class="p-6 md:p-8 flex-1 overflow-y-auto custom-scrollbar">
+<!-- Page Header & Filters -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Health Statistics</h1>
+<p class="text-on-surface-variant font-body-md text-body-md">Comprehensive analysis of patient biometric and mental health data.</p>
+</div>
+<div class="flex bg-surface-container-high p-1 rounded-xl">
+<button class="px-6 py-2 rounded-lg font-button-text text-button-text text-on-surface-variant hover:text-primary transition-all">Week</button>
+<button class="px-6 py-2 rounded-lg bg-white shadow-sm font-button-text text-button-text text-primary transition-all">Month</button>
+<button class="px-6 py-2 rounded-lg font-button-text text-button-text text-on-surface-variant hover:text-primary transition-all">Year</button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Mood Trends Chart (Line Chart) -->
+<div class="col-span-12 lg:col-span-8 glass-panel p-6 rounded-2xl shadow-sm group">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-md text-headline-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">sentiment_satisfied</span>
+                                Mood Trends
+                            </h3>
+<div class="flex items-center gap-2 text-on-surface-variant text-body-sm">
+<span class="w-3 h-3 rounded-full bg-primary"></span> Patient
+                                <span class="w-3 h-3 rounded-full bg-teal-accent ml-4"></span> Average
+                            </div>
+</div>
+<!-- SVG Chart Simulation -->
+<div class="relative h-[240px] w-full mt-4 bg-surface/30 rounded-lg overflow-hidden">
+<svg class="w-full h-full" viewbox="0 0 800 240">
+<path class="drop-shadow-lg" d="M0,180 Q100,160 200,190 T400,120 T600,150 T800,80" fill="none" stroke="#0032b6" stroke-linecap="round" stroke-width="4"></path>
+<path d="M0,200 Q100,190 200,210 T400,160 T600,180 T800,140" fill="none" stroke="#14B8A6" stroke-dasharray="8 4" stroke-opacity="0.5" stroke-width="2"></path>
+<!-- Data points -->
+<circle class="hover:scale-150 transition-transform cursor-pointer" cx="200" cy="190" fill="#0032b6" r="6"></circle>
+<circle class="hover:scale-150 transition-transform cursor-pointer" cx="400" cy="120" fill="#0032b6" r="6"></circle>
+<circle class="hover:scale-150 transition-transform cursor-pointer" cx="800" cy="80" fill="#0032b6" r="6"></circle>
+</svg>
+<!-- Grid lines -->
+<div class="absolute inset-0 grid grid-rows-4 pointer-events-none border-b border-outline-variant/30">
+<div class="border-t border-outline-variant/20"></div>
+<div class="border-t border-outline-variant/20"></div>
+<div class="border-t border-outline-variant/20"></div>
+</div>
+</div>
+<div class="flex justify-between mt-4 text-label-mono text-label-mono text-on-surface-variant font-medium">
+<span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
+</div>
+</div>
+<!-- AI Insights Side Panel -->
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="glass-panel p-6 rounded-2xl shadow-sm border-l-4 border-teal-accent">
+<h3 class="font-headline-md text-headline-md mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-teal-accent" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                                AI Insights
+                            </h3>
+<ul class="space-y-4">
+<li class="flex gap-3">
+<span class="material-symbols-outlined text-teal-accent mt-1">trending_up</span>
+<p class="font-body-sm text-body-sm">Your mood has improved by <strong class="text-teal-accent">15%</strong> this week compared to last month.</p>
+</li>
+<li class="flex gap-3">
+<span class="material-symbols-outlined text-primary mt-1">lightbulb</span>
+<p class="font-body-sm text-body-sm">Increased activity during the morning hours correlates with higher sleep quality scores.</p>
+</li>
+<li class="flex gap-3">
+<span class="material-symbols-outlined text-destructive mt-1">warning</span>
+<p class="font-body-sm text-body-sm">Late night pharmaceutical logging might be disrupting natural REM cycles.</p>
+</li>
+</ul>
+</div>
+<div class="bg-primary text-white p-6 rounded-2xl shadow-md relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[80px]">medical_information</span>
+</div>
+<div class="relative z-10">
+<div class="text-label-mono text-label-mono opacity-80 mb-2">QUICK ACTION</div>
+<div class="font-headline-md text-headline-md mb-4">Export Monthly Report</div>
+<button class="bg-white text-primary px-4 py-2 rounded-lg font-button-text text-button-text hover:bg-primary-fixed transition-colors">Download PDF</button>
+</div>
+</div>
+</div>
+<!-- Activity Levels (Bar Chart) -->
+<div class="col-span-12 lg:col-span-6 glass-panel p-6 rounded-2xl shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-md text-headline-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">directions_run</span>
+                                Activity Levels
+                            </h3>
+<span class="font-label-mono text-label-mono bg-primary-container text-on-primary-container px-3 py-1 rounded-full">+12.4%</span>
+</div>
+<div class="flex items-end justify-between h-[180px] gap-2 px-4">
+<!-- Bars -->
+<div class="flex-1 bg-primary/20 rounded-t-md hover:bg-primary/40 transition-all cursor-pointer relative group" style="height: 60%">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-dark-bg text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">4.2k</div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-md hover:bg-primary/40 transition-all cursor-pointer relative group" style="height: 45%"></div>
+<div class="flex-1 bg-primary rounded-t-md hover:bg-primary/80 transition-all cursor-pointer relative group" style="height: 85%">
+<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-dark-bg text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">8.9k</div>
+</div>
+<div class="flex-1 bg-primary/20 rounded-t-md hover:bg-primary/40 transition-all cursor-pointer relative group" style="height: 70%"></div>
+<div class="flex-1 bg-primary/20 rounded-t-md hover:bg-primary/40 transition-all cursor-pointer relative group" style="height: 55%"></div>
+<div class="flex-1 bg-primary/20 rounded-t-md hover:bg-primary/40 transition-all cursor-pointer relative group" style="height: 40%"></div>
+<div class="flex-1 bg-primary/20 rounded-t-md hover:bg-primary/40 transition-all cursor-pointer relative group" style="height: 90%"></div>
+</div>
+<div class="flex justify-between mt-4 text-label-mono text-label-mono text-on-surface-variant font-medium">
+<span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+</div>
+</div>
+<!-- Sleep Quality (Custom Visualization) -->
+<div class="col-span-12 lg:col-span-6 glass-panel p-6 rounded-2xl shadow-sm">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-headline-md text-headline-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">bedtime</span>
+                                Sleep Quality
+                            </h3>
+<div class="text-right">
+<div class="text-headline-md font-bold text-primary">7h 45m</div>
+<div class="text-label-mono text-on-surface-variant">Avg. Duration</div>
+</div>
+</div>
+<div class="space-y-6">
+<!-- REM / DEEP / LIGHT Split -->
+<div>
+<div class="flex justify-between text-body-sm mb-2">
+<span class="text-on-surface-variant">Sleep Cycles</span>
+<span class="font-bold">Good</span>
+</div>
+<div class="w-full h-8 bg-surface-container-high rounded-full flex overflow-hidden">
+<div class="h-full bg-primary" style="width: 25%" title="Deep Sleep"></div>
+<div class="h-full bg-primary/60" style="width: 50%" title="Light Sleep"></div>
+<div class="h-full bg-teal-accent" style="width: 15%" title="REM Sleep"></div>
+<div class="h-full bg-destructive/40" style="width: 10%" title="Awake"></div>
+</div>
+<div class="flex gap-4 mt-2">
+<div class="flex items-center gap-1 text-[10px] font-label-mono"><span class="w-2 h-2 rounded-full bg-primary"></span> DEEP</div>
+<div class="flex items-center gap-1 text-[10px] font-label-mono"><span class="w-2 h-2 rounded-full bg-primary/60"></span> LIGHT</div>
+<div class="flex items-center gap-1 text-[10px] font-label-mono"><span class="w-2 h-2 rounded-full bg-teal-accent"></span> REM</div>
+<div class="flex items-center gap-1 text-[10px] font-label-mono"><span class="w-2 h-2 rounded-full bg-destructive/40"></span> AWAKE</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-low p-3 rounded-xl">
+<div class="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Fall Asleep Time</div>
+<div class="font-headline-md text-primary mt-1">10:45 PM</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-xl">
+<div class="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Wake Up Time</div>
+<div class="font-headline-md text-primary mt-1">06:30 AM</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="bg-surface-container dark:bg-dark-bg border-t border-outline-variant w-full py-6 shrink-0">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto text-center md:text-left gap-4">
+<div class="text-label-mono text-label-mono uppercase tracking-widest text-secondary font-bold">AIMed Systems</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-md">© 2024 AIMed AI Medical Systems. For clinical support only. Not a replacement for professional diagnosis.</p>
+<div class="flex gap-6">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-all" href="#">Support</a>
+</div>
+</div>
+</footer>
+</main>
+</div>
+<!-- Micro-interaction Script -->
+<script>
+        document.querySelectorAll('.glass-panel').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body></html>

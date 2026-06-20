@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Psychological Screening | AIMed</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#eceeef",
+                    "on-surface-variant": "#434655",
+                    "secondary": "#5a5f65",
+                    "inverse-on-surface": "#eff1f2",
+                    "on-secondary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#a8c8ff",
+                    "surface-container-low": "#f2f4f5",
+                    "primary-container": "#1447e6",
+                    "error": "#ba1a1a",
+                    "dark-card": "#1A1F2E",
+                    "on-primary-container": "#c9d0ff",
+                    "surface-container-high": "#e6e8e9",
+                    "surface-tint": "#1c4bea",
+                    "surface-container-lowest": "#ffffff",
+                    "on-background": "#191c1d",
+                    "on-secondary-container": "#60656b",
+                    "tertiary": "#004383",
+                    "teal-accent": "#14B8A6",
+                    "surface": "#f8fafb",
+                    "on-tertiary-fixed-variant": "#004689",
+                    "surface-bright": "#f8fafb",
+                    "tertiary-fixed": "#d5e3ff",
+                    "outline-variant": "#c4c5d8",
+                    "background": "#f8fafb",
+                    "on-secondary-fixed": "#171c21",
+                    "surface-dim": "#d8dadb",
+                    "secondary-fixed-dim": "#c2c7cd",
+                    "primary-fixed-dim": "#b9c3ff",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed": "#001b3c",
+                    "surface-variant": "#e1e3e4",
+                    "on-surface": "#191c1d",
+                    "destructive": "#E63946",
+                    "on-primary-fixed": "#001356",
+                    "on-secondary-fixed-variant": "#42474d",
+                    "on-primary-fixed-variant": "#0035be",
+                    "primary": "#0032b6",
+                    "on-tertiary-container": "#bcd4ff",
+                    "dark-bg": "#0F1419",
+                    "inverse-surface": "#2e3132",
+                    "primary-fixed": "#dde1ff",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-error": "#ffffff",
+                    "secondary-fixed": "#dfe3ea",
+                    "inverse-primary": "#b9c3ff",
+                    "outline": "#747687",
+                    "tertiary-container": "#005aac",
+                    "muted-blue": "#E8F0FF",
+                    "secondary-container": "#dfe3ea",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "1rem",
+                    "gutter": "1.5rem",
+                    "header-height": "4.5rem",
+                    "stack-gap": "1rem",
+                    "container-max": "1280px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "button-text": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "label-mono": ["Geist"],
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f8fafb;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #c4c5d8;
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: #747687;
+        }
+        .glass-panel {
+            backdrop-filter: blur(10px);
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        .chat-bubble-user {
+            border-bottom-right-radius: 4px;
+        }
+        .chat-bubble-ai {
+            border-bottom-left-radius: 4px;
+        }
+        .step-transition {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .blob-bg {
+            filter: blur(120px);
+            z-index: -1;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-background selection:bg-primary/20">
+<!-- Background Blobs -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 rounded-full blob-bg"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-teal-accent/10 rounded-full blob-bg"></div>
+</div>
+<!-- TopNavBar -->
+<header class="bg-white/80 dark:bg-dark-bg/80 backdrop-blur-md shadow-sm docked full-width top-0 sticky z-50">
+<div class="flex justify-between items-center h-header-height px-gutter max-w-container-max mx-auto">
+<div class="flex items-center gap-8">
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed cursor-pointer">AIMed</span>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="font-body-md text-body-md text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Dashboard</a>
+<a class="font-body-md text-body-md text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Emergency</a>
+<a class="font-body-md text-body-md text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Pharmacy</a>
+<a class="font-body-md text-body-md text-on-surface-variant dark:text-on-secondary-container hover:text-primary dark:hover:text-primary-fixed transition-colors" href="#">Appointments</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 transition-transform" data-icon="notifications">notifications</button>
+<button class="p-2 rounded-full hover:bg-surface-container transition-colors material-symbols-outlined text-on-surface-variant cursor-pointer active:scale-95 transition-transform" data-icon="settings">settings</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary-container cursor-pointer active:scale-95 transition-transform">
+<img class="w-full h-full object-cover" data-alt="A professional close-up portrait of Dr. Julian Vance, a clean-shaven male medical practitioner in his late 30s. He is wearing a minimalist navy blue scrub and a stethoscope around his neck. The lighting is bright and high-key, suggesting a modern clinical environment. The overall aesthetic is trustworthy and focused." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB4oMmDUiyqU5LhmCytih6_fTbJj5PwmH2OSZeQ6SqtT_ab42pFv0XnAmgaDFO_sAJ10lPOXVjMAC8fBlnIGLDGb4rQQpe4LqqujWwdL1Eq7FXBN2F3kwjha4WQlgDD8f49bFYDZv3oOq08Vkf9CO9_CYa9PEVglYDKuBHbneZv5CoFRq2R4IwkSWMDxSzTwK8j7sF4syBTyR5g2i5JkROau5UeNoUjPoeNg693LnO1_H5pUE0lJBlj5vIQ90yju52GjeuwIUoYlflJ"/>
+</div>
+</div>
+</div>
+</header>
+<div class="flex h-[calc(100vh-theme(spacing.header-height))] overflow-hidden">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col p-4 gap-stack-gap h-full border-r border-outline-variant dark:border-outline bg-surface-container-low/90 dark:bg-dark-card/90 backdrop-blur-xl w-64 shadow-lg shrink-0">
+<div class="mb-4">
+<div class="flex items-center gap-3 p-2">
+<div class="w-10 h-10 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="clinical_notes">clinical_notes</span>
+</div>
+<div>
+<p class="font-headline-md text-headline-md text-primary truncate" style="font-size: 16px; line-height: 20px;">Dr. Julian Vance</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">General Practitioner</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-on-secondary-container px-4 py-3 hover:bg-surface-container-high dark:hover:bg-inverse-surface rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="chat_bubble">chat_bubble</span>
+<span class="font-body-sm text-body-sm">Consultations</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant dark:text-on-secondary-container px-4 py-3 hover:bg-surface-container-high dark:hover:bg-inverse-surface rounded-xl transition-all hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="medical_services">medical_services</span>
+<span class="font-body-sm text-body-sm">Health Records</span>
+</a>
+<a class="flex items-center gap-3 bg-primary-container dark:bg-primary-fixed-dim text-on-primary-container dark:text-on-primary-fixed rounded-xl px-4 py-3 hover:translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span class="font-body-sm text-body-sm">AI Analysis</span>
+</a>
+</nav>
+<button class="mt-4 w-full bg-primary text-white font-button-text text-button-text py-3 rounded-xl hover:translate-y-[-2px] transition-all shadow-md active:scale-95">
+                New Consultation
+            </button>
+<div class="mt-auto flex flex-col gap-2 pt-4 border-t border-outline-variant">
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-2 hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 text-on-surface-variant px-4 py-2 hover:bg-surface-container-high rounded-xl transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-sm text-body-sm">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12">
+<div class="max-w-5xl mx-auto space-y-12" id="test-selection-view">
+<!-- Header -->
+<div class="space-y-4">
+<h1 class="font-headline-lg text-headline-lg text-on-background">Psychological Screening</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+                        Select a clinically validated self-assessment tool. These screenings help monitor your mental well-being and are shared with your medical practitioner for professional review.
+                    </p>
+</div>
+<!-- Test Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- PHQ-9 Card -->
+<div class="group relative bg-white rounded-3xl p-8 border border-outline-variant hover:shadow-xl hover:translate-y-[-4px] transition-all flex flex-col h-full">
+<div class="w-12 h-12 bg-muted-blue rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl" data-icon="mood_bad">mood_bad</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-2">PHQ-9</h3>
+<p class="font-label-mono text-label-mono text-secondary mb-4 uppercase tracking-wider">Depression Screening</p>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1 mb-8">
+                            A standardized tool to measure the severity of depression and monitor treatment response.
+                        </p>
+<div class="flex items-center gap-6 mb-8 text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl" data-icon="description">description</span>
+<span class="font-body-sm text-body-sm">9 Questions</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl" data-icon="schedule">schedule</span>
+<span class="font-body-sm text-body-sm">~5 mins</span>
+</div>
+</div>
+<button class="w-full py-4 bg-primary text-white rounded-2xl font-button-text text-button-text hover:bg-primary-container transition-colors flex items-center justify-center gap-2" onclick="startTest('PHQ-9')">
+                            Start Test <span class="material-symbols-outlined text-xl" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- GAD-7 Card -->
+<div class="group relative bg-white rounded-3xl p-8 border border-outline-variant hover:shadow-xl hover:translate-y-[-4px] transition-all flex flex-col h-full">
+<div class="w-12 h-12 bg-muted-blue rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl" data-icon="psychology_alt">psychology_alt</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-2">GAD-7</h3>
+<p class="font-label-mono text-label-mono text-secondary mb-4 uppercase tracking-wider">Anxiety Assessment</p>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1 mb-8">
+                            Widely used tool to screen for Generalized Anxiety Disorder and assess symptom severity.
+                        </p>
+<div class="flex items-center gap-6 mb-8 text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl" data-icon="description">description</span>
+<span class="font-body-sm text-body-sm">7 Questions</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl" data-icon="schedule">schedule</span>
+<span class="font-body-sm text-body-sm">~3 mins</span>
+</div>
+</div>
+<button class="w-full py-4 bg-primary text-white rounded-2xl font-button-text text-button-text hover:bg-primary-container transition-colors flex items-center justify-center gap-2" onclick="startTest('GAD-7')">
+                            Start Test <span class="material-symbols-outlined text-xl" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- ASRS Card -->
+<div class="group relative bg-white rounded-3xl p-8 border border-outline-variant hover:shadow-xl hover:translate-y-[-4px] transition-all flex flex-col h-full">
+<div class="w-12 h-12 bg-muted-blue rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-3xl" data-icon="dynamic_form">dynamic_form</span>
+</div>
+<h3 class="font-headline-md text-headline-md mb-2">ASRS</h3>
+<p class="font-label-mono text-label-mono text-secondary mb-4 uppercase tracking-wider">ADHD Checklist</p>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1 mb-8">
+                            Adult ADHD Self-Report Scale Symptom Checklist for preliminary attention-deficit screening.
+                        </p>
+<div class="flex items-center gap-6 mb-8 text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl" data-icon="description">description</span>
+<span class="font-body-sm text-body-sm">18 Questions</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-xl" data-icon="schedule">schedule</span>
+<span class="font-body-sm text-body-sm">~10 mins</span>
+</div>
+</div>
+<button class="w-full py-4 bg-primary text-white rounded-2xl font-button-text text-button-text hover:bg-primary-container transition-colors flex items-center justify-center gap-2" onclick="startTest('ASRS')">
+                            Start Test <span class="material-symbols-outlined text-xl" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Disclaimer Info -->
+<div class="bg-surface-container rounded-3xl p-8 flex gap-6 items-start">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-secondary" data-icon="info">info</span>
+</div>
+<div class="space-y-2">
+<p class="font-body-md text-body-md text-on-surface-variant">
+<strong>Note on Clinical Accuracy:</strong> These results are not a definitive diagnosis. They are meant to identify symptoms that may warrant further evaluation by a clinical professional.
+                        </p>
+</div>
+</div>
+</div>
+<!-- Active Test Mode (Hidden by default) -->
+<div class="hidden h-full flex flex-col max-w-3xl mx-auto py-12" id="test-active-view">
+<div class="mb-12">
+<div class="flex justify-between items-center mb-4">
+<button class="text-on-surface-variant flex items-center gap-2 font-button-text text-button-text hover:text-primary transition-colors" onclick="exitTest()">
+<span class="material-symbols-outlined" data-icon="close">close</span> Exit Test
+                        </button>
+<span class="font-label-mono text-label-mono text-secondary uppercase tracking-widest" id="test-type-label">PHQ-9 DEPRESSION</span>
+<span class="font-label-mono text-label-mono text-primary" id="progress-text">Question 1 of 9</span>
+</div>
+<!-- Progress Bar -->
+<div class="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary transition-all duration-500" id="progress-bar-inner" style="width: 11%"></div>
+</div>
+</div>
+<div class="flex-1 flex flex-col justify-center" id="question-container">
+<div class="step-transition space-y-12">
+<h2 class="font-headline-lg text-headline-lg text-center leading-snug" id="current-question">
+                            Over the last 2 weeks, how often have you been bothered by: Little interest or pleasure in doing things?
+                        </h2>
+<div class="grid grid-cols-1 gap-4 max-w-xl mx-auto w-full">
+<button class="group p-6 text-left border-2 border-outline-variant hover:border-primary hover:bg-primary/5 rounded-3xl flex items-center justify-between transition-all" onclick="nextQuestion()">
+<span class="font-body-lg text-body-lg">Not at all</span>
+<span class="w-8 h-8 rounded-full border-2 border-outline-variant group-hover:border-primary flex items-center justify-center transition-all">
+<span class="w-3 h-3 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+</span>
+</button>
+<button class="group p-6 text-left border-2 border-outline-variant hover:border-primary hover:bg-primary/5 rounded-3xl flex items-center justify-between transition-all" onclick="nextQuestion()">
+<span class="font-body-lg text-body-lg">Several days</span>
+<span class="w-8 h-8 rounded-full border-2 border-outline-variant group-hover:border-primary flex items-center justify-center transition-all">
+<span class="w-3 h-3 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+</span>
+</button>
+<button class="group p-6 text-left border-2 border-outline-variant hover:border-primary hover:bg-primary/5 rounded-3xl flex items-center justify-between transition-all" onclick="nextQuestion()">
+<span class="font-body-lg text-body-lg">More than half the days</span>
+<span class="w-8 h-8 rounded-full border-2 border-outline-variant group-hover:border-primary flex items-center justify-center transition-all">
+<span class="w-3 h-3 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+</span>
+</button>
+<button class="group p-6 text-left border-2 border-outline-variant hover:border-primary hover:bg-primary/5 rounded-3xl flex items-center justify-between transition-all" onclick="nextQuestion()">
+<span class="font-body-lg text-body-lg">Nearly every day</span>
+<span class="w-8 h-8 rounded-full border-2 border-outline-variant group-hover:border-primary flex items-center justify-center transition-all">
+<span class="w-3 h-3 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer -->
+<footer class="bg-surface-container border-t border-outline-variant w-full py-8">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter max-w-container-max mx-auto text-center md:text-left gap-4">
+<span class="font-label-mono text-label-mono uppercase tracking-widest text-secondary">AIMED SYSTEM</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex-1 md:px-12">
+                © 2024 AIMed AI Medical Systems. For clinical support only. Not a replacement for professional diagnosis.
+            </p>
+<div class="flex gap-6">
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Medical Disclaimer</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors" href="#">Contact Support</a>
+</div>
+</div>
+</footer>
+<script>
+        let currentStep = 1;
+        let totalSteps = 9;
+
+        function startTest(testType) {
+            const selectionView = document.getElementById('test-selection-view');
+            const activeView = document.getElementById('test-active-view');
+            const typeLabel = document.getElementById('test-type-label');
+            const progressText = document.getElementById('progress-text');
+            const progressBar = document.getElementById('progress-bar-inner');
+            
+            selectionView.classList.add('hidden');
+            activeView.classList.remove('hidden');
+            
+            currentStep = 1;
+            if(testType === 'PHQ-9') totalSteps = 9;
+            if(testType === 'GAD-7') totalSteps = 7;
+            if(testType === 'ASRS') totalSteps = 18;
+
+            typeLabel.innerText = `${testType} SCREENING`;
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const progressText = document.getElementById('progress-text');
+            const progressBar = document.getElementById('progress-bar-inner');
+            
+            progressText.innerText = `Question ${currentStep} of ${totalSteps}`;
+            progressBar.style.width = `${(currentStep / totalSteps) * 100}%`;
+        }
+
+        function nextQuestion() {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                updateProgress();
+                
+                // Animated text change
+                const questionHeader = document.getElementById('current-question');
+                questionHeader.style.opacity = '0';
+                questionHeader.style.transform = 'translateY(10px)';
+                
+                setTimeout(() => {
+                    const questions = [
+                        "Feeling down, depressed, or hopeless?",
+                        "Trouble falling or staying asleep, or sleeping too much?",
+                        "Feeling tired or having little energy?",
+                        "Poor appetite or overeating?",
+                        "Feeling bad about yourself — or that you are a failure or have let yourself or your family down?",
+                        "Trouble concentrating on things, such as reading the newspaper or watching television?",
+                        "Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual?",
+                        "Thoughts that you would be better off dead or of hurting yourself in some way?"
+                    ];
+                    questionHeader.innerText = questions[currentStep - 2] || "Over the last 2 weeks, how often have you been bothered by: Little interest or pleasure in doing things?";
+                    questionHeader.style.opacity = '1';
+                    questionHeader.style.transform = 'translateY(0)';
+                }, 400);
+            } else {
+                alert('Assessment completed. Processing results...');
+                exitTest();
+            }
+        }
+
+        function exitTest() {
+            const selectionView = document.getElementById('test-selection-view');
+            const activeView = document.getElementById('test-active-view');
+            selectionView.classList.remove('hidden');
+            activeView.classList.add('hidden');
+        }
+    </script>
+</body></html>

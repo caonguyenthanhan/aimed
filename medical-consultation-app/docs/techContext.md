@@ -14,6 +14,10 @@
 - `FOZA_BASE_URL`: base URL OpenAI-compatible (mặc định `https://api.foza.ai/v1`).
 - `FOZA_TOKEN`: bearer token cho Foza.
 - `LLM_MODEL_NAME`: model name cho Foza (ví dụ `cinb/gemini-3.1-flash-lite`).
+- Vercel env trạng thái hiện tại:
+  - `Production`: có `FOZA_BASE_URL`, `FOZA_TOKEN`, `LLM_MODEL_NAME`
+  - `Development`: đã sync `FOZA_BASE_URL`, `FOZA_TOKEN`, `LLM_MODEL_NAME`
+  - `Preview`: đã xoá typo `FOZA_BASE_UR` và đã set đúng `FOZA_BASE_URL`, `FOZA_TOKEN`, `LLM_MODEL_NAME`
 
 ## Agent profiles
 
@@ -64,6 +68,8 @@
 
 - Docker compose: `postgres-platform/docker-compose.yml` (DB `aimed`, user/pass `postgres/postgres`).
 - Env (Next.js): `DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/aimed?sslmode=disable` (hoặc `POSTGRES_URL_NO_SSL`).
+- Init schema tối thiểu: `postgres-platform/init.sql` tạo `conversations` + `conversation_messages` cùng index `idx_conversations_user_last_active` và `idx_conversation_messages_conv_created`.
+- Nếu `memgraph-lab` đang dùng `3000`, chạy web local ở `127.0.0.1:3001` để tránh trùng cổng khi test full stack local.
 
 ## Audio (Vercel)
 
@@ -75,6 +81,21 @@
   - Gemini TTS: `GEMINI_API_KEY`, `GEMINI_TTS_MODEL`, `GEMINI_TTS_VOICE`
 - CPU server TTS: có thể override bằng `CPU_TTS_PROVIDER` (cùng enum như `TTS_PROVIDER`) để ép ưu tiên local Supertonic thay vì gTTS.
 - TTS text normalization: `lib/tts-text.ts` có chuẩn hoá tiếng Việt cho bối cảnh y tế (mmHg, mg/dL, mmol/L, bpm, °C, liều mg/mL...), áp dụng trước khi gọi TTS để đọc tự nhiên hơn.
+
+## Vercel Deploy Notes
+
+- Project `aimed` trên Vercel đang dùng `rootDirectory=medical-consultation-app`.
+- Nếu deploy bằng CLI ngay trong monorepo, `.vercel/repo.json` có thể làm CLI package cả repo root và đụng vào các file lớn ở `_models/`, `Archived/`, `DB_ALL/`.
+- Workaround đã kiểm chứng:
+  - tạo workspace tạm ngoài repo với cấu trúc `temp-root/medical-consultation-app/`
+  - copy subtree app, bỏ `node_modules`, `.next`, `.vercel`, `.env`, `.env.local`
+  - `vercel link --project aimed` tại `temp-root`
+  - `vercel --prod --yes` tại `temp-root`
+- Vercel CLI limitation hiện tại:
+  - `vercel env add ... preview --value ... --yes` có thể trả `git_branch_required` dù command đã đúng.
+  - Có thể bypass bằng REST API:
+    - create/update env: `POST https://api.vercel.com/v10/projects/{idOrName}/env?upsert=true&slug={team-slug}`
+    - delete project: `DELETE https://api.vercel.com/v9/projects/{idOrName}?slug={team-slug}`
 
 ## Integration tests (LLM thật)
 
@@ -97,6 +118,35 @@
   - `LG_GRAPH_STATUS_CACHE_TTL_S` (default 2)
   - `LG_GRAPH_EVIDENCE_CACHE_TTL_S` (default 60)
 - Demo runtime helper:
+- UI foundation (2026-06-18):
+  - CSS tokens mới trong `app/globals.css`: `--primary-deep`, `--teal-accent`, `--outline`, `--header-height`, `--mobile-nav-height`.
+  - Utility classes mới: `.app-surface`, `.hover-lift`, `.gradient-heading`; giữ cùng hệ với `.glass-panel`, `.card-gradient`, `.input-glow`.
+  - Reusable presentation primitives: `components/ui/section-card.tsx`, `components/ui/stat-card.tsx`, `components/portal-shell.tsx`.
+  - Consultation shell components: `components/consultation/conversation-history-panel.tsx`, `components/consultation/agent-runtime-banner.tsx` cho khu chat `/tu-van`.
+  - Screening presentation helpers: `components/screening/screening-ui.tsx` cho metadata card bài test và option card khi làm bài.
+  - Speech presentation helpers: `components/speech/voice-wave-visualizer.tsx` và `components/speech/speech-control-dock.tsx` cho màn `/speech-chat`.
+  - Doctor/public-booking flows `app/bac-si/*` và `app/doctor/appointments/page.tsx` đã chuyển sang dùng trực tiếp `PortalShell`, `SectionCard`, `StatCard` thay cho card layout cũ rời rạc.
+  - Doctor demo dashboard/pages `app/doctor/page.tsx` và `app/doctor/patients/page.tsx` hiện cũng dùng cùng bộ `PortalShell`, `SectionCard`, `StatCard`; source data vẫn là `lib/doctor-demo.ts`.
+  - Doctor detail/report pages `app/doctor/patients/[id]/page.tsx`, `app/doctor/reports/page.tsx`, `app/doctor/reports/new/page.tsx` cũng đã migrate sang cùng shell; storage key report vẫn là `mcs_doctor_reports_v1`.
+  - Doctor forum/profile pages `app/doctor/forum/page.tsx`, `app/doctor/forum/[id]/page.tsx`, `app/doctor/profile/page.tsx` cũng đã migrate sang cùng shell; storage keys/flows vẫn là `mcs_doctor_forum_posts_v1` và local doctor profile store.
+  - Admin runtime page `app/admin/server/page-client.tsx` cũng đã migrate sang cùng shell; vẫn giữ nguyên contract với `/api/servers`, `/api/servers/logs`, `/api/runtime/events`, `/api/runtime/mode` và các action admin purge/check/sync.
+  - Admin hub `app/quan-ly/page.tsx` hiện cũng dùng `PortalShell`, `SectionCard`, `StatCard`; `RoleGuard` tiếp tục là cơ chế bảo vệ quyền truy cập cho root admin workspace.
+  - Admin child pages `app/quan-ly/user/page.tsx`, `app/quan-ly/data/page.tsx`, `app/quan-ly/config/page.tsx` đã được đưa về cùng shell; hiện là static readiness dashboards, chưa có data source riêng và vẫn dựa vào `RoleGuard`.
+  - `app/agent-hub/page.tsx` hiện cũng dùng `PortalShell`, `SectionCard`, `StatCard`; logic `getAllAgentProfiles()`, demo scenarios và localStorage handoff sang `/tu-van` vẫn giữ nguyên.
+  - `app/account/page.tsx` đã được rút gọn thành page orchestrator; controller logic hiện nằm ở `components/account/use-account-page-controller.ts`, còn presentation helpers nằm trong `components/account/` gồm `account-page-types.ts`, `account-section-nav.tsx`, `account-profile-section.tsx`, `account-security-section.tsx`, `account-settings-section.tsx`, `account-special-section.tsx`, `account-messages.tsx`, `account-switcher-section.tsx`.
+  - `account` tiếp tục dùng `avatar-worker.ts` cho nén ảnh và `components/account-switcher.tsx` cho multi-account switching; query `?tab=accounts` vẫn là trigger để mở section switcher trong trang tài khoản.
+  - `app/tin-tuc-y-khoa/page.tsx` đã được rút gọn thành page orchestrator; controller logic nằm ở `components/medical-news/use-medical-news-controller.ts`, còn presentation helpers nằm ở `components/medical-news/medical-news-search-panel.tsx`, `medical-news-workspace.tsx`, `medical-news-types.ts`.
+  - `components/medical-news/medical-news-workspace.tsx` hiện tái dùng `components/ui/skeleton.tsx` cho 3 loading zones (`results`, `embed`, `reference`) và giữ nguyên controller contract; route cũng có thêm `app/tin-tuc-y-khoa/loading.tsx` để che thời gian compile/hydrate bằng cùng shell primitives thay vì dùng global loading rỗng.
+  - `app/tra-cuu/page.tsx` hiện dùng shell `PortalShell`, `SectionCard`, `StatCard` ở level route, nhưng vẫn giữ `components/health-lookup.tsx` làm dynamic core component cho toàn bộ logic lookup hiện tại.
+  - `components/health-lookup.tsx` nay đã được rút gọn thành wrapper component; controller logic nằm ở `components/health-lookup/use-health-lookup-controller.ts`, còn presentation/helpers nằm ở `components/health-lookup/health-lookup-search-panel.tsx`, `health-lookup-results-panel.tsx`, `health-lookup-utils.tsx`, `health-lookup-types.ts`.
+  - Shared shell note: `components/site-header.tsx` có các `useMemo` phụ thuộc role/navigation; mọi hook phải luôn được khai báo trước các nhánh `return null` để tránh hook-order mismatch trong dev hydration/Fast Refresh.
+  - Demo auth note: `lib/test-accounts.ts` hiện có `doctor`, `patient`, và `admin` demo accounts; helper `getAllTestAccounts()` là nguồn gom chung cho auth helpers thay vì tự nối mảng ở nhiều nơi.
+  - Backend proxy note: `app/api/backend/[...path]/route.ts` trong demo mode đã tự suy ra user từ bearer token và trả `role` trong `/api/backend/v1/user`, giúp `RoleGuard`, `site-header`, và `app/admin/server/page-client.tsx` hoạt động khi không có backend thật; route này hiện cũng cô lập `profile/consent` theo `user_id` để nhiều demo accounts không chia sẻ cùng dữ liệu người dùng.
+  - Role-shell note: `components/mobile-bottom-nav.tsx` và `components/floating-quick-menu.tsx` hiện cũng phụ thuộc `userRole` trong localStorage để chọn item set; khi thêm role mới phải cập nhật cả hai để tránh mobile/desktop lệch navigation.
+  - Account-session note: `lib/account-manager.ts` đã hỗ trợ `admin` trong `AccountSession`, role badge helpers, và `getRoleHomePath()`; `components/account-switcher.tsx` dùng helper này để route về dashboard đúng role sau khi switch.
+  - Account hydration note: `components/account/use-account-page-controller.ts` đã thêm `sessionReady` thay cho việc đọc token trực tiếp trong render; các section action trong `app/account/page.tsx` phải dùng flag này nếu chúng điều khiển `disabled/visibility` dựa vào session local.
+  - Error tracking note: `lib/error-tracker.ts` dùng loader gián tiếp để import Sentry optional ở runtime; cách này giữ `@sentry/nextjs` là dependency thật sự tùy chọn và tránh Turbopack build warning khi package chưa được cài.
+  - Theme system note: `components/theme-provider.tsx` dùng `next-themes`; từ GĐ6.2 `app/layout.tsx` đã mount `ThemeProvider` với `attribute="class"`, `defaultTheme="system"`, `enableSystem`, `disableTransitionOnChange`, và shared header dùng `components/theme-toggle.tsx` để đổi `light/dark`.
   - `medical-consultation-app/lib/runtime-sync.ts`: shared helper cho demo pass fallback, provider normalization, và browser event `runtime_mode_changed`.
 
 ## Production LLMOps (CPU server)

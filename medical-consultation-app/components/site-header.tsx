@@ -2,12 +2,45 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { BrainCircuit, Home, MessageSquare, Search, Activity, LogIn, Newspaper, Smile, BookOpenText, Bell, Menu, X, Stethoscope, Users, FileText, BarChart3, Calendar } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Activity, Bell, BookOpenText, BrainCircuit, Calendar, ChevronDown, FileText, Home, LogIn, MessageSquare, Newspaper, Search, Smile, Stethoscope, Users } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import { cn } from '@/lib/utils'
 import AccountMenu from './account-menu'
 import LanguageSwitcher from './language-switcher'
+import ThemeToggle from './theme-toggle'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 const ComputeToggle = dynamic(() => import('./compute-toggle'), { ssr: false })
+
+type NavItem = {
+  href: string
+  label: string
+}
+
+type ToolItem = NavItem & {
+  icon: React.ComponentType<{ size?: number; className?: string }>
+}
+
+function NavPill({ href, label, active }: NavItem & { active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200',
+        active
+          ? 'bg-card text-foreground shadow-[0_10px_24px_-18px_rgba(20,71,230,0.95)] ring-1 ring-primary/10'
+          : 'text-muted-foreground hover:bg-background/80 hover:text-foreground',
+      )}
+    >
+      {label}
+    </Link>
+  )
+}
 
 export default function SiteHeader() {
   const pathname = usePathname()
@@ -15,10 +48,8 @@ export default function SiteHeader() {
   const [authed, setAuthed] = useState(false)
   const [userLabel, setUserLabel] = useState<string>("Tài khoản")
   const [userRole, setUserRole] = useState<string>("patient")
-  const [toolsOpen, setToolsOpen] = useState(false)
   
   useEffect(() => { setMounted(true) }, [])
-  useEffect(() => { setToolsOpen(false) }, [pathname])
   useEffect(() => {
     try {
       const t = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
@@ -56,32 +87,50 @@ export default function SiteHeader() {
       }
     } catch {}
   }, [mounted, pathname])
-  if (!mounted || pathname === '/') return null
 
-  // Role-based navigation
-  const patientItems = [
-    { href: '/', label: 'Trang chủ', icon: Home },
-    { href: '/tu-van', label: 'Tư vấn', icon: MessageSquare },
-    { href: '/tam-su', label: 'Tâm sự', icon: Smile },
-    { href: '/agent-hub', label: 'Agent', icon: Stethoscope },
-    { href: '/gioi-thieu', label: 'Hướng dẫn', icon: BookOpenText },
-  ]
+  const patientItems = useMemo<NavItem[]>(
+    () => [
+      { href: '/', label: 'Trang chủ' },
+      { href: '/tu-van', label: 'Tư vấn' },
+      { href: '/tam-su', label: 'Tâm sự' },
+      { href: '/agent-hub', label: 'Agent' },
+      { href: '/gioi-thieu', label: 'Hướng dẫn' },
+    ],
+    [],
+  )
 
-  const doctorItems = [
-    { href: '/doctor', label: 'Bảng điều khiển', icon: Home },
-    { href: '/doctor/patients', label: 'Bệnh nhân', icon: Users },
-    { href: '/doctor/reports', label: 'Báo cáo', icon: FileText },
-    { href: '/doctor/appointments', label: 'Lịch hẹn', icon: Calendar },
-    { href: '/doctor/forum', label: 'Chia sẻ', icon: Users },
-  ]
+  const doctorItems = useMemo<NavItem[]>(
+    () => [
+      { href: '/doctor', label: 'Bảng điều khiển' },
+      { href: '/doctor/patients', label: 'Bệnh nhân' },
+      { href: '/doctor/reports', label: 'Báo cáo' },
+      { href: '/doctor/appointments', label: 'Lịch hẹn' },
+      { href: '/doctor/forum', label: 'Chia sẻ' },
+    ],
+    [],
+  )
 
-  const toolItemsBase = [
+  const adminItems = useMemo<NavItem[]>(
+    () => [
+      { href: '/quan-ly', label: 'Tổng quan' },
+      { href: '/quan-ly/user', label: 'Người dùng' },
+      { href: '/quan-ly/data', label: 'Dữ liệu' },
+      { href: '/quan-ly/config', label: 'Cấu hình' },
+      { href: '/admin/server', label: 'Runtime' },
+    ],
+    [],
+  )
+
+  const toolItemsBase = useMemo<ToolItem[]>(
+    () => [
     { href: '/tra-cuu', label: 'Tra cứu', icon: Search },
     { href: '/sang-loc', label: 'Sàng lọc', icon: Activity },
     { href: '/tri-lieu', label: 'Trị liệu', icon: BookOpenText },
     { href: '/nhac-nho', label: 'Nhắc nhở', icon: Bell },
     { href: '/tin-tuc-y-khoa', label: 'Tin tức', icon: Newspaper },
-  ]
+    ],
+    [],
+  )
   const toolItems =
     userRole === "doctor"
       ? [
@@ -91,90 +140,98 @@ export default function SiteHeader() {
         ]
       : toolItemsBase
 
-  const mainItems = userRole === 'doctor' ? doctorItems : patientItems
-  const navItems = mainItems
+  const mainItems =
+    userRole === 'doctor'
+      ? doctorItems
+      : userRole === 'admin'
+        ? adminItems
+        : patientItems
+  const roleLabel =
+    userRole === 'doctor'
+      ? 'Doctor Portal'
+      : userRole === 'admin'
+        ? 'Admin Console'
+        : 'Patient App'
+  const appHref = userRole === 'doctor' ? '/doctor' : userRole === 'admin' ? '/quan-ly' : '/'
+
+  if (!mounted || pathname === '/') return null
 
   return (
-    <div className="fixed top-2 sm:top-3 left-0 right-0 z-50 flex justify-center px-2 sm:px-3">
-      {/* Compact Glass Header */}
-      <div data-site-header className="relative w-full max-w-4xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-2xl sm:rounded-full px-3 sm:px-4 h-14 sm:h-12 flex items-center justify-between shadow-lg shadow-black/5 dark:shadow-black/20 border border-white/20 dark:border-slate-700/50 transition-all duration-300">
-        
-        {/* Logo Section - Compact */}
-        <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group flex-shrink-0">
-          <div className="bg-gradient-to-br from-primary to-accent p-1.5 rounded-lg">
-            <BrainCircuit className="text-white w-4 h-4 sm:w-4.5 sm:h-4.5" />
+    <div className="fixed inset-x-0 top-2 z-50 flex justify-center px-2 sm:top-3 sm:px-3">
+      <div
+        data-site-header
+        className="glass-panel dark:glass-panel-dark relative flex h-14 w-full max-w-6xl items-center justify-between gap-2 rounded-[1.1rem] border border-border/60 px-3 sm:h-[var(--header-height)] sm:rounded-full sm:px-4"
+      >
+        <Link href={appHref} className="flex min-w-0 items-center gap-2">
+          <div className="rounded-xl bg-gradient-to-br from-primary via-accent to-teal-accent p-2 text-white shadow-[0_12px_24px_-16px_rgba(20,71,230,0.9)]">
+            <BrainCircuit className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
           </div>
-          <span className="font-bold text-foreground tracking-tight text-xs sm:text-sm hidden sm:block">
-            <span className="text-primary">AI</span>Med
-          </span>
+          <div className="hidden min-w-0 sm:block">
+            <div className="truncate text-sm font-bold tracking-tight text-foreground">
+              <span className="text-primary">AI</span>Med
+            </div>
+            <div className="truncate text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              {roleLabel}
+            </div>
+          </div>
         </Link>
 
-        {/* Navigation Section - Desktop - Compact pills */}
-        <nav className="hidden md:flex items-center gap-1 bg-secondary/50 rounded-full p-1">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <Link 
-                key={item.href} 
-                href={item.href} 
-                className={`
-                  relative px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200
-                  ${isActive 
-                    ? 'bg-primary text-primary-foreground shadow-sm' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-                  }
-                `}
-              >
-                {item.label}
-              </Link>
-            )
-          })}
-          
-          {/* Tools Dropdown Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setToolsOpen(!toolsOpen)}
-              className={`relative px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 flex items-center gap-1 ${toolsOpen ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+        <nav className="hidden items-center gap-1 rounded-full bg-secondary/70 p-1 md:flex">
+          {mainItems.map((item) => (
+            <NavPill key={item.href} href={item.href} label={item.label} active={pathname === item.href} />
+          ))}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold text-muted-foreground transition-all hover:bg-background/80 hover:text-foreground">
+                Công cụ
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="glass-panel dark:glass-panel-dark min-w-56 rounded-2xl border border-border/70 p-2"
             >
-              Cong cu
-              <svg className={`w-3 h-3 transition-transform ${toolsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-            </button>
-            {toolsOpen && (
-              <div className="absolute top-full mt-2 right-0 w-48 bg-card border border-border rounded-xl shadow-xl z-50 overflow-hidden">
-                {toolItems.map((item) => (
+              {toolItems.map((item) => (
+                <DropdownMenuItem key={item.href} asChild>
                   <Link
-                    key={item.href}
                     href={item.href}
-                    className="flex items-center gap-2.5 w-full px-3 py-2.5 text-xs font-medium text-foreground hover:bg-secondary transition"
+                    className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary/80"
                   >
-                    <item.icon size={14} className="text-muted-foreground" />
-                    {item.label}
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-primary">
+                      <item.icon size={16} />
+                    </span>
+                    <span>{item.label}</span>
                   </Link>
-                ))}
-              </div>
-            )}
-          </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
-        {/* Action Section - Compact */}
         <div className="flex items-center gap-1 sm:gap-1.5">
+          <div className="hidden rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground lg:inline-flex">
+            {roleLabel}
+          </div>
           <LanguageSwitcher />
+          <ThemeToggle />
           <ComputeToggle />
           {!authed ? (
-            <Link href="/login" className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition-opacity whitespace-nowrap shadow-sm">
-              <LogIn className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-[0_12px_24px_-16px_rgba(20,71,230,0.95)] transition-all hover:-translate-y-0.5 hover:bg-primary/90 whitespace-nowrap"
+            >
+              <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Đăng nhập</span>
             </Link>
           ) : (
             <AccountMenu
               userLabel={userLabel}
-              userRole={userRole as 'doctor' | 'patient'}
+              userRole={userRole as 'doctor' | 'patient' | 'admin'}
               userFullName={typeof window !== 'undefined' ? localStorage.getItem('userFullName') || undefined : undefined}
               userEmail={typeof window !== 'undefined' ? localStorage.getItem('userEmail') || undefined : undefined}
             />
           )}
         </div>
-
       </div>
     </div>
   )

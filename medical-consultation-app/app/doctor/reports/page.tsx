@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Download, Calendar, BarChart3, TrendingUp, FileText } from 'lucide-react'
+import { Calendar, Download, FileText, ShieldCheck, Sparkles, TrendingUp } from 'lucide-react'
 import { demoReports, type DoctorReport } from "@/lib/doctor-demo"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
+import { Button } from "@/components/ui/button"
 
 export default function DoctorReportsPage() {
   const router = useRouter()
@@ -42,6 +46,13 @@ export default function DoctorReportsPage() {
     setReports(merged as any)
   }, [])
 
+  const stats = useMemo(() => {
+    const total = reports.length
+    const drafts = reports.filter((report) => report.status === "Đang soạn").length
+    const completed = reports.filter((report) => report.status === "Hoàn tất").length
+    return { total, drafts, completed }
+  }, [reports])
+
   const downloadReport = (r: any) => {
     try {
       const content =
@@ -69,136 +80,96 @@ export default function DoctorReportsPage() {
     } catch {}
   }
 
-  const stats = [
-    {
-      label: 'Tổng báo cáo',
-      value: '28',
-      icon: FileText,
-      color: 'blue',
-    },
-    {
-      label: 'Tư vấn tháng này',
-      value: '45',
-      icon: TrendingUp,
-      color: 'green',
-    },
-    {
-      label: 'Bệnh nhân hoạt động',
-      value: '24',
-      icon: BarChart3,
-      color: 'purple',
-    },
-  ]
-
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50 mb-2">
-          Báo cáo tư vấn
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Xem và quản lý các báo cáo tư vấn của bạn
-        </p>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {stats.map((stat, idx) => {
-          const Icon = stat.icon
-          const colorClasses = {
-            blue: 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300',
-            green: 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300',
-            purple: 'bg-purple-100 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300',
-          }
-
-          return (
-            <div
-              key={idx}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-6 shadow-sm"
-            >
-              <div className={`w-12 h-12 rounded-lg ${colorClasses[stat.color as keyof typeof colorClasses]} flex items-center justify-center mb-4`}>
-                <Icon size={24} />
+    <PortalShell
+      eyebrow="Medical Reports"
+      title="Báo cáo tư vấn"
+      description="Quản lý, rà soát và tải xuống các báo cáo trong doctor portal. Logic localStorage và download text được giữ nguyên."
+      actions={
+        <div className="flex flex-wrap gap-3">
+          <Button className="rounded-xl" onClick={() => router.push("/doctor/reports/new")}>
+            New Manual Note
+          </Button>
+          <Button variant="outline" className="rounded-xl">
+            Run AI Audit
+          </Button>
+        </div>
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Report State" description="Tổng quan nhanh về nguồn dữ liệu báo cáo hiện tại.">
+            <div className="rounded-[1.2rem] bg-primary px-5 py-5 text-primary-foreground">
+              <div className="mb-2 flex items-center gap-2 text-primary-foreground/90">
+                <ShieldCheck className="h-5 w-5" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Local + Demo</span>
               </div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-                {stat.value}
+              <p className="text-sm leading-6 text-primary-foreground/85">
+                Màn này đang merge báo cáo từ `localStorage` với dataset demo trong `doctor-demo` và sắp xếp theo ngày.
               </p>
             </div>
-          )
-        })}
+          </SectionCard>
+        </div>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard label="Total Reports" value={stats.total} helper="Tất cả báo cáo đang hiển thị" icon={<FileText className="h-5 w-5" />} tone="primary" />
+        <StatCard label="Drafts" value={stats.drafts} helper="Cần hoàn thiện hoặc kiểm tra lại" icon={<Sparkles className="h-5 w-5" />} tone="neutral" />
+        <StatCard label="Signed" value={stats.completed} helper="Báo cáo hoàn tất" icon={<TrendingUp className="h-5 w-5" />} tone="teal" />
       </div>
 
-      {/* Reports List */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">Danh sách báo cáo</h2>
-        </div>
-
-        <div className="divide-y divide-slate-200 dark:divide-slate-700">
-          {reports.map((report) => (
-            <div
-              key={report.id}
-              className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-slate-900 dark:text-slate-50 mb-2">
-                    {report.title}
-                  </h3>
-                  <div className="flex flex-wrap gap-4 text-sm text-slate-600 dark:text-slate-400">
-                    <div className="flex items-center gap-2">
-                      <Calendar size={16} />
-                      {new Date(report.date).toLocaleDateString('vi-VN')}
-                    </div>
-                    <div>
-                      <span className="px-2 py-1 rounded-full text-xs bg-slate-100 dark:bg-slate-800 font-medium">
-                        {report.type}
-                      </span>
-                    </div>
-                    <div>
-                      {report.patients} bệnh nhân • {report.sessions} phiên tư vấn
-                    </div>
+      <SectionCard
+        title="Danh sách báo cáo"
+        description="Danh sách hợp nhất giữa report demo và report người dùng đã lưu cục bộ."
+        badge={
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            {reports.length} items
+          </span>
+        }
+        contentClassName="space-y-4"
+      >
+        {reports.map((report) => (
+          <div key={report.id} className="app-surface hover-lift rounded-[1.35rem] bg-card/90 p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0 flex-1">
+                <h3 className="mb-2 text-lg font-semibold tracking-tight text-foreground">{report.title}</h3>
+                <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(report.date).toLocaleDateString('vi-VN')}
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                    report.status === 'Hoàn tất'
-                      ? 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300'
-                      : 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300'
-                  }`}>
-                    {report.status}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => downloadReport(report as any)}
-                    className="p-2 rounded-lg bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-950/50 transition"
-                  >
-                    <Download size={18} />
-                  </button>
+                  <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground">{report.type}</span>
+                  <span>{report.patients} bệnh nhân • {report.sessions} phiên tư vấn</span>
                 </div>
               </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  report.status === 'Hoàn tất'
+                    ? 'bg-teal-accent/10 text-teal-accent'
+                    : 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
+                }`}>
+                  {report.status}
+                </span>
+                <Button type="button" variant="outline" className="rounded-xl" onClick={() => downloadReport(report as any)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Tải xuống
+                </Button>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+        ))}
+      </SectionCard>
 
-      {/* Export Section */}
-      <div className="mt-8 p-6 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-        <h3 className="font-bold text-slate-900 dark:text-slate-50 mb-3">Xuất báo cáo mới</h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-          Tạo báo cáo tùy chỉnh dựa trên khoảng thời gian và bệnh nhân bạn chọn
-        </p>
-        <button
-          type="button"
-          onClick={() => router.push("/doctor/reports/new")}
-          className="px-6 py-2.5 rounded-lg bg-blue-600 dark:bg-blue-600 text-white font-semibold hover:bg-blue-700 dark:hover:bg-blue-700 transition"
-        >
-          Tạo báo cáo mới
-        </button>
-      </div>
-    </div>
+      <SectionCard title="Xuất báo cáo mới" description="Tạo báo cáo tùy chỉnh dựa trên khoảng thời gian và bệnh nhân bạn chọn.">
+        <div className="flex flex-col gap-4 rounded-[1.35rem] bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="font-semibold text-foreground">Tạo báo cáo mới</div>
+            <div className="mt-1 text-sm text-muted-foreground">Đi sang workspace tạo báo cáo để chọn loại báo cáo, khoảng thời gian và bệnh nhân.</div>
+          </div>
+          <Button type="button" className="rounded-xl" onClick={() => router.push("/doctor/reports/new")}>
+            Tạo báo cáo mới
+          </Button>
+        </div>
+      </SectionCard>
+    </PortalShell>
   )
 }

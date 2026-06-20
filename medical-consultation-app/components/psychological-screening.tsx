@@ -2,7 +2,7 @@
 
 import { useEffect, useState, lazy, Suspense } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronRight, CheckCircle, AlertCircle, Info, MessageCircle, FileText } from "lucide-react"
+import { ChevronRight, CheckCircle, AlertCircle, FileText, MessageCircle, ShieldCheck, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -15,6 +15,10 @@ import { getScreeningHistory, saveScreeningResult, setPendingScreeningContext } 
 import { upsertUserState } from "@/lib/user-state-client"
 import { appendTherapyEvent } from "@/lib/therapy-store"
 import { PageAiInsight } from "@/components/page-ai-insight"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
+import { getScreeningMeta, ScreeningOptionCard, ScreeningSelectionCard } from "@/components/screening/screening-ui"
 
 const PDFReportGenerator = dynamic(() => import("./pdf-report-generator").then(mod => ({ default: mod.PDFReportGenerator })), {
   ssr: false,
@@ -910,19 +914,46 @@ export function PsychologicalScreening() {
     const scoreColor = ratio < 0.33 ? "#10b981" : (ratio < 0.66 ? "#f59e0b" : "#ef4444")
 
     return (
-      <div className="p-4 space-y-4 max-h-screen overflow-y-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              Kết quả {selectedAssessment.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <PortalShell
+        eyebrow="Screening Result"
+        title={`Kết quả ${selectedAssessment.title}`}
+        description="Tóm tắt điểm số, mức độ và gợi ý tiếp theo sau khi hoàn tất bài sàng lọc."
+        actions={
+          <Button onClick={resetAssessment} className="rounded-xl bg-primary hover:bg-primary/90">
+            Thực hiện bài test khác
+          </Button>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard
+            label="Điểm số"
+            value={score}
+            helper={`Thang tối đa ${maxScore}`}
+            icon={<CheckCircle className="h-5 w-5" />}
+            tone="primary"
+          />
+          <StatCard
+            label="Mức đánh giá"
+            value={interpretation?.level || "Chưa rõ"}
+            helper={selectedAssessment.title}
+            icon={<Sparkles className="h-5 w-5" />}
+            tone="teal"
+          />
+          <StatCard
+            label="Tỷ lệ hoàn tất"
+            value={`${Math.round(ratio * 100)}%`}
+            helper="Bài đánh giá đã hoàn tất"
+            icon={<ShieldCheck className="h-5 w-5" />}
+            tone="neutral"
+          />
+        </div>
+
+        <Card className="app-surface border-0 bg-card/90 shadow-none">
+          <CardContent className="space-y-4 p-6">
             {interpretation && (
               <>
-                <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl p-6">
-                  <div className="text-center p-4 bg-muted rounded-xl">
+                <div className="mx-auto max-w-3xl rounded-[1.8rem] bg-gradient-to-br from-card to-secondary/50 p-6">
+                  <div className="rounded-[1.4rem] bg-background/70 p-4 text-center">
                     <div className="relative w-40 h-40 mx-auto flex items-center justify-center">
                       <svg className="w-full h-full" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" strokeWidth="8" />
@@ -935,10 +966,10 @@ export function PsychologicalScreening() {
                     </div>
                     <div className="mt-2 text-sm text-muted-foreground">{interpretation.description}</div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                     {interpretation.recommendations.map((rec, index) => (
-                      <div key={index} className="flex items-start gap-2 text-sm bg-gray-50 p-3 rounded-xl">
-                        <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-1 flex-shrink-0">
+                      <div key={index} className="flex items-start gap-2 rounded-xl bg-card/80 p-3 text-sm">
+                        <div className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary">
                           <CheckCircle className="h-3 w-3 text-white" />
                         </div>
                         {rec}
@@ -964,7 +995,7 @@ export function PsychologicalScreening() {
                       router.push("/tam-su")
                     }}
                     variant="outline"
-                    className="w-full"
+                    className="w-full rounded-xl"
                   >
                     <MessageCircle className="h-4 w-4 mr-2" />
                     {showAiSupport ? "Ẩn" : "Tâm sự"} với AI
@@ -979,7 +1010,7 @@ export function PsychologicalScreening() {
                   )}
                 </div>
 
-                <Alert>
+                <Alert className="rounded-2xl border-amber-200 bg-amber-50/80 dark:bg-amber-950/20">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     Kết quả này chỉ mang tính chất tham khảo. Nếu bạn có lo ngại về sức khỏe tâm thần, 
@@ -988,14 +1019,14 @@ export function PsychologicalScreening() {
                 </Alert>
 
                 {history.length ? (
-                  <Card>
+                  <Card className="app-surface border-0 bg-card/90 shadow-none">
                     <CardHeader>
                       <CardTitle className="text-base">Lịch sử sàng lọc gần đây</CardTitle>
                       <CardDescription>5 lần gần nhất trên thiết bị này</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
                       {history.map((h) => (
-                        <div key={String(h.ts)} className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                        <div key={String(h.ts)} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/70 p-3">
                           <div className="min-w-0">
                             <div className="text-sm font-medium truncate">{h.title}</div>
                             <div className="text-xs text-muted-foreground">
@@ -1010,20 +1041,17 @@ export function PsychologicalScreening() {
                 ) : null}
 
                 {/* Action buttons with improved spacing and visibility */}
-                <div className="space-y-3 pt-4 border-t">
+                <div className="space-y-3 border-t border-border/70 pt-4">
                   <Button
                     onClick={() => setShowPDFGenerator(true)}
-                    className="w-full"
+                    className="w-full rounded-xl"
                     variant="outline"
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     Tạo báo cáo PDF
                   </Button>
                   
-                  <Button 
-                    onClick={resetAssessment} 
-                    className="w-full bg-primary hover:bg-primary/90"
-                  >
+                  <Button onClick={resetAssessment} className="w-full rounded-xl bg-primary hover:bg-primary/90">
                     Thực hiện bài test khác
                   </Button>
                 </div>
@@ -1044,7 +1072,7 @@ export function PsychologicalScreening() {
             />
           </div>
         )}
-      </div>
+      </PortalShell>
     )
   }
 
@@ -1054,158 +1082,178 @@ export function PsychologicalScreening() {
     const currentAnswer = answers[question.id]
 
     return (
-      <div className="p-4 space-y-4 max-h-screen overflow-y-auto">
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>
-              Bước {currentQuestion + 1}/{selectedAssessment.questions.length}
-            </span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[#4facfe] to-[#00f2fe] transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{question.text}</CardTitle>
-            <CardDescription>Trong vòng hai tuần qua, bạn có thường bị những vấn đề dưới đây làm phiền ở mức độ nào?</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <RadioGroup 
-              key={`${selectedAssessment.id}-${question.id}`}
-              value={currentAnswer} 
-              onValueChange={(value) => handleAnswer(question.id, value)}
-            >
-                {question.options.map((option) => {
-                  const uniqueId = `${selectedAssessment.id}-q${question.id}-${option.value}`
-                  return (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <RadioGroupItem value={option.value} id={uniqueId} />
-                      <Label htmlFor={uniqueId} className="flex-1 cursor-pointer">
-                        {option.label}
-                      </Label>
-                    </div>
-                  )
-                })}
-              </RadioGroup>
-              
-              {currentAnswer && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleAnswer(question.id, "")}
-                  className="text-xs"
-                >
-                  Làm mới lựa chọn
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex gap-2 pb-4">
-          <Button variant="outline" onClick={resetAssessment} className="flex-1 bg-transparent">
+      <PortalShell
+        eyebrow="Assessment In Progress"
+        title={selectedAssessment.title}
+        description={selectedAssessment.description}
+        actions={
+          <Button variant="outline" onClick={resetAssessment} className="rounded-xl bg-transparent">
             Hủy bỏ
           </Button>
-          <Button onClick={handleNext} disabled={!currentAnswer} className="flex-1">
-            {currentQuestion === selectedAssessment.questions.length - 1 ? "Hoàn thành" : "Tiếp theo"}
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
-      </div>
+        }
+      >
+        <SectionCard
+          title={`Câu ${currentQuestion + 1} / ${selectedAssessment.questions.length}`}
+          description="Trong vòng hai tuần qua, bạn có thường bị những vấn đề dưới đây làm phiền ở mức độ nào?"
+          badge={
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              {Math.round(progress)}%
+            </span>
+          }
+          contentClassName="space-y-6"
+        >
+          <Progress value={progress} className="h-2 rounded-full" />
+          <div className="rounded-[1.4rem] bg-secondary/35 p-5">
+            <h2 className="text-2xl font-semibold leading-snug tracking-tight text-foreground">{question.text}</h2>
+          </div>
+          <div className="space-y-3">
+            <RadioGroup
+              key={`${selectedAssessment.id}-${question.id}`}
+              value={currentAnswer}
+              onValueChange={(value) => handleAnswer(question.id, value)}
+            >
+              {question.options.map((option) => {
+                const uniqueId = `${selectedAssessment.id}-q${question.id}-${option.value}`
+                return (
+                  <div key={option.value}>
+                    <RadioGroupItem value={option.value} id={uniqueId} className="sr-only" />
+                    <Label htmlFor={uniqueId} className="block cursor-pointer">
+                      <ScreeningOptionCard
+                        label={option.label}
+                        selected={currentAnswer === option.value}
+                        onClick={() => handleAnswer(question.id, option.value)}
+                      />
+                    </Label>
+                  </div>
+                )
+              })}
+            </RadioGroup>
+            {currentAnswer && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAnswers((prev) => ({ ...prev, [question.id]: "" }))}
+                className="rounded-xl text-xs"
+              >
+                Làm mới lựa chọn
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-3 pb-1">
+            <Button variant="outline" onClick={resetAssessment} className="flex-1 rounded-xl bg-transparent">
+              Hủy bỏ
+            </Button>
+            <Button onClick={handleNext} disabled={!currentAnswer} className="flex-1 rounded-xl">
+              {currentQuestion === selectedAssessment.questions.length - 1 ? "Hoàn thành" : "Tiếp theo"}
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        </SectionCard>
+      </PortalShell>
     )
   }
 
   return (
-    <div className="p-4 space-y-4 max-h-screen overflow-y-auto">
-      <div className="text-center py-4">
-        <h2 className="text-xl font-bold mb-2">Sàng lọc Tâm lý</h2>
-        <p className="text-muted-foreground text-sm">Đánh giá sức khỏe tâm thần với các bài test chuẩn quốc tế</p>
+    <PortalShell
+      eyebrow="Psychological Screening"
+      title="Sàng lọc Tâm lý"
+      description="Chọn bài test chuẩn hóa để theo dõi sức khỏe tinh thần. Kết quả chỉ mang tính sàng lọc ban đầu và nên được xem cùng đánh giá chuyên môn."
+      actions={
+        <Button onClick={() => router.push('/tam-su')} variant="outline" className="rounded-xl bg-transparent">
+          <MessageCircle className="mr-2 h-4 w-4" />
+          Bắt đầu tâm sự
+        </Button>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          label="Bài đánh giá"
+          value={assessments.length}
+          helper="PHQ-9, GAD-7, PCL-5, MDQ, SCOFF, ASRS"
+          icon={<Sparkles className="h-5 w-5" />}
+          tone="primary"
+        />
+        <StatCard
+          label="Thời lượng"
+          value="3-10p"
+          helper="Tùy theo từng bộ câu hỏi"
+          icon={<CheckCircle className="h-5 w-5" />}
+          tone="teal"
+        />
+        <StatCard
+          label="Dữ liệu"
+          value="Bảo mật"
+          helper="Lưu cục bộ và đồng bộ theo user state"
+          icon={<ShieldCheck className="h-5 w-5" />}
+          tone="neutral"
+        />
       </div>
 
-      {/* AI Insight */}
-      <PageAiInsight
-        pageContext="mental_health_screening"
-      />
+      <PageAiInsight pageContext="mental_health_screening" />
 
-      <Alert>
+      <Alert className="rounded-2xl border-amber-200 bg-amber-50/80 dark:bg-amber-950/20">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
           Các bài test này chỉ mang tính chất sàng lọc ban đầu, không thay thế cho chẩn đoán y khoa chuyên nghiệp.
         </AlertDescription>
       </Alert>
 
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <MessageCircle className="h-5 w-5 text-blue-600" />
-            <h3 className="font-semibold text-blue-900">Hỗ trợ tâm lý AI</h3>
-          </div>
-          <p className="text-sm text-blue-800 mb-3">
-            Trước khi làm bài test, bạn có thể tâm sự với AI để được hỗ trợ và tư vấn ban đầu.
-          </p>
-          <Button
-            onClick={() => router.push('/tam-su')}
-            variant="outline"
-            size="sm"
-            className="border-blue-300 text-blue-700 hover:bg-blue-100"
-          >
-            <MessageCircle className="h-4 w-4 mr-2" />
-            {showAiSupport ? "Ẩn" : "Bắt đầu"} tâm sự
+      <SectionCard
+        title="Hỗ trợ tâm lý AI"
+        description="Nếu bạn muốn chia sẻ cảm xúc trước khi làm bài test, có thể đi sang không gian tâm sự để được AI đồng hành."
+        badge={
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            Optional
+          </span>
+        }
+        action={
+          <Button onClick={() => router.push('/tam-su')} variant="outline" size="sm" className="rounded-xl">
+            <MessageCircle className="mr-2 h-4 w-4" />
+            Mở tâm sự
           </Button>
+        }
+      >
+        <div className="rounded-[1.3rem] bg-primary/5 p-4 text-sm leading-6 text-muted-foreground">
+          Bạn có thể tâm sự với AI để giảm căng thẳng hoặc làm rõ điều mình đang trải qua trước khi bước vào sàng lọc.
+        </div>
+      </SectionCard>
 
-          {false && (
-            <div className="mt-4">
-              <AiChatBox
-                placeholder="Chia sẻ cảm xúc của bạn..."
-                initialMessage="Xin chào! Tôi là trợ lý AI hỗ trợ tâm lý. Tôi ở đây để lắng nghe và hỗ trợ bạn. Bạn có muốn chia sẻ về tâm trạng hoặc những gì đang khiến bạn lo lắng không?"
-                context="psychological support"
-              />
+      <SectionCard
+        title="Chọn bộ đánh giá"
+        description="Mỗi bài test có mục tiêu khác nhau. Hãy chọn bộ phù hợp nhất với điều bạn đang quan tâm."
+        contentClassName="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
+      >
+        {assessments.map((assessment) => {
+          const meta = getScreeningMeta(assessment.id, assessment.title, assessment.questions.length)
+          return (
+            <ScreeningSelectionCard
+              key={assessment.id}
+              title={assessment.title}
+              description={assessment.description}
+              questionCount={assessment.questions.length}
+              subtitle={meta.subtitle}
+              duration={meta.duration}
+              icon={meta.icon}
+              onClick={() => handleStartAssessment(assessment)}
+            />
+          )
+        })}
+      </SectionCard>
+
+      <SectionCard title="Lưu ý quan trọng" description="Những nguyên tắc nên nhớ để kết quả sàng lọc có giá trị tham khảo tốt hơn.">
+        <div className="grid gap-3 md:grid-cols-2">
+          {[
+            "Trả lời thật lòng để có kết quả chính xác nhất.",
+            "Mỗi bài test mất khoảng 3-10 phút tùy bộ câu hỏi.",
+            "Thông tin của bạn được bảo mật tuyệt đối.",
+            "Nếu có kết quả bất thường, hãy tham khảo chuyên gia.",
+          ].map((item) => (
+            <div key={item} className="rounded-xl bg-secondary/55 px-4 py-3 text-sm text-foreground">
+              {item}
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="space-y-3">
-        {assessments.map((assessment) => (
-          <Card
-            key={assessment.id}
-            className="cursor-pointer min-h-[80px] rounded-[12px] shadow-[0px_2px_6px_rgba(0,0,0,0.05)] transition-all hover:scale-[1.02] hover:bg-muted/30"
-            onClick={() => handleStartAssessment(assessment)}
-          >
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">{assessment.title}</CardTitle>
-                  <CardDescription className="mt-1">{assessment.description}</CardDescription>
-                </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
-
-      <Card className="bg-muted/50">
-        <CardContent className="p-4">
-          <h3 className="font-semibold mb-2">Lưu ý quan trọng:</h3>
-          <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Trả lời thật lòng để có kết quả chính xác nhất</li>
-            <li>• Mỗi bài test mất khoảng 3-5 phút</li>
-            <li>• Thông tin của bạn được bảo mật tuyệt đối</li>
-            <li>• Nếu có kết quả bất thường, hãy tham khảo chuyên gia</li>
-          </ul>
-        </CardContent>
-      </Card>
-
-      {/* Add some bottom padding to ensure content is not cut off */}
-      <div className="pb-8"></div>
-    </div>
+          ))}
+        </div>
+      </SectionCard>
+    </PortalShell>
   )
 }

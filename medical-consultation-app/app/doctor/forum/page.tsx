@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { MessageSquare, RefreshCcw, Search, ShieldCheck, Sparkles, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { scanPii, type PiiFinding } from "@/lib/pii-scan"
 import { normalizeForumPost, type DoctorForumPost } from "@/lib/doctor-forum"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
 
 const LOCAL_KEY = "mcs_doctor_forum_posts_v1"
 
@@ -49,6 +52,7 @@ export default function DoctorForumPage() {
   const [tags, setTags] = useState("")
   const [saving, setSaving] = useState(false)
   const [findings, setFindings] = useState<PiiFinding[]>([])
+  const [search, setSearch] = useState("")
 
   useEffect(() => {
     setMounted(true)
@@ -101,6 +105,13 @@ export default function DoctorForumPage() {
   }, [title, content])
 
   const canPost = title.trim() && content.trim() && findings.length === 0
+  const filteredPosts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return posts
+    return posts.filter((post) =>
+      [post.title, post.content, ...(post.tags || [])].join(" ").toLowerCase().includes(q),
+    )
+  }, [posts, search])
 
   const submit = async () => {
     if (!canPost || saving) return
@@ -156,33 +167,95 @@ export default function DoctorForumPage() {
   if (!mounted) return null
 
   return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="space-y-1">
-          <div className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50">Cộng đồng bác sĩ</div>
-          <div className="text-sm text-slate-600 dark:text-slate-400">
-            Hỏi đáp & chia sẻ kinh nghiệm. Hệ thống tự chặn thông tin cá nhân bệnh nhân.
+    <PortalShell
+      eyebrow="Clinical Forum"
+      title="Cộng đồng bác sĩ"
+      description="Trao đổi ca lâm sàng, chia sẻ kinh nghiệm và giữ an toàn dữ liệu nhờ cơ chế quét PII trước khi đăng."
+      actions={
+        <div className="flex flex-wrap gap-3">
+          <div className="relative min-w-[260px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo tiêu đề, nội dung, tag..." className="input-glow rounded-full border-border/70 bg-card pl-10" />
           </div>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => void refresh()}>
+          <Button variant="outline" className="rounded-xl" onClick={() => void refresh()}>
+            <RefreshCcw className="mr-2 h-4 w-4" />
             Làm mới
           </Button>
         </div>
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Forum State" description="Trạng thái hiện tại của luồng forum bác sĩ.">
+            <div className="rounded-[1.2rem] bg-primary px-5 py-5 text-primary-foreground">
+              <div className="mb-2 flex items-center gap-2 text-primary-foreground/90">
+                <ShieldCheck className="h-5 w-5" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">PII Guard</span>
+              </div>
+              <p className="text-sm leading-6 text-primary-foreground/85">
+                Hệ thống tiếp tục chặn tên, tuổi, số điện thoại, địa chỉ và dữ liệu nhận diện bệnh nhân trước khi cho phép đăng bài.
+              </p>
+            </div>
+          </SectionCard>
+          <SectionCard title="Trending Topics" description="Các chủ đề gợi ý để định hình sidebar theo mockup FE.">
+            <div className="space-y-3">
+              {["#LongCovidPediatrics", "#AI_Diagnostics_Radiology", "#ImmunoOncology_Update"].map((topic) => (
+                <div key={topic} className="rounded-xl border border-border/60 bg-secondary/40 px-4 py-3 text-sm font-medium text-foreground">
+                  {topic}
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard label="Bài viết" value={posts.length} helper="Tổng thảo luận hiện có" icon={<MessageSquare className="h-5 w-5" />} tone="primary" />
+        <StatCard label="Kết quả lọc" value={filteredPosts.length} helper="Theo từ khóa hiện tại" icon={<Users className="h-5 w-5" />} tone="neutral" />
+        <StatCard label="PII findings" value={findings.length} helper="Phải bằng 0 để đăng" icon={<Sparkles className="h-5 w-5" />} tone="teal" />
       </div>
 
-      {dbDisabled ? (
-        <div className="rounded-xl border bg-background p-4 text-sm">Chưa cấu hình database nên forum đang ở chế độ offline.</div>
-      ) : null}
+      {dbDisabled ? <div className="rounded-xl border bg-background p-4 text-sm">Chưa cấu hình database nên forum đang ở chế độ offline.</div> : null}
 
-      <Card className="border-0 shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Đăng bài mới</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(340px,0.95fr)]">
+        <SectionCard
+          title="Bài viết mới nhất"
+          description="Danh sách ca thảo luận mới nhất trong cộng đồng bác sĩ."
+          badge={<span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">{filteredPosts.length} items</span>}
+          contentClassName="space-y-4"
+        >
+          {loading ? <div className="text-sm text-muted-foreground">Đang tải...</div> : null}
+          {!loading && !filteredPosts.length ? <div className="text-sm text-muted-foreground">Chưa có bài viết.</div> : null}
+          {filteredPosts.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className="app-surface hover-lift w-full rounded-[1.35rem] bg-card/90 p-5 text-left"
+              onClick={() => router.push(`/doctor/forum/${encodeURIComponent(p.id)}`)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-lg font-semibold tracking-tight text-foreground">{p.title}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString("vi-VN")}</div>
+                  <div className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">{p.content}</div>
+                </div>
+              </div>
+              {p.tags?.length ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {p.tags.slice(0, 8).map((t) => (
+                    <span key={t} className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </button>
+          ))}
+        </SectionCard>
+
+        <SectionCard title="Đăng bài mới" description="Soạn case discussion mới cho peer review." contentClassName="space-y-4">
           <div className="space-y-1">
             <div className="text-sm font-medium">Tiêu đề</div>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} className="input-glow" />
           </div>
           <div className="space-y-1">
             <div className="text-sm font-medium">Nội dung</div>
@@ -190,19 +263,18 @@ export default function DoctorForumPage() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={8}
-              className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm resize-none"
+              className="w-full resize-none rounded-xl border border-border bg-background px-3 py-3 text-sm"
               placeholder="Không chia sẻ tên/tuổi/sđt/địa chỉ/CCCD của bệnh nhân..."
             />
           </div>
           <div className="space-y-1">
-            <div className="text-sm font-medium">Tags (phân cách dấu phẩy)</div>
+            <div className="text-sm font-medium">Tags</div>
             <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="ví dụ: lo-âu, mất-ngủ, dinh-dưỡng" />
           </div>
-
           {findings.length ? (
-            <div className="rounded-xl border bg-background p-3 text-sm">
-              <div className="font-medium">Đang phát hiện thông tin cá nhân</div>
-              <div className="text-muted-foreground mt-1">Xóa các mục sau trước khi đăng:</div>
+            <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+              <div className="font-medium text-foreground">Đang phát hiện thông tin cá nhân</div>
+              <div className="mt-1 text-muted-foreground">Xóa các mục sau trước khi đăng:</div>
               <div className="mt-2 space-y-1">
                 {findings.slice(0, 8).map((f, i) => (
                   <div key={`${f.type}-${i}`} className="text-xs">
@@ -212,54 +284,14 @@ export default function DoctorForumPage() {
               </div>
             </div>
           ) : null}
-
           <div className="flex gap-2 flex-wrap">
-            <Button disabled={!canPost || saving} onClick={() => void submit()}>
+            <Button className="rounded-xl" disabled={!canPost || saving} onClick={() => void submit()}>
               {saving ? "Đang đăng..." : "Đăng bài"}
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-          <div className="text-lg font-bold text-slate-900 dark:text-slate-50">Bài viết mới nhất</div>
-        </div>
-        <div className="divide-y divide-slate-200 dark:divide-slate-700">
-          {loading ? (
-            <div className="p-6 text-sm text-slate-600 dark:text-slate-400">Đang tải...</div>
-          ) : posts.length ? (
-            posts.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className="w-full text-left p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
-                onClick={() => router.push(`/doctor/forum/${encodeURIComponent(p.id)}`)}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-semibold text-slate-900 dark:text-slate-50 truncate">{p.title}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">{new Date(p.created_at).toLocaleString("vi-VN")}</div>
-                    <div className="text-sm text-slate-700 dark:text-slate-300 mt-2 line-clamp-2">{p.content}</div>
-                  </div>
-                </div>
-                {p.tags?.length ? (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {p.tags.slice(0, 8).map((t) => (
-                      <span key={t} className="text-xs px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </button>
-            ))
-          ) : (
-            <div className="p-6 text-sm text-slate-600 dark:text-slate-400">Chưa có bài viết.</div>
-          )}
-        </div>
+        </SectionCard>
       </div>
-    </div>
+    </PortalShell>
   )
 }
 

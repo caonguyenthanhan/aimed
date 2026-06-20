@@ -2,10 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
+import { CalendarDays, CheckCircle2, Clock3, RefreshCcw, ShieldCheck, UserRound, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Appointment, AppointmentStatus } from "@/lib/appointments"
 import { normalizeAppointment } from "@/lib/appointments"
 import { useToast } from "@/hooks/use-toast"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
 
 const LOCAL_KEY = "mcs_appointments_local_v1"
 
@@ -65,6 +69,13 @@ export default function DoctorAppointmentsPage() {
     void refresh()
   }, [mounted])
 
+  const stats = useMemo(() => {
+    const pending = items.filter((item) => item.status === "pending").length
+    const confirmed = items.filter((item) => item.status === "confirmed").length
+    const completed = items.filter((item) => item.status === "completed").length
+    return { pending, confirmed, completed }
+  }, [items])
+
   const updateStatus = async (id: string, status: AppointmentStatus) => {
     try {
       const t = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
@@ -89,17 +100,56 @@ export default function DoctorAppointmentsPage() {
   if (!mounted) return null
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div className="space-y-1">
-          <div className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50">Lịch hẹn</div>
-          <div className="text-sm text-slate-600 dark:text-slate-400">Xem và xác nhận lịch hẹn của bạn</div>
+    <PortalShell
+      eyebrow="Doctor Appointments"
+      title="Lịch hẹn"
+      description="Xem, xác nhận và hoàn tất các yêu cầu đặt lịch đến từ luồng public booking."
+      actions={
+        <Button variant="outline" className="rounded-xl" onClick={() => void refresh()}>
+          <RefreshCcw className="mr-2 h-4 w-4" />
+          Làm mới
+        </Button>
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Trạng thái dữ liệu" description="Màn này ưu tiên dữ liệu server, fallback về local khi DB chưa sẵn sàng.">
+            <div className="rounded-[1.2rem] bg-primary px-5 py-5 text-primary-foreground">
+              <div className="mb-2 flex items-center gap-2 text-primary-foreground/90">
+                <ShieldCheck className="h-5 w-5" />
+                <span className="text-sm font-semibold uppercase tracking-[0.18em]">Doctor Inbox</span>
+              </div>
+              <p className="text-sm leading-6 text-primary-foreground/85">
+                {dbDisabled
+                  ? "Hiện đang ở chế độ offline, chỉ xem được dữ liệu cục bộ trên thiết bị này."
+                  : "Đang dùng dữ liệu thật từ API appointments kèm quyền sở hữu bác sĩ."}
+              </p>
+            </div>
+          </SectionCard>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => void refresh()}>
-            Làm mới
-          </Button>
-        </div>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <StatCard
+          label="Chờ xác nhận"
+          value={stats.pending}
+          helper="Booking mới từ patient flow"
+          icon={<Clock3 size={20} />}
+          tone="primary"
+        />
+        <StatCard
+          label="Đã xác nhận"
+          value={stats.confirmed}
+          helper="Lịch đang active"
+          icon={<CheckCircle2 size={20} />}
+          tone="teal"
+        />
+        <StatCard
+          label="Hoàn tất"
+          value={stats.completed}
+          helper="Lịch đã xử lý"
+          icon={<CalendarDays size={20} />}
+          tone="neutral"
+        />
       </div>
 
       {dbDisabled ? (
@@ -108,47 +158,66 @@ export default function DoctorAppointmentsPage() {
         </div>
       ) : null}
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-          <div className="text-lg font-bold text-slate-900 dark:text-slate-50">Yêu cầu đặt hẹn</div>
-        </div>
-        <div className="divide-y divide-slate-200 dark:divide-slate-700">
-          {items.length ? (
-            items.map((ap) => (
-              <div key={ap.id} className="p-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="font-semibold text-slate-900 dark:text-slate-50 truncate">{ap.patient_name}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-400">
-                    {new Date(ap.scheduled_at).toLocaleString("vi-VN")} • {ap.status}
+      <SectionCard
+        title="Yêu cầu đặt hẹn"
+        description="Danh sách booking được gửi từ luồng công khai `/bac-si/[doctorId]/hen`."
+        badge={
+          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            {items.length} items
+          </span>
+        }
+        contentClassName="space-y-4"
+      >
+        {items.length ? (
+          items.map((ap) => (
+            <div key={ap.id} className="app-surface rounded-[1.4rem] bg-card/90 p-5">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <UserRound className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-lg font-semibold tracking-tight text-foreground">{ap.patient_name}</div>
+                      <div className="text-sm text-muted-foreground">{new Date(ap.scheduled_at).toLocaleString("vi-VN")}</div>
+                    </div>
+                    <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      {ap.status}
+                    </span>
                   </div>
-                  <div className="text-sm text-slate-700 dark:text-slate-300 mt-2 whitespace-pre-wrap">{ap.reason}</div>
+
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{ap.reason}</p>
+
                   {(ap.contact?.phone || ap.contact?.email) ? (
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                      {ap.contact?.phone ? `☎ ${ap.contact.phone}` : ""}
-                      {ap.contact?.phone && ap.contact?.email ? " • " : ""}
-                      {ap.contact?.email ? `✉ ${ap.contact.email}` : ""}
+                    <div className="mt-4 flex flex-wrap gap-3 text-sm text-foreground">
+                      {ap.contact?.phone ? <span className="rounded-full bg-secondary px-3 py-1">{ap.contact.phone}</span> : null}
+                      {ap.contact?.email ? <span className="rounded-full bg-secondary px-3 py-1">{ap.contact.email}</span> : null}
                     </div>
                   ) : null}
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" onClick={() => updateStatus(ap.id, "confirmed")}>
+
+                <div className="flex flex-wrap gap-2 xl:max-w-[240px] xl:justify-end">
+                  <Button variant="outline" className="rounded-xl" onClick={() => updateStatus(ap.id, "confirmed")}>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
                     Xác nhận
                   </Button>
-                  <Button variant="outline" onClick={() => updateStatus(ap.id, "completed")}>
+                  <Button variant="outline" className="rounded-xl" onClick={() => updateStatus(ap.id, "completed")}>
+                    <CalendarDays className="mr-2 h-4 w-4" />
                     Hoàn tất
                   </Button>
-                  <Button variant="outline" onClick={() => updateStatus(ap.id, "cancelled")}>
+                  <Button variant="outline" className="rounded-xl" onClick={() => updateStatus(ap.id, "cancelled")}>
+                    <XCircle className="mr-2 h-4 w-4" />
                     Hủy
                   </Button>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="p-6 text-sm text-slate-600 dark:text-slate-400">Chưa có lịch hẹn.</div>
-          )}
-        </div>
-      </div>
-    </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-sm text-muted-foreground">Chưa có lịch hẹn.</div>
+        )}
+      </SectionCard>
+    </PortalShell>
   )
 }
 

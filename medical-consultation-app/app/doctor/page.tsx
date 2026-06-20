@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Users, FileText, BarChart3, Clock, AlertCircle, TrendingUp } from 'lucide-react'
-import { demoConsultations } from "@/lib/doctor-demo"
+import { AlertTriangle, ArrowRight, CalendarDays, ClipboardList, FileText, HeartPulse, TrendingUp, Users } from 'lucide-react'
+import { demoConsultations, demoPatients } from "@/lib/doctor-demo"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
+import { Button } from "@/components/ui/button"
 
 export default function DoctorDashboard() {
   const router = useRouter()
@@ -27,151 +31,209 @@ export default function DoctorDashboard() {
   if (!mounted) return null
 
   const stats = [
-    { icon: Users, label: 'Bệnh nhân', value: '24', color: 'blue' },
-    { icon: FileText, label: 'Báo cáo hôm nay', value: '8', color: 'green' },
-    { icon: Clock, label: 'Cuộc tư vấn chưa xử lý', value: '5', color: 'orange' },
-    { icon: AlertCircle, label: 'Trường hợp khẩn cấp', value: '2', color: 'red' },
+    { icon: Users, label: 'Bệnh nhân đang theo dõi', value: demoPatients.length, helper: 'Danh sách active trong doctor portal', tone: 'primary' as const },
+    { icon: FileText, label: 'Báo cáo hôm nay', value: '8', helper: '2 báo cáo cần rà soát gấp', tone: 'neutral' as const },
+    { icon: CalendarDays, label: 'Lịch hẹn đang chờ', value: '5', helper: 'Đồng bộ với inbox appointments', tone: 'teal' as const },
+    { icon: AlertTriangle, label: 'Clinical alerts', value: '2', helper: 'Tình huống cần phản hồi sớm', tone: 'primary' as const },
   ]
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50 mb-2">
-          Chào mừng, {userName}
-        </h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Quản lý bệnh nhân và theo dõi báo cáo tư vấn
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat, idx) => {
-          const Icon = stat.icon
-          const colorClasses = {
-            blue: 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300',
-            green: 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300',
-            orange: 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300',
-            red: 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300',
-          }
-          
-          return (
-            <div
-              key={idx}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-6 shadow-sm hover:shadow-md transition"
-            >
-              <div className={`w-12 h-12 rounded-lg ${colorClasses[stat.color as keyof typeof colorClasses]} flex items-center justify-center mb-4`}>
-                <Icon size={24} />
-              </div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
-                {stat.label}
-              </p>
-              <p className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-                {stat.value}
-              </p>
+    <PortalShell
+      eyebrow="Doctor Dashboard"
+      title={`Chào mừng, ${userName}`}
+      description="Bảng điều khiển tổng hợp cho lịch hẹn, bệnh nhân, cảnh báo lâm sàng và luồng thao tác nhanh của bác sĩ."
+      actions={
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" className="rounded-xl" onClick={() => router.push("/doctor/reports")}>
+            Export Daily Log
+          </Button>
+          <Button className="rounded-xl" onClick={() => router.push("/doctor/reports/new")}>
+            New Consultation
+          </Button>
+        </div>
+      }
+      aside={
+        <div className="space-y-6">
+          <SectionCard title="Quick Actions" description="Các lối tắt chính cho ca trực hôm nay.">
+            <div className="grid gap-3">
+              <button type="button" onClick={() => router.push("/doctor/patients")} className="rounded-xl bg-primary px-4 py-3 text-left text-sm font-semibold text-primary-foreground transition hover:bg-primary/90">
+                Xem danh sách bệnh nhân
+              </button>
+              <button type="button" onClick={() => router.push("/doctor/appointments")} className="rounded-xl bg-secondary/55 px-4 py-3 text-left text-sm font-medium text-foreground transition hover:bg-secondary">
+                Xem lịch hẹn
+              </button>
+              <button type="button" onClick={() => router.push("/thong-ke")} className="rounded-xl bg-secondary/55 px-4 py-3 text-left text-sm font-medium text-foreground transition hover:bg-secondary">
+                Xem thống kê
+              </button>
             </div>
+          </SectionCard>
+
+          <SectionCard title="Hiệu suất" description="Một số chỉ số demo để hỗ trợ bố cục doctor portal.">
+            <div className="space-y-4">
+              <div>
+                <div className="mb-1 flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tỷ lệ hoàn tất</span>
+                  <span className="font-semibold text-foreground">92%</span>
+                </div>
+                <div className="h-2 rounded-full bg-secondary">
+                  <div className="h-2 rounded-full bg-teal-accent" style={{ width: '92%' }} />
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 flex justify-between text-sm">
+                  <span className="text-muted-foreground">Hài lòng bệnh nhân</span>
+                  <span className="font-semibold text-foreground">4.8/5</span>
+                </div>
+                <div className="h-2 rounded-full bg-secondary">
+                  <div className="h-2 rounded-full bg-primary" style={{ width: '96%' }} />
+                </div>
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+      }
+    >
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => {
+          const Icon = stat.icon
+          return (
+            <StatCard
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              helper={stat.helper}
+              icon={<Icon size={20} />}
+              tone={stat.tone}
+            />
           )
         })}
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Consultations */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-4">Tư vấn gần đây</h2>
-          <div className="space-y-4">
-            {demoConsultations.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => router.push(`/tu-van?id=${encodeURIComponent(item.conversationId)}`)}
-                className="w-full text-left flex items-center justify-between p-4 rounded-lg border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
-              >
-                <div className="flex-1">
-                  <p className="font-medium text-slate-900 dark:text-slate-50">{item.patient}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{item.time}</p>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <SectionCard
+          title="Tư vấn gần đây"
+          description="Các hội thoại gần nhất để bác sĩ quay lại xử lý hoặc tiếp tục theo conversation id."
+          badge={
+            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+              {demoConsultations.length} items
+            </span>
+          }
+          contentClassName="space-y-4"
+        >
+          {demoConsultations.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => router.push(`/tu-van?id=${encodeURIComponent(item.conversationId)}`)}
+              className="app-surface hover-lift w-full rounded-[1.3rem] bg-card/90 p-4 text-left"
+            >
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-foreground">{item.patient}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{item.time}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">
-                    {item.type}
-                  </span>
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                    item.status === 'Đã hoàn tất' ? 'bg-green-100 dark:bg-green-950/30 text-green-700 dark:text-green-300' :
-                    item.status === 'Đang xử lý' ? 'bg-blue-100 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300' :
-                    'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300'
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground">{item.type}</span>
+                  <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    item.status === 'Đã hoàn tất'
+                      ? 'bg-teal-accent/10 text-teal-accent'
+                      : item.status === 'Đang xử lý'
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
                   }`}>
                     {item.status}
                   </span>
                 </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-6 shadow-sm">
-            <h3 className="font-bold text-slate-900 dark:text-slate-50 mb-4">Hành động nhanh</h3>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => router.push("/doctor/patients")}
-                className="w-full px-4 py-3 rounded-lg bg-blue-600 dark:bg-blue-600 text-white font-medium hover:bg-blue-700 dark:hover:bg-blue-700 transition"
-              >
-                Xem danh sách bệnh nhân
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/doctor/reports/new")}
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-              >
-                Viết báo cáo
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push("/thong-ke")}
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50 font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-              >
-                Xem thống kê
-              </button>
-            </div>
-          </div>
-
-          {/* Performance */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-slate-900 dark:text-slate-50">Hiệu suất</h3>
-              <TrendingUp size={20} className="text-green-600 dark:text-green-400" />
-            </div>
-            <div className="space-y-3">
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-slate-700 dark:text-slate-300">Tỷ lệ hoàn tất</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-50">92%</span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '92%' }}></div>
-                </div>
               </div>
-              <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-slate-700 dark:text-slate-300">Hài lòng bệnh nhân</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-50">4.8/5</span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '96%' }}></div>
-                </div>
+            </button>
+          ))}
+        </SectionCard>
+
+        <div className="space-y-6">
+          <SectionCard
+            title="AI Clinical Alerts"
+            description="Khối cảnh báo và gợi ý ưu tiên theo mockup doctor dashboard."
+            badge={
+              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                Live Analysis
+              </span>
+            }
+            contentClassName="space-y-4"
+          >
+            <div className="rounded-[1.25rem] border-l-4 border-destructive bg-destructive/5 px-4 py-4">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <h4 className="font-semibold text-foreground">Critical Bradycardia Detected</h4>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-destructive">2m ago</span>
               </div>
+              <p className="text-sm leading-6 text-muted-foreground">Patient ID `#PX-9921` cho tín hiệu nhịp tim thấp kéo dài. Khuyến nghị gọi kiểm tra nhanh ngay trong phiên hôm nay.</p>
             </div>
-          </div>
+            <div className="rounded-[1.25rem] border-l-4 border-primary bg-primary/5 px-4 py-4">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <h4 className="font-semibold text-foreground">Lab Result Anomaly</h4>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">45m ago</span>
+              </div>
+              <p className="text-sm leading-6 text-muted-foreground">Bảng xét nghiệm của bệnh nhân Sarah Jenkins có bất thường điện giải và cần rà lại trước buổi khám tiếp theo.</p>
+            </div>
+            <div className="rounded-[1.25rem] border border-border/70 bg-secondary/40 px-4 py-4">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <h4 className="font-semibold text-foreground">Medication Reconciliation</h4>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">2h ago</span>
+              </div>
+              <p className="text-sm leading-6 text-muted-foreground">Phát hiện nguy cơ tương tác thuốc trên lịch sử mới nhập. Có thể mở report hoặc vào lịch hẹn để xác nhận thêm.</p>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Upcoming Schedule" description="Một vài mốc ca khám tiếp theo trong ngày.">
+            <div className="space-y-4">
+              {[
+                { time: '09:00 AM', title: 'Post-op Review', subtitle: 'Elena Rodriguez (Room 304)', active: true },
+                { time: '10:30 AM', title: 'Cardiology Consultation', subtitle: 'Mr. George Walton (Remote)', active: false },
+                { time: '11:15 AM', title: 'Team Case Briefing', subtitle: 'Conference Room B', active: false },
+              ].map((entry) => (
+                <div key={`${entry.time}-${entry.title}`} className="flex gap-4">
+                  <div className={`mt-1 h-10 w-10 shrink-0 rounded-full border-2 ${entry.active ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-secondary text-muted-foreground'} flex items-center justify-center`}>
+                    <HeartPulse className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1 rounded-[1.2rem] bg-secondary/40 px-4 py-4">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className={`text-sm font-semibold ${entry.active ? 'text-primary' : 'text-muted-foreground'}`}>{entry.time}</span>
+                      {entry.active ? <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">Ongoing</span> : null}
+                    </div>
+                    <div className="font-semibold text-foreground">{entry.title}</div>
+                    <div className="text-sm text-muted-foreground">{entry.subtitle}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
         </div>
       </div>
+
+      <SectionCard title="Portal Routes" description="Điều hướng nhanh tới các phần chính của doctor portal.">
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            { title: 'Patients', description: 'Xem danh sách bệnh nhân và hồ sơ điều trị.', href: '/doctor/patients', icon: <Users className="h-5 w-5" /> },
+            { title: 'Appointments', description: 'Quản lý lịch hẹn và booking từ public flow.', href: '/doctor/appointments', icon: <CalendarDays className="h-5 w-5" /> },
+            { title: 'Reports', description: 'Soạn báo cáo và rà lại các trường hợp cần theo dõi.', href: '/doctor/reports', icon: <ClipboardList className="h-5 w-5" /> },
+          ].map((item) => (
+            <button
+              key={item.href}
+              type="button"
+              onClick={() => router.push(item.href)}
+              className="app-surface hover-lift flex items-start gap-4 rounded-[1.3rem] bg-card/90 p-5 text-left"
+            >
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">{item.icon}</div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="font-semibold text-foreground">{item.title}</div>
+                  <ArrowRight className="h-4 w-4 text-primary" />
+                </div>
+                <div className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</div>
+              </div>
+            </button>
+          ))}
         </div>
-      </div>
-    </div>
+      </SectionCard>
+    </PortalShell>
   )
 }

@@ -559,6 +559,9 @@ export async function POST(req: Request) {
         return applyTriageActionGuard([{ type: "ask_navigation", args: { feature: "bac-si", reason: "Đây có thể là tình huống khẩn cấp. Hãy gọi 115 ngay hoặc đến cơ sở y tế gần nhất." } }], triageMeta)
       }
       if (triageMeta?.active) return []
+      if (intentFlags.triage) {
+        return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Triệu chứng này có thể cần bác sĩ đánh giá sớm để loại trừ nguy cơ cấp cứu." } }]
+      }
       if (agentProfile.id === "medication") return [{ type: "ask_navigation", args: { feature: "tra-cuu", reason: "Mở tra cứu để xem thông tin thuốc/tương tác chính xác hơn." } }]
       if (agentProfile.id === "care_plan") return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Mở kế hoạch chăm sóc để lập lộ trình theo dõi cụ thể." } }]
       if (agentProfile.id === "therapy") return [{ type: "ask_navigation", args: { feature: "tri-lieu", reason: "Mở trị liệu để xem bài tập thở/grounding và kỹ thuật giảm căng thẳng." } }]

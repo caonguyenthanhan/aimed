@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AIMed - Hệ thống Tư vấn Y tế AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "outline": "#747687",
+                    "dark-card": "#1A1F2E",
+                    "on-tertiary-fixed": "#001b3c",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed": "#d5e3ff",
+                    "on-error": "#ffffff",
+                    "on-background": "#191c1d",
+                    "background": "#f8fafb",
+                    "on-primary-fixed": "#001356",
+                    "dark-bg": "#0F1419",
+                    "surface-container-low": "#f2f4f5",
+                    "tertiary-fixed-dim": "#a8c8ff",
+                    "teal-accent": "#14B8A6",
+                    "inverse-primary": "#b9c3ff",
+                    "tertiary-container": "#005aac",
+                    "inverse-surface": "#2e3132",
+                    "muted-blue": "#E8F0FF",
+                    "surface-tint": "#1c4bea",
+                    "secondary-fixed-dim": "#c2c7cd",
+                    "on-primary": "#ffffff",
+                    "destructive": "#E63946",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#004383",
+                    "surface-variant": "#e1e3e4",
+                    "secondary": "#5a5f65",
+                    "on-surface-variant": "#434655",
+                    "surface-container-highest": "#e1e3e4",
+                    "secondary-fixed": "#dfe3ea",
+                    "on-surface": "#191c1d",
+                    "on-tertiary-container": "#bcd4ff",
+                    "secondary-container": "#dfe3ea",
+                    "on-secondary-fixed": "#171c21",
+                    "on-tertiary-fixed-variant": "#004689",
+                    "surface": "#f8fafb",
+                    "surface-container-high": "#e6e8e9",
+                    "on-error-container": "#93000a",
+                    "on-primary-container": "#c9d0ff",
+                    "on-secondary-fixed-variant": "#42474d",
+                    "surface": "#f8fafb",
+                    "surface-container": "#eceeef",
+                    "surface-bright": "#f8fafb",
+                    "on-secondary-container": "#60656b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-gap": "1rem",
+                    "margin-mobile": "1rem",
+                    "gutter": "1.5rem",
+                    "container-max": "1280px",
+                    "header-height": "4.5rem"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "button-text": ["Inter"],
+                    "label-mono": ["Geist"],
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl": ["60px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["30px", {"lineHeight": "38px", "fontWeight": "600"}],
+                    "headline-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "button-text": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "label-mono": ["13px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f8fafb;
+            overflow-x: hidden;
+            height: 100vh;
+        }
+        .main-scroll-container {
+            height: calc(100vh - 4.5rem);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #747687 transparent;
+        }
+        .main-scroll-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .main-scroll-container::-webkit-scrollbar-thumb {
+            background-color: #747687;
+            border-radius: 10px;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .animated-blob {
+            position: absolute;
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: -1;
+            animation: blob-float 20s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
+        }
+        @keyframes blob-float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 50px) scale(1.2); }
+        }
+        .text-gradient {
+            background: linear-gradient(135deg, #0032b6 0%, #14B8A6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-background">
+<!-- Background Atmospheric Blobs -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none -z-10">
+<div class="animated-blob w-[500px] h-[500px] bg-primary rounded-full top-[-100px] left-[-100px]"></div>
+<div class="animated-blob w-[400px] h-[400px] bg-teal-accent rounded-full bottom-[-50px] right-[-50px]" style="animation-delay: -5s;"></div>
+<div class="animated-blob w-[300px] h-[300px] bg-tertiary-fixed-dim rounded-full top-[40%] left-[60%]" style="animation-delay: -10s;"></div>
+</div>
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm">
+<nav class="max-w-container-max mx-auto h-header-height px-margin-mobile md:px-gutter flex justify-between items-center">
+<div class="flex items-center gap-8">
+<a class="font-headline-md text-headline-md font-bold text-primary" href="/">AIMed</a>
+<div class="hidden md:flex gap-6 items-center">
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md transition-all duration-300" href="#">Tư vấn AI</a>
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md hover:translate-y-[-2px] transition-all duration-300" href="#">Hồ sơ sức khỏe</a>
+<a class="text-on-surface-variant hover:text-primary font-body-md text-body-md hover:translate-y-[-2px] transition-all duration-300" href="#">Chuyên gia</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:text-primary active:scale-95 transition-transform">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary active:scale-95 transition-transform">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="h-10 w-10 rounded-full border-2 border-primary-fixed overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a user for their medical profile, high-quality studio lighting, neutral background, medical professional aesthetic with a soft blue tint to match the clinical modern branding." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBd0REYicHgM9XgcQ8RmvDhtYYEnFKXrlSv6Ag2soDHhzBbEmHcJLHEMXpKMDlfFLm3rQD0sLZGv_gt-y73RZPsN5M7GIBetea0FQfVuZzBtJxGr7bVDEzooGltwsYvNDXN76IzO1twBxeWbzmChZBRFYSRhqvdsM3oOcasiYDYCLiwkzq3dImKHvNC3ZdpDITTazO3ckviVgE0NRBdjCr2G8cexBpmKSRLPUbyXplYDzCbrIiQvJrRaOruZLlW0pEhmGBdRFUXW8nW"/>
+</div>
+</div>
+</nav>
+</header>
+<main class="main-scroll-container pt-header-height">
+<!-- Hero Section -->
+<section class="relative px-margin-mobile md:px-gutter pt-16 pb-24 md:pt-24 md:pb-32 overflow-hidden">
+<div class="max-w-container-max mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+<div class="space-y-8 z-10">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-muted-blue text-primary rounded-full font-label-mono text-label-mono">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-accent opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-teal-accent"></span>
+</span>
+                        AI-POWERED MEDICAL HUB
+                    </div>
+<h1 class="font-headline-xl text-headline-xl lg:text-headline-xl text-on-background leading-tight">
+<span class="text-gradient">Hệ thống Tư vấn Y tế</span> <br/> 
+                        &amp; Sức khỏe Tinh thần AI
+                    </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
+                        Trải nghiệm giải pháp y tế tương lai với Hybrid LLM Routing, đảm bảo độ chính xác cao và khả năng phản hồi tức thì 24/7. Hoàn toàn bảo mật và đồng hành cùng bạn mỗi ngày.
+                    </p>
+<div class="flex flex-wrap gap-4 pt-4">
+<button class="px-8 py-3 bg-primary text-on-primary font-button-text text-button-text rounded-xl shadow-lg hover:translate-y-[-4px] active:scale-95 transition-all duration-300">
+                            Bắt đầu ngay
+                        </button>
+<button class="px-8 py-3 bg-secondary-container text-primary font-button-text text-button-text rounded-xl hover:translate-y-[-4px] active:scale-95 transition-all duration-300">
+                            Tìm hiểu thêm
+                        </button>
+</div>
+</div>
+<div class="relative hidden lg:block h-[500px]">
+<div class="glass-panel absolute inset-0 rounded-[40px] shadow-2xl overflow-hidden group">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A futuristic medical 3D visualization showing a clean digital human profile being scanned by blue light beams, representing AI analysis. The background is a clean, minimalist laboratory with soft ambient lighting in a high-key light mode style. Blue and teal color palette with professional clinical atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCh0IZMZA21RrrlZkt5Rcy-_sTXgROfuHPRDfK1OzORrNzAAZfggyjMzx5Fytk8AZW2iJHgtXDM2RdhBGXJqNpifxjkP-k9INjjnaafGFMsp_n9N7ouIzdzVd0aclgQ_Du5qKXN8RGTKyssOpFXTm_TJAnfBbqSZ68sJSc25bN_Aq614wJzY_dDQnqJ2Y2Mt7ZYQscgLktaakcVT7I_49mTxtcGDW6nkQ_DTzwkmMfMshlZs2qZR0gbUrFXN_VzWPv1S8gkFBAqGABY"/>
+<div class="absolute bottom-6 left-6 right-6 p-6 glass-panel rounded-2xl">
+<div class="flex items-center gap-4">
+<div class="bg-teal-accent/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-teal-accent" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+<div>
+<p class="font-label-mono text-label-mono text-on-surface-variant">HỆ THỐNG TRỰC TUYẾN</p>
+<p class="font-headline-md text-headline-md text-primary">100% Uptime Status</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Quick Access Grid -->
+<section class="px-margin-mobile md:px-gutter py-20 bg-surface-container-lowest/50">
+<div class="max-w-container-max mx-auto">
+<div class="mb-12 text-center">
+<h2 class="font-headline-lg text-headline-lg text-on-background mb-4">Tiện ích sức khỏe thông minh</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Chọn một dịch vụ để bắt đầu hành trình chăm sóc sức khỏe của bạn</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<!-- AI Consultation -->
+<a class="glass-panel group p-8 rounded-3xl hover:translate-y-[-8px] transition-all duration-500 hover:shadow-xl hover:border-primary/30" href="#">
+<div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110">
+<span class="material-symbols-outlined text-primary text-3xl">smart_toy</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">Tư vấn AI</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Hỏi đáp y tế 24/7 với hệ thống AI thông minh nhất.</p>
+<div class="mt-6 flex items-center text-primary font-button-text text-button-text">
+                            Bắt đầu chat <span class="material-symbols-outlined ml-2 group-hover:translate-x-2 transition-transform">arrow_forward</span>
+</div>
+</a>
+<!-- Mental Companion -->
+<a class="glass-panel group p-8 rounded-3xl hover:translate-y-[-8px] transition-all duration-500 hover:shadow-xl hover:border-teal-accent/30" href="#">
+<div class="w-14 h-14 bg-teal-accent/10 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110">
+<span class="material-symbols-outlined text-teal-accent text-3xl">sentiment_satisfied</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">Tâm sự</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Lắng nghe &amp; chia sẻ cảm xúc, hỗ trợ tâm lý mọi lúc.</p>
+<div class="mt-6 flex items-center text-teal-accent font-button-text text-button-text">
+                            Kết nối ngay <span class="material-symbols-outlined ml-2 group-hover:translate-x-2 transition-transform">arrow_forward</span>
+</div>
+</a>
+<!-- Doctor Directory -->
+<a class="glass-panel group p-8 rounded-3xl hover:translate-y-[-8px] transition-all duration-500 hover:shadow-xl hover:border-primary/30" href="#">
+<div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110">
+<span class="material-symbols-outlined text-primary text-3xl">medical_services</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">Bác sĩ</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Kết nối nhanh chóng với các bác sĩ chuyên khoa hàng đầu.</p>
+<div class="mt-6 flex items-center text-primary font-button-text text-button-text">
+                            Tìm bác sĩ <span class="material-symbols-outlined ml-2 group-hover:translate-x-2 transition-transform">arrow_forward</span>
+</div>
+</a>
+<!-- Medical Encyclopedia -->
+<a class="glass-panel group p-8 rounded-3xl hover:translate-y-[-8px] transition-all duration-500 hover:shadow-xl hover:border-secondary/30" href="#">
+<div class="w-14 h-14 bg-secondary/10 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110">
+<span class="material-symbols-outlined text-secondary text-3xl">menu_book</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">Tra cứu</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Thư viện tra cứu thuốc và các bệnh lý chi tiết, chuẩn xác.</p>
+<div class="mt-6 flex items-center text-secondary font-button-text text-button-text">
+                            Xem thư viện <span class="material-symbols-outlined ml-2 group-hover:translate-x-2 transition-transform">arrow_forward</span>
+</div>
+</a>
+</div>
+</div>
+</section>
+<!-- Features Highlights -->
+<section class="px-margin-mobile md:px-gutter py-24 overflow-hidden relative">
+<div class="max-w-container-max mx-auto">
+<div class="flex flex-col lg:flex-row gap-16 items-center">
+<div class="w-full lg:w-1/2 relative">
+<div class="absolute -top-12 -left-12 w-48 h-48 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="glass-panel p-8 rounded-[32px] relative z-10 border-l-4 border-l-primary shadow-xl">
+<div class="flex items-start gap-6 mb-8">
+<div class="bg-primary p-4 rounded-2xl text-on-primary">
+<span class="material-symbols-outlined text-4xl">database</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md text-on-surface">GraphRAG Technology</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Truy xuất kiến thức dựa trên đồ thị, đảm bảo thông tin y tế được liên kết chặt chẽ và chính xác hơn bao giờ hết.</p>
+</div>
+</div>
+<div class="flex items-start gap-6">
+<div class="bg-teal-accent p-4 rounded-2xl text-on-primary">
+<span class="material-symbols-outlined text-4xl" style="font-variation-settings: 'FILL' 1;">security</span>
+</div>
+<div>
+<h4 class="font-headline-md text-headline-md text-on-surface">Data Security</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Dữ liệu sức khỏe của bạn được mã hóa đầu cuối và tuân thủ các tiêu chuẩn bảo mật y tế quốc tế nghiêm ngặt nhất.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="w-full lg:w-1/2 space-y-6">
+<h2 class="font-headline-lg text-headline-lg text-on-background">Công nghệ tiên phong vì <span class="text-gradient">Sức khỏe của Bạn</span></h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">
+                            AIMed không chỉ là một chatbot thông thường. Chúng tôi xây dựng một hệ sinh thái trí tuệ nhân tạo chuyên sâu trong lĩnh vực y tế, kết nối giữa dữ liệu thực tế và lời khuyên từ các chuyên gia.
+                        </p>
+<ul class="space-y-4 pt-4">
+<li class="flex items-center gap-3 font-body-md text-body-md text-on-surface">
+<span class="material-symbols-outlined text-teal-accent">check_circle</span>
+                                Phân tích triệu chứng dựa trên bằng chứng khoa học
+                            </li>
+<li class="flex items-center gap-3 font-body-md text-body-md text-on-surface">
+<span class="material-symbols-outlined text-teal-accent">check_circle</span>
+                                Khuyến nghị lối sống và dinh dưỡng cá nhân hóa
+                            </li>
+<li class="flex items-center gap-3 font-body-md text-body-md text-on-surface">
+<span class="material-symbols-outlined text-teal-accent">check_circle</span>
+                                Tích hợp hồ sơ sức khỏe điện tử (EHR)
+                            </li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest border-t border-outline-variant py-12">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter grid grid-cols-1 md:grid-cols-2 gap-stack-gap">
+<div>
+<a class="font-headline-md text-headline-md font-bold text-primary mb-6 block" href="/">AIMed</a>
+<p class="font-body-sm text-body-sm text-secondary max-w-md">
+                        © 2024 AIMed Healthcare. All rights reserved. Medical Disclaimer: Information provided is for educational purposes and not a substitute for professional medical advice.
+                    </p>
+</div>
+<div class="grid grid-cols-2 gap-8">
+<div class="space-y-4">
+<h5 class="font-button-text text-button-text text-on-surface">Pháp lý</h5>
+<nav class="flex flex-col gap-2">
+<a class="font-body-sm text-body-sm text-secondary hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="font-body-sm text-body-sm text-secondary hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="font-body-sm text-body-sm text-secondary hover:text-primary transition-colors" href="#">Medical Disclaimer</a>
+</nav>
+</div>
+<div class="space-y-4">
+<h5 class="font-button-text text-button-text text-on-surface">Hỗ trợ</h5>
+<nav class="flex flex-col gap-2">
+<a class="font-body-sm text-body-sm text-secondary hover:text-primary transition-colors" href="#">Contact Support</a>
+<a class="font-body-sm text-body-sm text-secondary hover:text-primary transition-colors" href="#">Trung tâm trợ giúp</a>
+<a class="font-body-sm text-body-sm text-secondary hover:text-primary transition-colors" href="#">Cộng đồng</a>
+</nav>
+</div>
+</div>
+</div>
+</footer>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed bottom-8 right-8 w-16 h-16 bg-primary text-on-primary rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-300 z-50">
+<span class="material-symbols-outlined text-3xl">chat_bubble</span>
+</button>
+<script>
+        // Micro-interaction for the navbar scroll effect
+        const scrollContainer = document.querySelector('.main-scroll-container');
+        const header = document.querySelector('header');
+        
+        scrollContainer.addEventListener('scroll', () => {
+            if (scrollContainer.scrollTop > 50) {
+                header.classList.add('shadow-md');
+                header.classList.remove('shadow-sm');
+            } else {
+                header.classList.remove('shadow-md');
+                header.classList.add('shadow-sm');
+            }
+        });
+    </script>
+</body></html>

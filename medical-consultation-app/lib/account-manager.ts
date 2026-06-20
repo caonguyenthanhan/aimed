@@ -9,7 +9,7 @@ export interface AccountSession {
   username: string
   email?: string
   full_name: string
-  userRole: 'doctor' | 'patient'
+  userRole: 'doctor' | 'patient' | 'admin'
   avatar_url?: string
   authToken: string
   timestamp: number
@@ -19,6 +19,12 @@ export interface AccountSession {
 const ACCOUNT_HISTORY_KEY = 'account_history'
 const CURRENT_SESSION_KEY = 'current_session'
 const MAX_STORED_ACCOUNTS = 5
+
+export function getRoleHomePath(role: 'doctor' | 'patient' | 'admin'): string {
+  if (role === 'doctor') return '/doctor'
+  if (role === 'admin') return '/quan-ly'
+  return '/'
+}
 
 /**
  * Save the current session to account history
@@ -30,7 +36,7 @@ export function saveCurrentSession(): void {
     const authToken = localStorage.getItem('authToken')
     const userId = localStorage.getItem('userId')
     const username = localStorage.getItem('username') || ''
-    const userRole = (localStorage.getItem('userRole') || 'patient') as 'doctor' | 'patient'
+    const userRole = (localStorage.getItem('userRole') || 'patient') as 'doctor' | 'patient' | 'admin'
     const userFullName = localStorage.getItem('userFullName') || username
     const email = localStorage.getItem('userEmail') || ''
     
@@ -175,15 +181,19 @@ export function clearAccountHistory(): void {
 /**
  * Get role badge color for UI display
  */
-export function getRoleColor(role: 'doctor' | 'patient'): string {
-  return role === 'doctor' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+export function getRoleColor(role: 'doctor' | 'patient' | 'admin'): string {
+  if (role === 'doctor') return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+  if (role === 'admin') return 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400'
+  return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
 }
 
 /**
  * Get role label in Vietnamese
  */
-export function getRoleLabel(role: 'doctor' | 'patient'): string {
-  return role === 'doctor' ? 'Bác sĩ' : 'Bệnh nhân'
+export function getRoleLabel(role: 'doctor' | 'patient' | 'admin'): string {
+  if (role === 'doctor') return 'Bác sĩ'
+  if (role === 'admin') return 'Quản trị viên'
+  return 'Bệnh nhân'
 }
 
 /**

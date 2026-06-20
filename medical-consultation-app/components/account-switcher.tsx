@@ -18,6 +18,7 @@ import {
   switchAccount,
   removeAccountFromHistory,
   AccountSession,
+  getRoleHomePath,
   getRoleColor,
   getRoleLabel,
   formatLastAccessed,
@@ -65,8 +66,8 @@ export default function AccountSwitcher() {
       // Switch to the selected account
       switchAccount(selectedAccount)
 
-      // Redirect to home/dashboard using window.location
-      window.location.href = '/'
+      // Redirect to the role-specific home after restoring the session.
+      window.location.href = getRoleHomePath(selectedAccount.userRole)
     } catch (error) {
       console.error('[v0] Error switching account:', error)
       setIsSwitching(false)

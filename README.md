@@ -34,13 +34,15 @@ Hệ thống tư vấn y tế & hỗ trợ sức khỏe tinh thần theo kiến 
 - Mood Tracker + Journaling: module ghi chép cá nhân hoá (local-first).
 - PWA cơ bản + Notifications: nhắc bài tập hành vi (Behavioral Activation).
 
-## 🧱 Kiến trúc
+## 🧱 Kiến trúc & Cấu trúc Thư mục
 
 **Monorepo**
-- `medical-consultation-app`: Next.js (App Router) + shadcn/ui + Tailwind + API routes (gateway).
-- `cpu_server`: FastAPI (CPU backend) — Auth/Consent, chat fallback, STT/TTS, clinical endpoints, phenotyping.
-- `gpu_server`: scripts Colab/Ngrok (tuỳ chọn).
-- `Archived`: mã thử nghiệm/đồ án cũ.
+- `medical-consultation-app`: Frontend Next.js (App Router) + Tailwind CSS + shadcn/ui + các API routes trung chuyển (gateway).
+- `cpu_server`: Backend FastAPI (chạy CPU/local) — Quản lý xác thực (Auth), đồng ý dữ liệu (Consent), fallback mô hình khi GPU lỗi, dịch vụ STT/TTS, tích hợp LangGraph Orchestrator và đồ thị tri thức Memgraph.
+- `gpu_server`: Các tập lệnh (scripts) triển khai máy chủ LLM trên Colab hoặc qua Ngrok (tùy chọn).
+- `postgres-platform`: Cấu hình Docker Compose để khởi chạy cơ sở dữ liệu PostgreSQL cục bộ phục vụ dự án.
+- `memgraph-platform`: Cấu hình Docker Compose để khởi chạy cơ sở dữ liệu đồ thị Memgraph phục vụ tính năng GraphRAG.
+- `archived`: Thư mục lưu trữ các tài liệu kiểm thử, báo cáo cũ, đề xuất thiết kế, mã nguồn thử nghiệm (`_workspace`, `plan`, `thesis`, `tester-log`...) không trực tiếp tham gia vào quá trình vận hành sản phẩm.
 
 **Luồng chat (tóm tắt)**
 - UI → `POST /api/llm-chat` (Next API) → GPU nếu available → fallback Gemini → fallback CPU.

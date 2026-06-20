@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Copy, ExternalLink, FileText, Sparkles } from "lucide-react"
+import { Bot, Copy, ExternalLink, FileText, ShieldCheck, Sparkles, Workflow } from "lucide-react"
+import PortalShell from "@/components/portal-shell"
+import { SectionCard } from "@/components/ui/section-card"
+import { StatCard } from "@/components/ui/stat-card"
 import { getAllAgentProfiles, type AgentProfileId } from "@/lib/agent-profiles"
 
 type DemoScenario = {
@@ -61,6 +64,10 @@ export default function AgentHubPage() {
     [],
   )
 
+  const supportedFeatures = useMemo(() => {
+    return Array.from(new Set(profiles.flatMap((profile) => profile.preferredFeatures)))
+  }, [profiles])
+
   const doCopy = async (id: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text)
@@ -81,14 +88,11 @@ export default function AgentHubPage() {
 
   return (
     <div suppressHydrationWarning className="min-h-screen hero-gradient dark:hero-gradient-dark">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Agent Hub</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Giới thiệu agent profiles, tool hỗ trợ và kịch bản demo 1-click để trình bày với hội đồng.
-            </p>
-          </div>
+      <PortalShell
+        eyebrow="Agent Demo"
+        title="Agent Hub"
+        description="Giới thiệu agent profiles, năng lực điều hướng và bộ demo 1-click để trình bày với hội đồng. Logic copy prompt, bật Agent mode và mở `/tu-van` vẫn giữ nguyên."
+        actions={
           <Link
             href="/tu-van"
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 transition"
@@ -96,60 +100,109 @@ export default function AgentHubPage() {
             <ExternalLink className="h-4 w-4" />
             Mở Chat
           </Link>
-        </div>
-
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {profiles.map((p) => (
-            <div key={p.id} className="rounded-2xl border border-border bg-card/70 backdrop-blur-sm p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="text-sm font-bold text-foreground truncate">{p.name}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">{p.description}</div>
-                </div>
-                <div className="px-2 py-1 rounded-full bg-secondary text-[11px] font-semibold text-foreground">
-                  {p.id}
-                </div>
+        }
+        aside={
+          <div className="space-y-6">
+            <SectionCard title="Flow demo" description="Nhịp trình bày được tối ưu cho bảo vệ hoặc smoke demo.">
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-4">Chọn một kịch bản 1-click hoặc copy prompt mẫu.</div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-4">Mở `/tu-van`, Agent mode được bật sẵn qua local storage.</div>
+                <div className="rounded-2xl border border-border/70 bg-background/70 p-4">Trong chat, trình bày thêm context viewer để giải thích runtime, evidence và fallback.</div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {p.preferredFeatures.map((f) => (
-                  <span key={f} className="px-2 py-0.5 rounded-full bg-secondary text-[11px] text-foreground">
-                    {f}
-                  </span>
-                ))}
+            </SectionCard>
+            <SectionCard title="Vùng ưu tiên" description="Điểm cần quan sát trong lúc demo agent.">
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>Ưu tiên profile `auto` để thể hiện semantic routing thay vì chọn tay.</p>
+                <p>Nhấn mạnh degrade gracefully khi graph hoặc tool không sẵn sàng.</p>
+                <p>Giữ các expected outcomes như checklist nói miệng cho hội đồng.</p>
               </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 rounded-2xl border border-border bg-card/70 backdrop-blur-sm p-4">
-          <div className="flex items-center gap-2 text-sm font-bold text-foreground">
-            <Sparkles className="h-4 w-4" />
-            Kịch bản demo 1-click
+            </SectionCard>
           </div>
-          <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {demos.map((d) => (
-              <div key={d.id} className="rounded-2xl border border-border bg-background/60 p-4">
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-3">
+          <StatCard
+            label="Profiles"
+            value={profiles.length}
+            helper="Các persona đang có trong hệ thống"
+            icon={<Bot className="h-5 w-5" />}
+            tone="primary"
+          />
+          <StatCard
+            label="Demo scenarios"
+            value={demos.length}
+            helper="Bộ tình huống 1-click hiện tại"
+            icon={<Workflow className="h-5 w-5" />}
+            tone="teal"
+          />
+          <StatCard
+            label="Feature coverage"
+            value={supportedFeatures.length}
+            helper="Tổng số feature điều hướng được nhắc tới"
+            icon={<ShieldCheck className="h-5 w-5" />}
+            tone="neutral"
+          />
+        </div>
+
+        <SectionCard title="Agent profiles" description="Tóm tắt persona và feature ưa dùng cho từng profile.">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {profiles.map((profile) => (
+              <article key={profile.id} className="rounded-[1rem] border border-border/70 bg-background/70 p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold text-foreground truncate">{profile.name}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{profile.description}</div>
+                  </div>
+                  <div className="rounded-full bg-secondary px-2 py-1 text-[11px] font-semibold text-foreground">
+                    {profile.id}
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {profile.preferredFeatures.map((feature) => (
+                    <span key={feature} className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-foreground">
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Kịch bản demo 1-click"
+          description="Prompt mẫu, điểm kỳ vọng và đường tắt để chuyển thẳng sang chat agent."
+          badge={
+            <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <Sparkles className="h-3.5 w-3.5" />
+              Demo ready
+            </div>
+          }
+        >
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {demos.map((demo) => (
+              <article key={demo.id} className="rounded-[1rem] border border-border/70 bg-background/70 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-foreground">{d.title}</div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">profile: {d.profile}</div>
+                    <div className="text-sm font-semibold text-foreground">{demo.title}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground">profile: {demo.profile}</div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => doCopy(d.id, d.prompt)}
+                    onClick={() => doCopy(demo.id, demo.prompt)}
                     className="inline-flex items-center gap-2 rounded-xl bg-secondary px-3 py-2 text-xs font-semibold text-foreground hover:bg-accent hover:text-accent-foreground transition"
                   >
                     <Copy className="h-3.5 w-3.5" />
-                    {copiedId === d.id ? "Đã copy" : "Copy"}
+                    {copiedId === demo.id ? "Đã copy" : "Copy"}
                   </button>
                 </div>
                 <div className="mt-3 rounded-xl border border-border bg-card/60 p-3 text-xs text-foreground whitespace-pre-wrap">
-                  {d.prompt}
+                  {demo.prompt}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={() => openChatWithPrompt(d.prompt)}
+                    onClick={() => openChatWithPrompt(demo.prompt)}
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90 transition"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -163,23 +216,22 @@ export default function AgentHubPage() {
                     Xem context
                   </Link>
                 </div>
-                <div className="mt-3 text-[11px] text-muted-foreground">
-                  Kỳ vọng:
-                  <ul className="list-disc ml-5 mt-1 space-y-0.5">
-                    {d.expected.map((x) => (
-                      <li key={x}>{x}</li>
-                    ))}
-                  </ul>
+                <div className="mt-3 space-y-2 text-[11px] text-muted-foreground">
+                  <div className="font-semibold uppercase tracking-[0.16em] text-foreground/70">Kỳ vọng</div>
+                  {demo.expected.map((item) => (
+                    <div key={item} className="rounded-lg border border-dashed border-border/70 px-3 py-2">
+                      {item}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </article>
             ))}
           </div>
           <div className="mt-4 text-[11px] text-muted-foreground">
             Gợi ý demo: bật Agent mode → gửi prompt → bấm nút xem context trong chat để trình bày evidence/prompt/runtime.
           </div>
-        </div>
-      </div>
+        </SectionCard>
+      </PortalShell>
     </div>
   )
 }
-
