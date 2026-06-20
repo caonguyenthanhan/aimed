@@ -16,6 +16,7 @@ import { getDailyCard, redrawToday, type TherapeuticCard } from "@/lib/therapeut
 import { PageAiInsight } from "@/components/page-ai-insight"
 import PortalShell from "@/components/portal-shell"
 import { StatCard } from "@/components/ui/stat-card"
+import { DtxAnalyticsMood } from "@/components/dtx-analytics-mood"
 
 type MoodEntry = {
   id: string
@@ -390,11 +391,12 @@ export function DtxTriLieu() {
       ) : null}
 
       <Tabs defaultValue="plan">
-        <TabsList className="h-auto w-full justify-between rounded-2xl bg-secondary/70 p-1">
+        <TabsList className="h-auto w-full justify-between rounded-2xl bg-secondary/70 p-1 flex-wrap md:flex-nowrap gap-1">
           <TabsTrigger value="plan" className="flex-1">Kế hoạch</TabsTrigger>
           <TabsTrigger value="cards" className="flex-1">Thẻ</TabsTrigger>
           <TabsTrigger value="wheel" className="flex-1">Bánh xe</TabsTrigger>
           <TabsTrigger value="insight" className="flex-1">Hành trình</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex-1">Phân tích</TabsTrigger>
           <TabsTrigger value="mood" className="flex-1">Tâm trạng</TabsTrigger>
           <TabsTrigger value="journal" className="flex-1">Nhật ký</TabsTrigger>
         </TabsList>
@@ -661,6 +663,10 @@ export function DtxTriLieu() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <DtxAnalyticsMood moodItems={moodItems} journalItems={journalItems} />
         </TabsContent>
 
         <TabsContent value="mood" className="space-y-4">

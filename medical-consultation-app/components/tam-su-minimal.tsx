@@ -5,7 +5,7 @@ import { deleteUserState, getUserState, upsertUserState } from "@/lib/user-state
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Heart, Menu, X, Music, Play, ExternalLink, User } from "lucide-react"
+import { Heart, Menu, X, Music, Play, ExternalLink, User, TrendingUp } from "lucide-react"
 import { consumePendingScreeningContext, getLastScreening, type ScreeningResult } from "@/lib/screening-store"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
 import { PageAiInsight } from "@/components/page-ai-insight"
@@ -783,6 +783,13 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
                 <div className="text-xs text-muted-foreground">Chia sẻ cảm xúc, tâm sự</div>
               </div>
               <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                <button 
+                  className="text-xs px-3 py-2 border border-border rounded-xl bg-card text-foreground font-medium hover:bg-secondary transition-colors flex items-center gap-1" 
+                  type="button" 
+                  onClick={() => { try { window.location.href = "/tri-lieu" } catch {} }}
+                >
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" /> <span className="hidden sm:inline">Tri lieu & Phan tich</span>
+                </button>
                 {isMobile ? (
                   <button className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl border border-border bg-card flex items-center justify-center hover:bg-secondary transition-colors" type="button" onClick={() => setShowSidebar(true)} aria-label="Mo lich su">
                     <Menu className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-foreground" />
