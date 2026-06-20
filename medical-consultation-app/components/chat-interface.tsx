@@ -1,4 +1,4 @@
-﻿﻿﻿﻿"use client"
+﻿﻿﻿"use client"
 
 import { useState, useRef, useEffect, useLayoutEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -1342,7 +1342,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       recorder.start();
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('KhÃ´ng thá»ƒ truy cáº­p microphone. Vui lÃ²ng kiá»ƒm tra quyá»n truy cáº­p.');
+      alert('KhÃ´ng thá»ƒ truy cáº­p microphone. Vui l��²ng kiá»ƒm tra quyá»n truy cáº­p.');
     }
   };
 
@@ -2125,8 +2125,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
               className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden"
               style={{
                 WebkitOverflowScrolling: 'touch',
-                overscrollBehavior: 'contain',
-                height: '100%'
+                overscrollBehavior: 'contain'
               }}
               onScroll={refreshIsAtBottom}
             >
@@ -2152,7 +2151,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                           className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 ${
                             msg.isUser
                               ? 'chat-bubble-user'
-                              : 'chat-bubble-bot border border-border/50'
+                              : 'chat-bubble-bot border border-border/80'
                           }`}
                           style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                         >
@@ -2217,7 +2216,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                   className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 ${
                     message.isUser
                       ? 'chat-bubble-user'
-                      : 'chat-bubble-bot border border-border/50'
+                      : 'chat-bubble-bot border border-border/80'
                   }`}
                   style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
                 >

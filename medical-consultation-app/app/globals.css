@@ -85,9 +85,9 @@
   --sidebar-border: #2d3f5f;
   --sidebar-ring: #3d7ee6;
   --chat-user-bg: #0088ff;
-  --chat-user-text: #f5f5f5;
-  --chat-bot-bg: #1f2937;
-  --chat-bot-text: #f5f5f5;
+  --chat-user-text: #ffffff;
+  --chat-bot-bg: #2d3748;
+  --chat-bot-text: #ffffff;
   --chat-accent: #0088ff;
 }
 
