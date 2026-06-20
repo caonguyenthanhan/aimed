@@ -11,7 +11,7 @@ psycopg[binary]==3.2.6
 psycopg-pool>=3.3.1
 llama-cpp-python
 neo4j==5.28.1
-langgraph
+langgraph>=1.2.6
 langchain-core
 langchain-community
 langchain-openai
@@ -22,3 +22,4 @@ semantic-router>=0.1.15
 ragas
 datasets
 pytest
+langgraph-checkpoint-postgres>=3.1.0

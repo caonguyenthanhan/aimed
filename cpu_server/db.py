@@ -12,6 +12,7 @@ from psycopg_pool import ConnectionPool
 logger = logging.getLogger("db")
 
 _pool = None
+_checkpointer_pool = None
 
 
 def get_database_url() -> str:
@@ -34,6 +35,34 @@ def get_pool() -> ConnectionPool:
             timeout=10.0
         )
     return _pool
+
+
+def get_checkpointer_pool() -> ConnectionPool:
+    global _checkpointer_pool
+    if _checkpointer_pool is None:
+        db_url = get_database_url()
+        from psycopg.rows import dict_row
+        _checkpointer_pool = ConnectionPool(
+            conninfo=db_url,
+            min_size=1,
+            max_size=5,
+            open=True,
+            kwargs={"autocommit": True, "connect_timeout": 5, "row_factory": dict_row},
+            timeout=10.0
+        )
+    return _checkpointer_pool
+
+
+def ensure_checkpointer_schema() -> None:
+    try:
+        from langgraph.checkpoint.postgres import PostgresSaver
+        pool = get_checkpointer_pool()
+        checkpointer = PostgresSaver(pool)
+        checkpointer.setup()
+        logger.info("LangGraph Postgres checkpointer schema setup completed.")
+    except Exception as e:
+        logger.error(f"Failed to setup Postgres checkpointer schema: {e}")
+        raise
 
 
 @contextlib.contextmanager

@@ -41,7 +41,10 @@ def invoke_agent(
         "include_tools": bool(include_tools),
         "started_at": datetime.datetime.utcnow().isoformat(),
     }
-    out = g.invoke(state)
+    out = g.invoke(
+        state,
+        config={"configurable": {"thread_id": conversation_id}},
+    )
     md = out.get("metadata") or {}
     tool_results = out.get("tool_results") or {}
     graph_result = tool_results.get("graph.evidence") or {}

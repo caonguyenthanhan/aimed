@@ -191,6 +191,7 @@ try:
         create_user as _db_create_user,
         delete_conversation as _db_delete_conversation,
         ensure_auth_schema as _db_ensure_auth_schema,
+        ensure_checkpointer_schema as _db_ensure_checkpointer_schema,
         ensure_clinical_memory_schema as _db_ensure_clinical_memory_schema,
         ensure_knowledge_schema as _db_ensure_knowledge_schema,
         ensure_phenotyping_schema as _db_ensure_phenotyping_schema,
@@ -218,6 +219,7 @@ try:
     )
 except Exception:
     _db_ensure_auth_schema = None
+    _db_ensure_checkpointer_schema = None
     _db_ensure_clinical_memory_schema = None
     _db_ensure_knowledge_schema = None
     _db_ensure_phenotyping_schema = None
@@ -384,6 +386,8 @@ async def lifespan(app: FastAPI):
     try:
         if _db_ensure_auth_schema is not None:
             _db_ensure_auth_schema()
+        if _db_ensure_checkpointer_schema is not None:
+            _db_ensure_checkpointer_schema()
         if _db_ensure_knowledge_schema is not None:
             _db_ensure_knowledge_schema()
         if _db_ensure_clinical_memory_schema is not None:
@@ -650,39 +654,14 @@ MOCK_SOCIAL_DB = {}
 DATA_DIR = os.path.abspath(os.environ.get("CPU_DATA_DIR", "").strip() or os.path.join(REPO_ROOT, "data"))
 USER_FILE = os.path.join(DATA_DIR, "user.json")
 
-_GRAPH_DRIVER = None
-
-
-def _reset_graph_driver():
-    global _GRAPH_DRIVER
-    d = _GRAPH_DRIVER
-    _GRAPH_DRIVER = None
+try:
+    from .graph_gateway import get_graph_driver as _get_graph_driver, reset_graph_driver as _reset_graph_driver
+except Exception:
     try:
-        if d is not None:
-            d.close()
+        from graph_gateway import get_graph_driver as _get_graph_driver, reset_graph_driver as _reset_graph_driver
     except Exception:
-        pass
-
-
-def _get_graph_driver():
-    global _GRAPH_DRIVER
-    if _GRAPH_DRIVER is not None:
-        return _GRAPH_DRIVER
-    if GraphDatabase is None:
-        _GRAPH_DRIVER = None
-        return _GRAPH_DRIVER
-    uri = (os.environ.get("GRAPH_BOLT_URL") or os.environ.get("NEO4J_URI") or "bolt://127.0.0.1:7687").strip()
-    user = (os.environ.get("GRAPH_USER") or os.environ.get("NEO4J_USER") or "").strip()
-    password = (os.environ.get("GRAPH_PASSWORD") or os.environ.get("NEO4J_PASSWORD") or "").strip()
-    try:
-        auth = (user, password) if (user and password) else None
-        _GRAPH_DRIVER = GraphDatabase.driver(uri, auth=auth)
-        with _GRAPH_DRIVER.session() as s:
-            s.run("RETURN 1").consume()
-        return _GRAPH_DRIVER
-    except Exception:
-        _GRAPH_DRIVER = None
-        return _GRAPH_DRIVER
+        _get_graph_driver = lambda: None
+        _reset_graph_driver = lambda: None
 
 
 def _graph_checked_at() -> str:

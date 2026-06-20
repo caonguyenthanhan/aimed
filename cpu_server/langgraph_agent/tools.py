@@ -9,6 +9,16 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
+try:
+    from cpu_server.graph_gateway import get_graph_driver, reset_graph_driver
+except Exception:
+    try:
+        from graph_gateway import get_graph_driver, reset_graph_driver
+    except Exception:
+        get_graph_driver = lambda: None
+        reset_graph_driver = lambda: None
+
+
 _CACHE: Dict[str, Any] = {}
 
 
@@ -177,8 +187,7 @@ def youtube_recommend_music(mood: Optional[str] = None, maxResults: int = 5, tim
 def graph_status(timeout_s: float = 8.0) -> Dict[str, Any]:
     timeout_s = timeout_s if timeout_s and timeout_s > 0 else _env_timeout("LG_GRAPH_TIMEOUT_S", 8.0)
     t0 = time.time()
-    srv = importlib.import_module("cpu_server.server")
-    driver = getattr(srv, "_get_graph_driver", lambda: None)()
+    driver = get_graph_driver()
     if driver is None:
         return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
     cached = _cache_get("graph.status")
@@ -193,7 +202,7 @@ def graph_status(timeout_s: float = 8.0) -> Dict[str, Any]:
         return out
     except Exception:
         try:
-            getattr(srv, "_reset_graph_driver", lambda: None)()
+            reset_graph_driver()
         except Exception:
             pass
         return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
@@ -208,8 +217,7 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
-    srv = importlib.import_module("cpu_server.server")
-    driver = getattr(srv, "_get_graph_driver", lambda: None)()
+    driver = get_graph_driver()
     if driver is None:
         return {"ok": False, "error": "graph_not_available", "query": q, "entities": [], "edges": []}
     lim = int(limit or 60)
@@ -320,7 +328,7 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
         return out
     except Exception as e:
         try:
-            getattr(srv, "_reset_graph_driver", lambda: None)()
+            reset_graph_driver()
         except Exception:
             pass
         return {"ok": False, "query": q, "entities": [], "edges": [], "error": str(e), "elapsed_ms": int((time.time() - t0) * 1000)}

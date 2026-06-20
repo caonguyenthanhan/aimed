@@ -379,6 +379,14 @@ def _triage_state_payload(state: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _build_json_prompt(agent_profile: str, user_text: str, tool_results: Dict[str, Any], triage_state: Dict[str, Any]) -> List[Dict[str, Any]]:
+    try:
+        from cpu_server.graph_gateway import compress_tool_results
+    except Exception:
+        try:
+            from graph_gateway import compress_tool_results
+        except Exception:
+            compress_tool_results = lambda x: x
+
     allow_paths = ", ".join(ALLOWED_PATH_PREFIXES)
     system_lines = [
         "Bạn là AI agent cho ứng dụng tư vấn y tế & tâm lý.",
@@ -404,7 +412,7 @@ def _build_json_prompt(agent_profile: str, user_text: str, tool_results: Dict[st
     return [
         {"role": "system", "content": "\n".join(system_lines)},
         {"role": "system", "content": f"TRIAGE_STATE_JSON:{json.dumps(triage_state, ensure_ascii=False)}"},
-        {"role": "system", "content": f"TOOL_RESULTS_JSON:{json.dumps(tool_results or {}, ensure_ascii=False)[:12000]}"},
+        {"role": "system", "content": f"TOOL_RESULTS_JSON:{json.dumps(compress_tool_results(tool_results or {}), ensure_ascii=False)}"},
         {"role": "user", "content": user_text},
     ]
 
@@ -646,14 +654,25 @@ def node_llm(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     try:
         content, metadata = _foza_chat(messages, timeout_s=_foza_timeout_s())
     except Exception as exc:
-        fallback_text = build_triage_fallback_text(
-            risk_level=risk_level,
-            follow_up_questions=current.get("triage_follow_up_questions") or [],
-            symptoms_collected=current.get("symptoms_collected") or [],
-        ) if agent_profile == "triage" else (
-            "Mình tạm thời chưa kết nối được với trợ lý AI. Nếu xuất hiện dấu hiệu nặng như khó thở, đau ngực, lơ mơ hoặc sốt cao tăng nhanh, "
-            "bạn nên gọi 115 hoặc đến cơ sở y tế gần nhất ngay."
-        )
+        try:
+            from cpu_server.safety import build_clinical_fallback_response
+        except Exception:
+            try:
+                from safety import build_clinical_fallback_response
+            except Exception:
+                build_clinical_fallback_response = None
+
+        if build_clinical_fallback_response is not None:
+            fallback_text = build_clinical_fallback_response(agent_profile, user_text, triage_state)
+        else:
+            fallback_text = build_triage_fallback_text(
+                risk_level=risk_level,
+                follow_up_questions=current.get("triage_follow_up_questions") or [],
+                symptoms_collected=current.get("symptoms_collected") or [],
+            ) if agent_profile == "triage" else (
+                "Mình tạm thời chưa kết nối được với trợ lý AI. Nếu xuất hiện dấu hiệu nặng như khó thở, đau ngực, lơ mơ hoặc sốt cao tăng nhanh, "
+                "bạn nên gọi 115 hoặc đến cơ sở y tế gần nhất ngay."
+            )
         current["response"] = sanitize_user_visible_text(fallback_text)
         current["actions"] = _fallback_actions(agent_profile, intent, risk_level, ready_for_cta)
         current["provider"] = "foza"
@@ -751,4 +770,16 @@ def build_graph():
     graph.add_edge("tools", "reasoning")
     graph.add_edge("reasoning", "llm")
     graph.add_edge("llm", END)
-    return graph.compile()
+
+    try:
+        from cpu_server.db import get_checkpointer_pool
+        from langgraph.checkpoint.postgres import PostgresSaver
+        pool = get_checkpointer_pool()
+        checkpointer = PostgresSaver(pool)
+        return graph.compile(checkpointer=checkpointer)
+    except Exception:
+        try:
+            from langgraph.checkpoint.memory import MemorySaver
+            return graph.compile(checkpointer=MemorySaver())
+        except Exception:
+            return graph.compile()
