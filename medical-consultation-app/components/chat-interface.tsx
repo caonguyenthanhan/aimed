@@ -1,4 +1,4 @@
-﻿﻿﻿﻿"use client"
+"use client"
 
 import { useState, useRef, useEffect, useLayoutEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -654,7 +654,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
     const shouldScroll = isAtBottomRef.current || (lenIncreased && !!last?.isUser)
 
     messagesCountRef.current = nextCount
-    if (nextCount <= 250 && shouldScroll) {
+    if (nextCount <= 30 && shouldScroll) {
       scrollToBottom()
     }
     messagesRef.current = messages
@@ -677,7 +677,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       const prevH = composerHeightRef.current
       if (!nextH || nextH === prevH) return
       composerHeightRef.current = nextH
-      if (messagesCountRef.current <= 250 && isAtBottomRef.current) {
+      if (messagesCountRef.current <= 30 && isAtBottomRef.current) {
         requestAnimationFrame(() => scrollToBottom("auto"))
       }
     })
@@ -2122,19 +2122,20 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           <div className="glass-panel dark:glass-panel-dark flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.85rem] border border-border/60 shadow-[0_28px_80px_-38px_rgba(15,20,25,0.45)]">
             <div
               ref={messagesContainerRef}
-              className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden"
+              className={`custom-scrollbar flex-1 overflow-x-hidden ${messages.length > 30 ? "overflow-hidden flex flex-col" : "overflow-y-auto"}`}
               style={{
                 WebkitOverflowScrolling: 'touch',
                 overscrollBehavior: 'contain',
                 height: '100%'
               }}
-              onScroll={refreshIsAtBottom}
+              onScroll={messages.length > 30 ? undefined : refreshIsAtBottom}
             >
-              {messages.length > 250 ? (
+              {messages.length > 30 ? (
           // Use virtual scroll for large message lists
                 <VirtualChatList
                   messages={messages}
-                contentClassName="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6 sm:py-6"
+                  conversationId={conversationId}
+                  contentClassName="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6 sm:py-6"
                   renderMessage={(msg, idx) => {
                     return (
                       <div
@@ -2194,7 +2195,6 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                       </div>
                     )
                   }}
-                  itemHeight={140}
                   overscan={5}
                 />
               ) : (

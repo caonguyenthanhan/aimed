@@ -12,6 +12,7 @@ import { PageAiInsight } from "@/components/page-ai-insight"
 import { InlineEmbed } from "@/components/inline-embed"
 import { ChatMusicRecommendations } from "@/components/music/chat-music-recommendations"
 import { normalizeRuntimeProvider } from "@/lib/runtime-sync"
+import { VirtualChatList } from "@/components/virtual-chat-list"
 
 type Message = {
   id: string
@@ -848,151 +849,278 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               ) : null}
             </div>
 
-            <div className="custom-scrollbar flex-1 min-h-0 overflow-y-auto bg-transparent">
-              <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
-                <PageAiInsight
-                  pageContext="emotional_support"
-                  userQuestion={messages.length > 0 ? messages[messages.length - 1]?.role === "user" ? messages[messages.length - 1]?.content : undefined : undefined}
-                  conversationHistory={messages.map(m => ({ role: m.role, content: m.content }))}
-                />
-                {messages.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
-                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-accent/20 to-primary/20">
-                    <Heart className="h-10 w-10 text-accent" />
+            <div className={`custom-scrollbar flex-1 min-h-0 bg-transparent ${messages.length > 30 ? "overflow-hidden flex flex-col" : "overflow-y-auto"}`}>
+              {messages.length > 30 ? (
+                <>
+                  <div className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 flex-shrink-0">
+                    <PageAiInsight
+                      pageContext="emotional_support"
+                      userQuestion={messages.length > 0 ? messages[messages.length - 1]?.role === "user" ? messages[messages.length - 1]?.content : undefined : undefined}
+                      conversationHistory={messages.map(m => ({ role: m.role, content: m.content }))}
+                    />
                   </div>
-                  <h3 className="text-xl font-bold text-foreground">Người bạn lắng nghe</h3>
-                  <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">Không gian an toàn để bạn chia sẻ cảm xúc và suy nghĩ của mình. Tôi luôn ở đây lắng nghe bạn.</p>
-                  </div>
-                ) : (
-                  <>
-                  {messages.map((m) => (
-                    <div key={m.id} className={`flex items-end gap-3 animate-message-in ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                      {m.role !== "user" && (
-                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
-                          <Heart className="h-4 w-4 text-white" />
-                        </div>
-                      )}
-                      <div
-                        className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-                          m.role === "user" 
-                            ? "chat-bubble-user" 
-                            : "chat-bubble-bot border border-border/50"
-                        }`}
-                      >
-                        {m.content}
-                        <div className={`text-xs mt-2 opacity-60 ${m.role === "user" ? "text-white/80" : "text-muted-foreground"}`}>
-                          {new Date(m.ts || nowTs()).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                      </div>
-                      {m.role === "user" && (
-                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
-                          <User className="h-4 w-4 text-white" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {/* AI Suggestions (Screening, Therapy, etc) - Temporarily disabled for debugging */}
-                  {/* Will be re-enabled after fixing initialization issue */}
-                  
-                  {/* Music Recommendations */}
-                  {musicRecommendations && musicRecommendations.length > 0 && (
-                    <div className="flex justify-start animate-message-in">
-                      <div className="max-w-[95%] sm:max-w-[85%] rounded-[1.4rem] border border-accent/30 bg-gradient-to-br from-accent/10 to-primary/10 px-4 py-4 shadow-[0_20px_40px_-28px_rgba(20,71,230,0.45)]">
-                        <div className="flex items-center gap-2 mb-4">
-                          <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
-                            <Music className="h-4 w-4 text-accent" />
-                          </div>
-                          <span className="text-sm font-semibold text-foreground">{musicMessage || "Nhạc gợi ý cho bạn"}</span>
-                          <button 
-                            onClick={() => { setMusicRecommendations(null); setPlayingVideoId(null) }}
-                            className="ml-auto p-1.5 rounded-full hover:bg-secondary transition-colors"
-                          >
-                            <X className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        </div>
-                        
-                        {/* Playing video */}
-                        {playingVideoId && (
-                          <div className="mb-4 rounded-xl overflow-hidden shadow-lg">
-                            <iframe
-                              src={`https://www.youtube.com/embed/${playingVideoId}?autoplay=1&rel=0`}
-                              className="w-full aspect-video"
-                              allow="autoplay; encrypted-media"
-                              allowFullScreen
-                              title="Music Player"
-                            />
+                  <VirtualChatList
+                    messages={messages}
+                    conversationId={conversationId}
+                    contentClassName="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6 sm:py-6"
+                    renderMessage={(m, idx) => (
+                      <div key={m.id || idx} className={`flex items-end gap-3 animate-message-in ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                        {m.role !== "user" && (
+                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                            <Heart className="h-4 w-4 text-white" />
                           </div>
                         )}
-                        
-                        {/* Music list */}
-                        <div className="space-y-2">
-                          {musicRecommendations.map((track, idx) => (
-                            <div 
-                              key={`${track.videoId}-${idx}`}
-                              className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${
-                                playingVideoId === track.videoId 
-                                  ? "bg-accent/20 border border-accent/40 shadow-sm" 
-                                  : "bg-card hover:bg-secondary border border-transparent"
-                              }`}
-                              onClick={() => setPlayingVideoId(playingVideoId === track.videoId ? null : track.videoId)}
-                            >
-                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                playingVideoId === track.videoId ? "bg-accent" : "bg-accent/20"
-                              }`}>
-                                {playingVideoId === track.videoId ? (
-                                  <div className="flex items-end gap-0.5 h-4">
-                                    <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "60%" }} />
-                                    <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "100%", animationDelay: "0.2s" }} />
-                                    <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "40%", animationDelay: "0.4s" }} />
-                                  </div>
-                                ) : (
-                                  <Play className="h-4 w-4 text-accent" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{track.title}</p>
-                                <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
-                              </div>
-                              <a 
-                                href={`https://www.youtube.com/watch?v=${track.videoId}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="p-2 rounded-lg hover:bg-secondary transition-colors"
-                              >
-                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                              </a>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Thinking Animation */}
-                  {isLoading && (
-                    <div className="flex items-end gap-3 animate-message-in">
-                      <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
-                        <Heart className="h-4 w-4 text-white animate-pulse" />
-                      </div>
-                      <div className="chat-bubble-bot border border-border/50 px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex gap-1.5">
-                            <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                            <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                            <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                        <div
+                          className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                            m.role === "user" 
+                              ? "chat-bubble-user" 
+                              : "chat-bubble-bot border border-border/50"
+                          }`}
+                        >
+                          {m.content}
+                          <div className={`text-xs mt-2 opacity-60 ${m.role === "user" ? "text-white/80" : "text-muted-foreground"}`}>
+                            {new Date(m.ts || nowTs()).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
                           </div>
-                          <span className="text-sm font-medium text-muted-foreground">Đang suy nghĩ...</span>
+                        </div>
+                        {m.role === "user" && (
+                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                            <User className="h-4 w-4 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  />
+                  {/* Append music recommendations and loading indicator */}
+                  <div className="mx-auto w-full max-w-3xl px-4 pb-4 sm:px-6 sm:pb-6 flex-shrink-0">
+                    {musicRecommendations && musicRecommendations.length > 0 && (
+                      <div className="flex justify-start animate-message-in">
+                        <div className="max-w-[95%] sm:max-w-[85%] rounded-[1.4rem] border border-accent/30 bg-gradient-to-br from-accent/10 to-primary/10 px-4 py-4 shadow-[0_20px_40px_-28px_rgba(20,71,230,0.45)]">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                              <Music className="h-4 w-4 text-accent" />
+                            </div>
+                            <span className="text-sm font-semibold text-foreground">{musicMessage || "Nhạc gợi ý cho bạn"}</span>
+                            <button 
+                              onClick={() => { setMusicRecommendations(null); setPlayingVideoId(null) }}
+                              className="ml-auto p-1.5 rounded-full hover:bg-secondary transition-colors"
+                            >
+                              <X className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          </div>
+                          
+                          {playingVideoId && (
+                            <div className="mb-4 rounded-xl overflow-hidden shadow-lg">
+                              <iframe
+                                src={`https://www.youtube.com/embed/${playingVideoId}?autoplay=1&rel=0`}
+                                className="w-full aspect-video"
+                                allow="autoplay; encrypted-media"
+                                allowFullScreen
+                                title="Music Player"
+                              />
+                            </div>
+                          )}
+                          
+                          <div className="space-y-2">
+                            {musicRecommendations.map((track, idx) => (
+                              <div 
+                                key={`${track.videoId}-${idx}`}
+                                className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${
+                                  playingVideoId === track.videoId 
+                                    ? "bg-accent/20 border border-accent/40 shadow-sm" 
+                                    : "bg-card hover:bg-secondary border border-transparent"
+                                }`}
+                                onClick={() => setPlayingVideoId(playingVideoId === track.videoId ? null : track.videoId)}
+                              >
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  playingVideoId === track.videoId ? "bg-accent" : "bg-accent/20"
+                                }`}>
+                                  {playingVideoId === track.videoId ? (
+                                    <div className="flex items-end gap-0.5 h-4">
+                                      <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "60%" }} />
+                                      <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "100%", animationDelay: "0.2s" }} />
+                                      <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "40%", animationDelay: "0.4s" }} />
+                                    </div>
+                                  ) : (
+                                    <Play className="h-4 w-4 text-accent" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">{track.title}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                                </div>
+                                <a 
+                                  href={`https://www.youtube.com/watch?v=${track.videoId}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                                >
+                                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
+                    )}
+                    {isLoading && (
+                      <div className="flex items-end gap-3 animate-message-in">
+                        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                          <Heart className="h-4 w-4 text-white animate-pulse" />
+                        </div>
+                        <div className="chat-bubble-bot border border-border/50 px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex gap-1.5">
+                              <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                              <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                              <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                            </div>
+                            <span className="text-sm font-medium text-muted-foreground">Đang suy nghĩ...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="mx-auto w-full max-w-3xl flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
+                  <PageAiInsight
+                    pageContext="emotional_support"
+                    userQuestion={messages.length > 0 ? messages[messages.length - 1]?.role === "user" ? messages[messages.length - 1]?.content : undefined : undefined}
+                    conversationHistory={messages.map(m => ({ role: m.role, content: m.content }))}
+                  />
+                  {messages.length === 0 ? (
+                    <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
+                      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-accent/20 to-primary/20">
+                        <Heart className="h-10 w-10 text-accent" />
+                      </div>
+                      <h3 className="text-xl font-bold text-foreground">Người bạn lắng nghe</h3>
+                      <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">Không gian an toàn để bạn chia sẻ cảm xúc và suy nghĩ của mình. Tôi luôn ở đây lắng nghe bạn.</p>
                     </div>
+                  ) : (
+                    <>
+                      {messages.map((m) => (
+                        <div key={m.id} className={`flex items-end gap-3 animate-message-in ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                          {m.role !== "user" && (
+                            <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                              <Heart className="h-4 w-4 text-white" />
+                            </div>
+                          )}
+                          <div
+                            className={`max-w-[75%] sm:max-w-[70%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                              m.role === "user" 
+                                ? "chat-bubble-user" 
+                                : "chat-bubble-bot border border-border/50"
+                            }`}
+                          >
+                            {m.content}
+                            <div className={`text-xs mt-2 opacity-60 ${m.role === "user" ? "text-white/80" : "text-muted-foreground"}`}>
+                              {new Date(m.ts || nowTs()).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          </div>
+                          {m.role === "user" && (
+                            <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center shadow-sm">
+                              <User className="h-4 w-4 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {musicRecommendations && musicRecommendations.length > 0 && (
+                        <div className="flex justify-start animate-message-in">
+                          <div className="max-w-[95%] sm:max-w-[85%] rounded-[1.4rem] border border-accent/30 bg-gradient-to-br from-accent/10 to-primary/10 px-4 py-4 shadow-[0_20px_40px_-28px_rgba(20,71,230,0.45)]">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                                <Music className="h-4 w-4 text-accent" />
+                              </div>
+                              <span className="text-sm font-semibold text-foreground">{musicMessage || "Nhạc gợi ý cho bạn"}</span>
+                              <button 
+                                onClick={() => { setMusicRecommendations(null); setPlayingVideoId(null) }}
+                                className="ml-auto p-1.5 rounded-full hover:bg-secondary transition-colors"
+                              >
+                                <X className="h-4 w-4 text-muted-foreground" />
+                              </button>
+                            </div>
+                            
+                            {playingVideoId && (
+                              <div className="mb-4 rounded-xl overflow-hidden shadow-lg">
+                                <iframe
+                                  src={`https://www.youtube.com/embed/${playingVideoId}?autoplay=1&rel=0`}
+                                  className="w-full aspect-video"
+                                  allow="autoplay; encrypted-media"
+                                  allowFullScreen
+                                  title="Music Player"
+                                />
+                              </div>
+                            )}
+                            
+                            <div className="space-y-2">
+                              {musicRecommendations.map((track, idx) => (
+                                <div 
+                                  key={`${track.videoId}-${idx}`}
+                                  className={`flex items-center gap-3 p-3 rounded-xl transition-all cursor-pointer ${
+                                    playingVideoId === track.videoId 
+                                      ? "bg-accent/20 border border-accent/40 shadow-sm" 
+                                      : "bg-card hover:bg-secondary border border-transparent"
+                                  }`}
+                                  onClick={() => setPlayingVideoId(playingVideoId === track.videoId ? null : track.videoId)}
+                                >
+                                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                    playingVideoId === track.videoId ? "bg-accent" : "bg-accent/20"
+                                  }`}>
+                                    {playingVideoId === track.videoId ? (
+                                      <div className="flex items-end gap-0.5 h-4">
+                                        <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "60%" }} />
+                                        <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "100%", animationDelay: "0.2s" }} />
+                                        <div className="w-1 bg-white animate-pulse rounded-full" style={{ height: "40%", animationDelay: "0.4s" }} />
+                                      </div>
+                                    ) : (
+                                      <Play className="h-4 w-4 text-accent" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-foreground truncate">{track.title}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
+                                  </div>
+                                  <a 
+                                    href={`https://www.youtube.com/watch?v=${track.videoId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="p-2 rounded-lg hover:bg-secondary transition-colors"
+                                  >
+                                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {isLoading && (
+                        <div className="flex items-end gap-3 animate-message-in">
+                          <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-accent to-primary rounded-full flex items-center justify-center shadow-sm">
+                            <Heart className="h-4 w-4 text-white animate-pulse" />
+                          </div>
+                          <div className="chat-bubble-bot border border-border/50 px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="flex gap-1.5">
+                                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                                <span className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                              </div>
+                              <span className="text-sm font-medium text-muted-foreground">Đang suy nghĩ...</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div ref={endRef} />
+                    </>
                   )}
-                  
-                    <div ref={endRef} />
-                  </>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             <div className="shrink-0 border-t border-border/60 bg-card/75 backdrop-blur-xl">
