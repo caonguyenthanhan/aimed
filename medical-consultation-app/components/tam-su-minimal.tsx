@@ -856,7 +856,7 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
               ) : null}
             </div>
 
-            <div className={`custom-scrollbar flex-1 min-h-0 bg-transparent ${messages.length > 30 ? "overflow-hidden flex flex-col" : "overflow-y-auto"}`}>
+            <div className="custom-scrollbar flex-1 min-h-0 overflow-y-auto bg-transparent">
               {messages.length > 30 ? (
                 <>
                   <div className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 flex-shrink-0">

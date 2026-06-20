@@ -2093,7 +2093,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             </button>
           </div>
         )}
-        <div className="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col px-3 pb-3 pt-3 sm:px-4">
+        <div className="mx-auto flex w-full max-w-6xl min-w-0 min-h-0 flex-1 flex-col px-3 pb-3 pt-3 sm:px-4">
           {!disclaimerDismissed && (
             <div className="mb-3 flex-shrink-0">
               <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[1.35rem] border border-amber-200/50 bg-amber-50/85 px-3 py-2.5 shadow-[0_18px_36px_-28px_rgba(217,119,6,0.5)] dark:border-amber-800/50 dark:bg-amber-950/30">
@@ -2122,11 +2122,14 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           <div className="glass-panel dark:glass-panel-dark flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.85rem] border border-border/60 shadow-[0_28px_80px_-38px_rgba(15,20,25,0.45)]">
             <div
               ref={messagesContainerRef}
-              className={`custom-scrollbar flex-1 overflow-x-hidden ${messages.length > 30 ? "overflow-hidden flex flex-col" : "overflow-y-auto"}`}
+              className={`custom-scrollbar flex-1 min-h-0 overflow-x-hidden ${
+                messages.length > 30
+                  ? 'flex flex-col overflow-hidden'
+                  : 'overflow-y-auto'
+              }`}
               style={{
                 WebkitOverflowScrolling: 'touch',
                 overscrollBehavior: 'contain',
-                height: '100%'
               }}
               onScroll={messages.length > 30 ? undefined : refreshIsAtBottom}
             >
