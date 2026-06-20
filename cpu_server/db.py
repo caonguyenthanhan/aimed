@@ -1,9 +1,17 @@
 import os
 import uuid
+import contextlib
+import time
+import logging
 from typing import Any, Dict, List, Optional
 
 import psycopg
 from psycopg.types.json import Jsonb
+from psycopg_pool import ConnectionPool
+
+logger = logging.getLogger("db")
+
+_pool = None
 
 
 def get_database_url() -> str:
@@ -13,8 +21,45 @@ def get_database_url() -> str:
     return url
 
 
-def db_connect():
-    return psycopg.connect(get_database_url(), connect_timeout=2, autocommit=True)
+def get_pool() -> ConnectionPool:
+    global _pool
+    if _pool is None:
+        db_url = get_database_url()
+        _pool = ConnectionPool(
+            conninfo=db_url,
+            min_size=1,
+            max_size=10,
+            open=True,
+            kwargs={"autocommit": True, "connect_timeout": 5},
+            timeout=10.0
+        )
+    return _pool
+
+
+@contextlib.contextmanager
+def db_connect(max_attempts=3, base_delay=1.0):
+    attempt = 0
+    last_err = None
+    while attempt < max_attempts:
+        attempt += 1
+        try:
+            pool = get_pool()
+            if pool.closed:
+                pool.open()
+            with pool.connection() as conn:
+                yield conn
+                return
+        except (psycopg.OperationalError, psycopg.DatabaseError) as e:
+            last_err = e
+            if attempt >= max_attempts:
+                break
+            delay = base_delay * (2 ** (attempt - 1))
+            logger.warning(
+                f"Database connection attempt {attempt} failed: {e}. "
+                f"Retrying in {delay:.2f}s..."
+            )
+            time.sleep(delay)
+    raise last_err
 
 
 def ensure_auth_schema() -> None:

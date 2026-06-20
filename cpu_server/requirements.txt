@@ -8,6 +8,7 @@ gTTS==2.5.4
 SpeechRecognition==3.11.0
 pydub==0.25.1
 psycopg[binary]==3.2.6
+psycopg-pool>=3.3.1
 llama-cpp-python
 neo4j==5.28.1
 langgraph
