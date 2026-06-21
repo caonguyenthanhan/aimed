@@ -208,12 +208,12 @@ def graph_status(timeout_s: float = 8.0) -> Dict[str, Any]:
         return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
 
 
-def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types: Optional[List[str]] = None, timeout_s: float = 12.0) -> Dict[str, Any]:
+def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types: Optional[List[str]] = None, timeout_s: float = 12.0, collection: Optional[str] = None) -> Dict[str, Any]:
     timeout_s = timeout_s if timeout_s and timeout_s > 0 else _env_timeout("LG_GRAPH_TIMEOUT_S", 12.0)
     q = (query or "").strip()
     if not q:
         return {"ok": True, "query": q, "entities": [], "edges": []}
-    cache_key = f"graph.evidence|{q}|{int(limit or 60)}|{int(entity_limit or 5)}|{','.join([str(x).strip() for x in (rel_types or []) if str(x).strip()])}"
+    cache_key = f"graph.evidence|{q}|{int(limit or 60)}|{int(entity_limit or 5)}|{','.join([str(x).strip() for x in (rel_types or []) if str(x).strip()])}|{str(collection or '')}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
@@ -242,7 +242,7 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
         keywords = [w for w in q_ascii.split() if len(w) >= 3][:4]
 
         with driver.session() as s:
-            def _query_entities(collection: Optional[str]) -> List[dict]:
+            def _query_entities(col: Optional[str]) -> List[dict]:
                 # Try exact CONTAINS first
                 rows = list(
                     s.run(
@@ -255,7 +255,7 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
                         """,
                         q=q,
                         ent_lim=ent_lim,
-                        collection=collection,
+                        collection=col,
                     )
                 )
                 if rows:
@@ -274,7 +274,7 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
                             RETURN id(e) AS id, e.name AS name, labels(e) AS labels, e.collection AS collection, e.id_doc AS id_doc
                             LIMIT 300
                             """,
-                            collection=collection,
+                            collection=col,
                         )
                     )
                     for r in kw_rows:
@@ -291,9 +291,12 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
                         break
                 return kw_results[:ent_lim]
 
-            ent_rows = _query_entities("demo")
-            if not ent_rows:
-                ent_rows = _query_entities(None)
+            if collection:
+                ent_rows = _query_entities(collection)
+            else:
+                ent_rows = _query_entities("demo")
+                if not ent_rows:
+                    ent_rows = _query_entities(None)
             ent_ids = [r.get("id") for r in ent_rows if r.get("id") is not None]
             edges = []
             if ent_ids:
@@ -304,7 +307,8 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
                         UNWIND $ids AS mg_id
                         MATCH (e:Entity) WHERE id(e) = mg_id
                         MATCH (e)-[r]-(n)
-                        WHERE $rel_types IS NULL OR type(r) IN $rel_types
+                        WHERE ($rel_types IS NULL OR type(r) IN $rel_types)
+                          AND ($collection IS NULL OR r.collection = $collection)
                         RETURN
                           id(e) AS entity_id,
                           e.name AS entity_name,
@@ -320,6 +324,7 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
                         """,
                         ids=ent_ids,
                         rel_types=rel_types_param,
+                        collection=collection,
                         lim=lim,
                     )
                 ]
@@ -332,3 +337,4 @@ def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types
         except Exception:
             pass
         return {"ok": False, "query": q, "entities": [], "edges": [], "error": str(e), "elapsed_ms": int((time.time() - t0) * 1000)}
+

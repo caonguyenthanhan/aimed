@@ -216,6 +216,7 @@ try:
         update_username as _db_update_username,
         update_conversation_title as _db_update_conversation_title,
         list_phenotyping_daily_metrics as _db_list_phenotyping_daily_metrics,
+        is_conversation_on_clinical_hold as _db_is_conversation_on_clinical_hold,
     )
 except Exception:
     _db_ensure_auth_schema = None
@@ -249,6 +250,7 @@ except Exception:
     _db_delete_conversation = None
     _db_offboard_user_data = None
     _db_upsert_conversation_summary = None
+    _db_is_conversation_on_clinical_hold = None
 
 try:
     import pypdf
@@ -1674,6 +1676,36 @@ async def agent_chat(req: AgentChatRequest, request: Request):
     conversation_id = (req.conversation_id or "").strip() or None
     if not conversation_id:
         conversation_id = create_conversation(user_id)
+
+    if conversation_id and _db_is_conversation_on_clinical_hold is not None:
+        try:
+            if _db_is_conversation_on_clinical_hold(conversation_id):
+                hold_msg = (
+                    "Hiện tại, chúng tôi nhận thấy bạn đang có những chia sẻ liên quan đến tự hại hoặc tự tử. "
+                    "Để đảm bảo an toàn tối đa cho bạn, hệ thống đã tạm thời đóng băng hội thoại này.\n"
+                    "Nếu bạn đang gặp khủng hoảng hoặc cần người lắng nghe ngay lập tức, xin vui lòng liên hệ với các đường dây nóng hỗ trợ khẩn cấp sau:\n"
+                    "- Đường dây nóng Ngày Mai (Hỗ trợ trầm cảm & ngăn ngừa tự sát): 096 306 1414\n"
+                    "- Tổng đài Cấp cứu Y tế: 115\n"
+                    "Bạn không phải đơn độc, hãy tìm kiếm sự giúp đỡ từ những người xung quanh hoặc các chuyên gia y tế ngay lập tức."
+                )
+                return JSONResponse(
+                    content={
+                        "response": hold_msg,
+                        "actions": [],
+                        "metadata": {
+                            "mode": "cpu",
+                            "orchestrator": "langgraph",
+                            "provider": "safety",
+                            "clinical_hold": True,
+                            "blocked": True,
+                        },
+                        "conversation_id": conversation_id,
+                    },
+                    media_type="application/json; charset=utf-8",
+                )
+        except Exception:
+            pass
+
     started = time.time()
     now = datetime.datetime.utcnow().isoformat()
     try:

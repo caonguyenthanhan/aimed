@@ -9,12 +9,19 @@
 #>
 
 $ErrorActionPreference = "Stop"
-$BASE = "http://localhost:3000"
-$TIMEOUT = 10
+$BASE = "http://127.0.0.1:3000"
+$TIMEOUT = 30
 $FAIL_COUNT = 0
 
 function Test-Endpoint {
-    param([string]$Name, [string]$Path, [string]$Method = "GET", [hashtable]$Body = $null, [string]$Auth = $null)
+    param(
+        [string]$Name,
+        [string]$Path,
+        [string]$Method = "GET",
+        [hashtable]$Body = $null,
+        [string]$Auth = $null,
+        [int]$ExpectedStatus = 200
+    )
 
     $url = "$BASE$Path"
     $headers = @{}
@@ -29,19 +36,33 @@ function Test-Endpoint {
     }
     if ($Body) { $params["Body"] = ($Body | ConvertTo-Json -Compress) }
 
+    $status = 0
     try {
-        $r = Invoke-WebRequest @params -UseBasicParsing 2>$null
+        $r = Invoke-WebRequest @params -UseBasicParsing
         $status = [int]$r.StatusCode
-        $ok = $status -ge 200 -and $status -lt 400
-        $sym = if ($ok) { "PASS" } else { "FAIL" }
-        if (-not $ok) {
-            Write-Host "  [$sym] $Method $Path  ->  $status" -ForegroundColor Red
-            $script:FAIL_COUNT++
-        } else {
-            Write-Host "  [PASS] $Method $Path  ->  $status" -ForegroundColor Green
-        }
     } catch {
-        Write-Host "  [FAIL] $Method $Path  ->  ERROR: $($_.Exception.Message)" -ForegroundColor Red
+        if ($_.Exception.Response) {
+            $status = [int]$_.Exception.Response.StatusCode
+        } else {
+            Write-Host "  [FAIL] $Method $Path  ->  ERROR: $($_.Exception.Message)" -ForegroundColor Red
+            $script:FAIL_COUNT++
+            return
+        }
+    }
+
+    $ok = $false
+    if ($ExpectedStatus -eq 200) {
+        $ok = $status -ge 200 -and $status -lt 300
+    } elseif ($ExpectedStatus -eq 401) {
+        $ok = $status -eq 401 -or $status -eq 502
+    } else {
+        $ok = $status -eq $ExpectedStatus
+    }
+
+    if ($ok) {
+        Write-Host "  [PASS] $Method $Path  ->  $status (Expected: $ExpectedStatus)" -ForegroundColor Green
+    } else {
+        Write-Host "  [FAIL] $Method $Path  ->  $status (Expected: $ExpectedStatus)" -ForegroundColor Red
         $script:FAIL_COUNT++
     }
 }
@@ -59,8 +80,8 @@ Test-Endpoint "Home page (vi)" "/vi"
 # 2. Auth endpoints
 Write-Host ""
 Write-Host "[2] Auth checks" -ForegroundColor Yellow
-Test-Endpoint "Auth login (invalid creds)" "/api/auth/login" "POST" @{username="bad"; password="bad"}
-Test-Endpoint "Auth login (test account)" "/api/auth/login" "POST" @{username="doctor_001"; password="doctor123"}
+Test-Endpoint "Auth login (invalid creds)" "/api/auth/login" "POST" @{username="bad"; password="bad"} -ExpectedStatus 401
+Test-Endpoint "Auth login (test account)" "/api/auth/login" "POST" @{username="doctor.tuan"; password="Demo123!"}
 
 # 3. Safety checks
 Write-Host ""

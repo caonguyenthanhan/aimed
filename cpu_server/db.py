@@ -460,6 +460,8 @@ def append_message(conv_id: str, role: str, content: str) -> None:
     r = (role or "").strip().lower()
     if r not in ("user", "assistant", "system"):
         r = "user"
+    if is_conversation_on_clinical_hold(conv_id):
+        raise ValueError("Conversation is on clinical hold. Messages are blocked.")
     with db_connect() as conn:
         with conn.cursor() as cur:
             cur.execute("INSERT INTO conversation_messages (conv_id, role, content) VALUES (%s, %s, %s)", (conv_id, r, content or ""))
@@ -759,3 +761,46 @@ def upsert_conversation_summary(conv_id: str, summary: str, metadata: Optional[d
                 """,
                 (cid, s, Jsonb(metadata) if metadata is not None else None),
             )
+
+
+def set_conversation_clinical_hold(conv_id: str, hold: bool, phq9: int = -1, gad7: int = -1) -> None:
+    try:
+        cid = str(uuid.UUID(str(conv_id)))
+    except Exception:
+        raise ValueError("Invalid conv_id")
+    with db_connect() as conn:
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute("SELECT metadata FROM conversation_summaries WHERE conv_id = %s", (cid,))
+            row = cur.fetchone()
+            if row:
+                meta = row["metadata"] or {}
+            else:
+                meta = {}
+            meta["clinical_hold"] = hold
+            if phq9 >= 0:
+                meta["stealth_phq9"] = phq9
+            if gad7 >= 0:
+                meta["stealth_gad7"] = gad7
+            cur.execute(
+                """
+                INSERT INTO conversation_summaries (conv_id, summary, metadata, updated_at)
+                VALUES (%s, '', %s, now())
+                ON CONFLICT (conv_id)
+                DO UPDATE SET metadata = EXCLUDED.metadata, updated_at = now()
+                """,
+                (cid, Jsonb(meta)),
+            )
+
+
+def is_conversation_on_clinical_hold(conv_id: str) -> bool:
+    try:
+        cid = str(uuid.UUID(str(conv_id)))
+    except Exception:
+        return False
+    with db_connect() as conn:
+        with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
+            cur.execute("SELECT metadata FROM conversation_summaries WHERE conv_id = %s", (cid,))
+            row = cur.fetchone()
+            if row and row["metadata"]:
+                return bool(row["metadata"].get("clinical_hold"))
+            return False

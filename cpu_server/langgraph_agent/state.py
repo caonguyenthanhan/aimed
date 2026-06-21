@@ -27,6 +27,10 @@ class AgentState(BaseModel):
     provider: str = ""
     model: str = ""
     agent_profile: str = "default"
+    next_node: str = "supervisor"
+    clinical_hold: bool = False
+    stealth_phq9: int = -1
+    stealth_gad7: int = -1
     intent: Dict[str, Any] = Field(default_factory=dict)
     route_decision: Dict[str, Any] = Field(default_factory=dict)
     blocked: bool = False

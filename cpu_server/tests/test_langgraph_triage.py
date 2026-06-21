@@ -28,6 +28,10 @@ def _install_test_doubles(
     )
     monkeypatch.setattr(graph, "run_semantic_triage_router", lambda **kwargs: router_decision)
     monkeypatch.setattr(graph, "_foza_chat", lambda messages, timeout_s=45.0: (llm_response, {"model": "test-foza"}))
+    
+    from cpu_server import db
+    monkeypatch.setattr(db, "get_checkpointer_pool", lambda: (_ for _ in ()).throw(Exception("Unit Test DB mock")))
+    
     monkeypatch.setattr(runtime, "_GRAPH", None)
 
 
@@ -170,3 +174,127 @@ def test_semantic_router_prompt_escapes_literal_json_schema():
     assert decision.router_source == "semantic_router_lcel"
     assert decision.agent_profile == "triage"
     assert decision.ready_for_cta is False
+
+
+def test_multi_agent_routing_medication(monkeypatch):
+    router_decision = SemanticRouterDecision(
+        agent_profile="medication",
+        symptoms_collected=[],
+        risk_level="unknown",
+        ready_for_cta=False,
+        next_step="follow_up",
+        trace=[],
+    )
+    llm_response = json.dumps(
+        {
+            "response": "Bạn cần dùng Paracetamol 500mg mỗi 4-6 giờ khi sốt trên 38.5 độ.",
+            "actions": [],
+        },
+        ensure_ascii=False,
+    )
+    _install_test_doubles(monkeypatch, router_decision=router_decision, llm_response=llm_response)
+
+    result = runtime.invoke_agent(
+        message="Thuốc paracetamol uống thế nào",
+        user_id="user-3",
+        conversation_id="conv-3",
+        agent_id="auto",
+        include_tools=True,
+    )
+
+    assert "Paracetamol" in result["response"]
+    assert result["metadata"]["agent_profile"] == "medication"
+
+
+def test_multi_agent_routing_therapy(monkeypatch):
+    router_decision = SemanticRouterDecision(
+        agent_profile="therapy",
+        symptoms_collected=[],
+        risk_level="unknown",
+        ready_for_cta=False,
+        next_step="follow_up",
+        trace=[],
+    )
+    llm_response = json.dumps(
+        {
+            "response": "Tôi hiểu bạn đang căng thẳng. Hãy cùng tập bài thở sâu nhé.",
+            "actions": [{"type": "play_music", "args": {"videoId": "123", "title": "Nhạc thiền"}}],
+        },
+        ensure_ascii=False,
+    )
+    _install_test_doubles(monkeypatch, router_decision=router_decision, llm_response=llm_response)
+
+    result = runtime.invoke_agent(
+        message="Stress mất ngủ quá",
+        user_id="user-4",
+        conversation_id="conv-4",
+        agent_id="auto",
+        include_tools=True,
+    )
+
+    assert "căng thẳng" in result["response"]
+    assert result["metadata"]["agent_profile"] == "therapy"
+    assert len(result["actions"]) == 1
+    assert result["actions"][0]["type"] == "play_music"
+
+
+def test_multi_agent_routing_doctor(monkeypatch):
+    router_decision = SemanticRouterDecision(
+        agent_profile="doctor_referral",
+        symptoms_collected=[],
+        risk_level="unknown",
+        ready_for_cta=False,
+        next_step="follow_up",
+        trace=[],
+    )
+    llm_response = json.dumps(
+        {
+            "response": "Để tôi giúp bạn kết nối với bác sĩ chuyên khoa phù hợp.",
+            "actions": [{"type": "ask_navigation", "args": {"feature": "bac-si", "reason": "Đặt lịch với bác sĩ"}}],
+        },
+        ensure_ascii=False,
+    )
+    _install_test_doubles(monkeypatch, router_decision=router_decision, llm_response=llm_response)
+
+    result = runtime.invoke_agent(
+        message="Đặt lịch hẹn khám",
+        user_id="user-5",
+        conversation_id="conv-5",
+        agent_id="auto",
+        include_tools=True,
+    )
+
+    assert "bác sĩ" in result["response"]
+    assert result["metadata"]["agent_profile"] == "doctor_referral"
+    assert result["actions"][0]["type"] == "ask_navigation"
+
+
+def test_multi_agent_routing_default(monkeypatch):
+    router_decision = SemanticRouterDecision(
+        agent_profile="default",
+        symptoms_collected=[],
+        risk_level="unknown",
+        ready_for_cta=False,
+        next_step="follow_up",
+        trace=[],
+    )
+    llm_response = json.dumps(
+        {
+            "response": "Xin chào! Mình có thể giúp gì cho sức khỏe của bạn hôm nay?",
+            "actions": [],
+        },
+        ensure_ascii=False,
+    )
+    _install_test_doubles(monkeypatch, router_decision=router_decision, llm_response=llm_response)
+
+    result = runtime.invoke_agent(
+        message="Xin chào bạn",
+        user_id="user-6",
+        conversation_id="conv-6",
+        agent_id="auto",
+        include_tools=True,
+    )
+
+    assert "Xin chào" in result["response"]
+    assert result["metadata"]["agent_profile"] == "default"
+

@@ -1,0 +1,171 @@
+{
+  "entities": [
+    {
+      "name": "Áp lực công việc",
+      "label": "Trigger",
+      "description": "Tác nhân liên quan đến quá tải công việc"
+    },
+    {
+      "name": "Kiệt sức",
+      "label": "Emotion",
+      "description": "Trạng thái burnout do căng thẳng kéo dài"
+    },
+    {
+      "name": "Mất ngủ",
+      "label": "Symptom",
+      "description": "Khó ngủ hoặc ngủ không đủ chất lượng"
+    },
+    {
+      "name": "Chán nản",
+      "label": "Symptom",
+      "description": "Tâm trạng buồn bã, giảm hứng thú"
+    },
+    {
+      "name": "Kế hoạch làm việc vi mô",
+      "label": "CopingStrategy",
+      "description": "Chiến lược chia nhỏ và lập kế hoạch công việc cụ thể"
+    },
+    {
+      "name": "Kỹ thuật hít thở 4-7-8",
+      "label": "CopingStrategy",
+      "description": "Kỹ thuật điều hòa hơi thở nhằm thư giãn"
+    },
+    {
+      "name": "Thiền chánh niệm",
+      "label": "CopingStrategy",
+      "description": "Thực hành chú tâm vào hiện tại để điều hòa cảm xúc"
+    },
+    {
+      "name": "Áp lực đồng trang lứa",
+      "label": "Trigger",
+      "description": "Tác nhân xã hội liên quan đến FOMO và áp lực từ bạn bè"
+    },
+    {
+      "name": "Lo âu xã hội",
+      "label": "Emotion",
+      "description": "Cảm xúc lo lắng trong bối cảnh giao tiếp hoặc xã hội"
+    },
+    {
+      "name": "Né tránh giao tiếp",
+      "label": "Symptom",
+      "description": "Xu hướng rút lui, tránh tương tác xã hội"
+    },
+    {
+      "name": "Tim đập nhanh",
+      "label": "Symptom",
+      "description": "Triệu chứng hồi hộp hoặc palpitations"
+    },
+    {
+      "name": "Nhìn nhận lại giá trị bản thân",
+      "label": "CopingStrategy",
+      "description": "Liệu pháp tự khẳng định nhằm củng cố giá trị cá nhân"
+    },
+    {
+      "name": "Viết nhật ký biết ơn",
+      "label": "CopingStrategy",
+      "description": "Thực hành ghi lại điều biết ơn để hỗ trợ điều hòa cảm xúc"
+    },
+    {
+      "name": "Mâu thuẫn gia đình",
+      "label": "Trigger",
+      "description": "Tác nhân căng thẳng phát sinh từ xung đột trong gia đình"
+    },
+    {
+      "name": "Trầm cảm lâm sàng",
+      "label": "Emotion",
+      "description": "Trạng thái trầm cảm có ý nghĩa lâm sàng"
+    },
+    {
+      "name": "Mất động lực",
+      "label": "Symptom",
+      "description": "Giảm hoặc mất động lực thực hiện hoạt động"
+    },
+    {
+      "name": "Kích hoạt hành vi",
+      "label": "CopingStrategy",
+      "description": "Liệu pháp tăng cường tham gia vào các hoạt động có ý nghĩa"
+    }
+  ],
+  "relationships": [
+    {
+      "source": "Áp lực công việc",
+      "type": "CAUSES",
+      "target": "Kiệt sức"
+    },
+    {
+      "source": "Kiệt sức",
+      "type": "MANIFESTS_AS",
+      "target": "Mất ngủ"
+    },
+    {
+      "source": "Kiệt sức",
+      "type": "MANIFESTS_AS",
+      "target": "Chán nản"
+    },
+    {
+      "source": "Kế hoạch làm việc vi mô",
+      "type": "RELIEVES",
+      "target": "Mất ngủ"
+    },
+    {
+      "source": "Kỹ thuật hít thở 4-7-8",
+      "type": "RELIEVES",
+      "target": "Mất ngủ"
+    },
+    {
+      "source": "Thiền chánh niệm",
+      "type": "MANAGES",
+      "target": "Kiệt sức"
+    },
+    {
+      "source": "Áp lực đồng trang lứa",
+      "type": "CAUSES",
+      "target": "Lo âu xã hội"
+    },
+    {
+      "source": "Lo âu xã hội",
+      "type": "MANIFESTS_AS",
+      "target": "Né tránh giao tiếp"
+    },
+    {
+      "source": "Lo âu xã hội",
+      "type": "MANIFESTS_AS",
+      "target": "Tim đập nhanh"
+    },
+    {
+      "source": "Nhìn nhận lại giá trị bản thân",
+      "type": "RELIEVES",
+      "target": "Né tránh giao tiếp"
+    },
+    {
+      "source": "Viết nhật ký biết ơn",
+      "type": "MANAGES",
+      "target": "Lo âu xã hội"
+    },
+    {
+      "source": "Mâu thuẫn gia đình",
+      "type": "CAUSES",
+      "target": "Trầm cảm lâm sàng"
+    },
+    {
+      "source": "Trầm cảm lâm sàng",
+      "type": "MANIFESTS_AS",
+      "target": "Mất ngủ"
+    },
+    {
+      "source": "Trầm cảm lâm sàng",
+      "type": "MANIFESTS_AS",
+      "target": "Mất động lực"
+    },
+    {
+      "source": "Kích hoạt hành vi",
+      "type": "RELIEVES",
+      "target": "Mất động lực"
+    },
+    {
+      "source": "Kích hoạt hành vi",
+      "type": "MANAGES",
+      "target": "Trầm cảm lâm sàng"
+    }
+  ]
+}

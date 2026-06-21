@@ -188,15 +188,17 @@ def _fallback_actions(agent_profile: str, intent: Dict[str, Any], risk_level: st
     return []
 
 
-def _plan_tools(text: str) -> List[Dict[str, Any]]:
+def _plan_tools(text: str, agent_profile: str = "default") -> List[Dict[str, Any]]:
     lower = str(text or "").lower()
     ascii_text = _strip_accents(lower)
-    requests_plan: List[Dict[str, Any]] = [{"name": "graph.evidence", "args": {"query": text, "limit": 60, "entity_limit": 6}}]
+    col = "therapy" if agent_profile == "therapy" else None
+    requests_plan: List[Dict[str, Any]] = [{"name": "graph.evidence", "args": {"query": text, "limit": 60, "entity_limit": 6, "collection": col}}]
     if "youtube" in lower or "video" in lower or "nhạc" in lower or "nhac" in ascii_text:
         requests_plan.append({"name": "youtube.search", "args": {"query": text, "maxResults": 5}})
     if re.search(r"\b(tìm|tra cứu|tim|tra cuu|nguồn|source|search)\b", ascii_text):
         requests_plan.append({"name": "web.search", "args": {"query": text, "num": 5}})
     return requests_plan[:3]
+
 
 
 def _first_json_object(text: str) -> str | None:
@@ -378,7 +380,60 @@ def _triage_state_payload(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _build_json_prompt(agent_profile: str, user_text: str, tool_results: Dict[str, Any], triage_state: Dict[str, Any]) -> List[Dict[str, Any]]:
+SYSTEM_INSTRUCTIONS = {
+    "triage": (
+        "Bạn là Tác tử Sàng lọc & Phân tầng Nguy cơ Y tế chuyên nghiệp.\n"
+        "Nhiệm vụ: Đánh giá triệu chứng khách quan qua câu thoại (tính toán ngầm GAD-7, PHQ-9 dựa trên ngữ nghĩa của cuộc trò chuyện).\n"
+        "Nguyên tắc lâm sàng:\n"
+        "- Nếu triệu chứng có dấu hiệu khẩn cấp (nguy cơ cao/emergency): Khuyên bệnh nhân gọi ngay 115 hoặc đến phòng cấp cứu gần nhất bằng giọng văn tự nhiên, rõ ràng, khẩn thiết nhưng bình tĩnh. Không tự lái xe.\n"
+        "- Tránh các bài test khảo sát cứng nhắc; hãy trò chuyện như bác sĩ sàng lọc thấu cảm.\n"
+        "- Đề xuất hỏi thêm 1-2 câu ngắn để làm rõ triệu chứng nếu nguy cơ ở mức thấp/trung bình."
+    ),
+    "medication": (
+        "Bạn là Tác tử Dược phẩm & Tương tác Y khoa chuyên sâu.\n"
+        "Nhiệm vụ: Giải thích về liều dùng, công dụng, tác dụng phụ và tương tác thuốc dựa trên hồ sơ y khoa cá nhân.\n"
+        "Nguyên tắc GraphRAG & Kiểm soát Ảo giác:\n"
+        "- Phải dựa SÁT vào dữ liệu ngữ cảnh y khoa được cung cấp (GraphRAG, Web Search) để trả lời.\n"
+        "- Không tự bịa ra thông tin bệnh lý phức tạp hay tương tác thuốc khi không có bằng chứng.\n"
+        "- Nếu phát hiện nguy cơ tương tác thuốc nguy hiểm, phải cảnh báo rõ ràng và đề xuất tra cứu hoặc liên hệ bác sĩ chuyên khoa.\n"
+        "- Giải thích dễ hiểu, tự nhiên, ẩn đi toàn bộ các nhãn đồ thị/JSON."
+    ),
+    "therapy": (
+        "Bạn là Tác tử Tâm lý Trị liệu (High EQ Life Coach) sử dụng CBT (Liệu pháp Hành vi Nhận thức).\n"
+        "Nhiệm vụ: Hỗ trợ cảm xúc, xoa dịu lo âu, căng thẳng, trầm cảm và nâng cao sức khỏe tinh thần.\n"
+        "Nguyên tắc giao tiếp & Trị liệu Đồ thị:\n"
+        "- Sử dụng thông tin từ Đồ thị Tri thức Tâm lý học (TOOL_RESULTS_JSON) để nhận diện Tác nhân (Trigger), Triệu chứng (Symptom), và gợi ý các Chiến lược đối phó (CopingStrategy) phù hợp nhất với tình trạng của người dùng.\n"
+        "- Giao tiếp vô cùng thấu cảm, ấm áp, khơi gợi cảm xúc tự nhiên, tránh đưa ra các bài trắc nghiệm máy móc.\n"
+        "- Tích hợp đa phương tiện: Nếu người dùng cần thư giãn hoặc thiền, hãy chủ động đề xuất hoặc phát nhạc thư giãn/video thiền (sử dụng action 'play_music' hoặc 'recommend_music' với videoId thích hợp từ kết quả YouTube)."
+    ),
+    "care_plan": (
+        "Bạn là Tác tử Kế hoạch Chăm sóc (Behavioral Activation Agent) thuộc Lộ trình Chăm sóc Stepped Care.\n"
+        "Nhiệm vụ: Lên lịch các hoạt động vi mô (micro-interventions) giúp cải thiện tâm trạng và lối sống.\n"
+        "Nguyên tắc:\n"
+        "- Đề xuất những hành động nhỏ, cụ thể, dễ thực hiện để phá vỡ vòng xoáy đi xuống của tâm lý.\n"
+        "- Tìm hiểu các rào cản hành vi của bệnh nhân (ví dụ: mệt mỏi, thiếu thời gian) và đề xuất giải pháp vượt qua.\n"
+        "- Nhắc nhở và hỗ trợ thiết lập thói quen lành mạnh."
+    ),
+    "doctor_referral": (
+        "Bạn là Tác tử Hỗ trợ Bác sĩ & Đặt lịch khám (Administrative Action Agent).\n"
+        "Nhiệm vụ: Hỗ trợ kết nối bác sĩ phù hợp, tra cứu thuốc/tồn kho nếu cần, và chuẩn bị thông tin đặt lịch.\n"
+        "Nguyên tắc:\n"
+        "- Khi người dùng đồng ý gặp bác sĩ hoặc đặt lịch, gợi ý mở tính năng Bác sĩ để chọn lịch hẹn (sử dụng action 'ask_navigation' hoặc 'navigate' đến đường dẫn bác sĩ).\n"
+        "- Hướng dẫn quy trình đặt lịch nhẹ nhàng, cung cấp tóm tắt thông tin tư vấn lâm sàng ngắn gọn để bệnh nhân chuẩn bị khi gặp bác sĩ."
+    ),
+    "default": (
+        "Bạn là Trợ lý Y tế & Sức khỏe toàn diện.\n"
+        "Nhiệm vụ: Trò chuyện và giải đáp các thắc mắc chung về sức khỏe một cách thân thiện, khoa học, dễ hiểu."
+    ),
+}
+
+
+def _build_agent_prompt(
+    agent_profile: str,
+    user_text: str,
+    tool_results: Dict[str, Any],
+    triage_state: Dict[str, Any],
+) -> List[Dict[str, Any]]:
     try:
         from cpu_server.graph_gateway import compress_tool_results
     except Exception:
@@ -388,27 +443,32 @@ def _build_json_prompt(agent_profile: str, user_text: str, tool_results: Dict[st
             compress_tool_results = lambda x: x
 
     allow_paths = ", ".join(ALLOWED_PATH_PREFIXES)
+    profile_instructions = SYSTEM_INSTRUCTIONS.get(agent_profile, SYSTEM_INSTRUCTIONS["default"])
+
     system_lines = [
-        "Bạn là AI agent cho ứng dụng tư vấn y tế & tâm lý.",
-        f"AGENT_PROFILE:{agent_profile}",
-        "Luôn trả về một JSON object DUY NHẤT. Không dùng markdown.",
-        "Schema:",
-        "{",
-        '  "response": "string",',
-        '  "actions": [ { "type": "...", "args": {} } ]',
-        "}",
-        "Actions hợp lệ: navigate(path), speak(text), embed(feature, context), ask_navigation(feature, reason, context), play_music(videoId,title,artist,autoplay), recommend_music(recommendations,mood,message).",
-        f"Allowlist paths: {allow_paths}",
-        "Không được lộ key JSON, tên biến kỹ thuật, metric code, metadata, tool names hay guardrail state vào response người dùng.",
+        "Bạn là một AI agent chuyên nghiệp trong ứng dụng hỗ trợ y tế & tâm lý đa tác tử.",
+        f"VAI TRÒ HIỆN TẠI CỦA BẠN: {agent_profile.upper()} AGENT.",
+        "HƯỚNG DẪN VAI TRÒ:",
+        profile_instructions,
+        "",
+        "YÊU CẦU ĐẦU RA KỸ THUẬT:",
+        "- Luôn luôn trả về một JSON object duy nhất, KHÔNG ĐƯỢC chứa định dạng markdown bao quanh (không dùng ```json ... ```), chỉ trả về văn bản JSON thuần túy.",
+        "- JSON Schema bắt buộc:",
+        "  {",
+        '    "response": "Câu trả lời tự nhiên của bạn bằng tiếng Việt cho người dùng",',
+        '    "actions": [ { "type": "navigate|speak|embed|ask_navigation|play_music|recommend_music", "args": {} } ]',
+        "  }",
+        "- Các actions hợp lệ:",
+        "  * navigate(path): điều hướng đến path. Allowlist paths: " + allow_paths,
+        "  * speak(text): đọc văn bản.",
+        "  * embed(feature, context): nhúng widget. Features: sang-loc, tri-lieu, tra-cuu, bac-si, ke-hoach, thong-ke.",
+        "  * ask_navigation(feature, reason, context): gợi ý người dùng mở tính năng.",
+        "  * play_music(videoId, title, artist, autoplay): phát bài hát trên YouTube.",
+        "  * recommend_music(recommendations, mood, message): đề xuất danh sách nhạc.",
+        "- TUYỆT ĐỐI KHÔNG ĐƯỢC để lộ các nhãn kỹ thuật, key JSON, tên biến hệ thống, metric codes, hay thông tin debug/guardrails vào trong trường 'response' gửi cho người dùng.",
+        "- Câu trả lời trong trường 'response' phải mượt mà, thấu cảm, hoàn toàn tự nhiên và viết bằng tiếng Việt."
     ]
-    if str(agent_profile or "").strip().lower() == "triage":
-        system_lines.extend(
-            [
-                "Nếu risk_level là low/moderate và ready_for_cta=false: ưu tiên hỏi tiếp 1-2 câu ngắn để phân tầng nguy cơ, không đẩy CTA/hẹn bác sĩ quá sớm.",
-                "Nếu risk_level là emergency: khuyên gọi 115 hoặc đi cấp cứu ngay với giọng tự nhiên, rõ ràng, ngắn gọn.",
-                "Nếu đã có follow_up_questions trong state, ưu tiên dùng chúng để hỏi tiếp.",
-            ]
-        )
+
     return [
         {"role": "system", "content": "\n".join(system_lines)},
         {"role": "system", "content": f"TRIAGE_STATE_JSON:{json.dumps(triage_state, ensure_ascii=False)}"},
@@ -424,14 +484,16 @@ def node_route(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     agent_profile = requested if requested and requested != "auto" else _infer_agent_profile(message)
     current["intent"] = _detect_intent_flags(message)
     current["agent_profile"] = agent_profile
-    current["tool_requests"] = _plan_tools(message) if bool(current.get("include_tools", True)) else []
+    current["tool_requests"] = _plan_tools(message, agent_profile) if bool(current.get("include_tools", True)) else []
 
     settings, _ = _get_llmops()
     if settings is None:
+        current["next_node"] = "tools"
         return current
     try:
         from core_lib.llmops.guardrails import route_message, validate_user_message
     except Exception:
+        current["next_node"] = "tools"
         return current
 
     route_decision = route_message(settings, text=message)
@@ -442,9 +504,11 @@ def node_route(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     }
     if bool(injection.allowed):
         current["blocked"] = False
+        current["next_node"] = "tools"
         return current
 
     current["blocked"] = True
+    current["next_node"] = "END"
     current["response"] = str(injection.user_message or "").strip() or "Mình không thể hỗ trợ yêu cầu này."
     current["actions"] = []
     current["tool_requests"] = []
@@ -461,6 +525,7 @@ def node_route(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
 def node_tools(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     current = _state_to_dict(state)
     if bool(current.get("blocked")):
+        current["next_node"] = "END"
         return current
 
     try:
@@ -487,6 +552,7 @@ def node_tools(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
                 entity_limit=int(args.get("entity_limit") or 5),
                 rel_types=args.get("rel_types") if isinstance(args.get("rel_types"), list) else None,
                 timeout_s=0.0,
+                collection=args.get("collection"),
             )
         return {"ok": False, "error": "unknown_tool"}
 
@@ -522,10 +588,12 @@ def node_tools(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
 
     settings, _ = _get_llmops()
     if settings is None:
+        current["next_node"] = "supervisor"
         return current
     try:
         from core_lib.llmops.guardrails import enforce_grounding
     except Exception:
+        current["next_node"] = "supervisor"
         return current
 
     grounding = enforce_grounding(
@@ -540,29 +608,50 @@ def node_tools(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     }
     additional_requests = grounding.additional_tool_requests if isinstance(grounding.additional_tool_requests, list) else []
     remaining = max_calls - len(tool_items)
-    if not grounding.should_fallback or remaining <= 0 or not additional_requests:
+    if grounding.should_fallback and remaining > 0 and additional_requests:
+        for spec in additional_requests[:remaining]:
+            name = str((spec or {}).get("name") or "").strip()
+            args = (spec or {}).get("args") if isinstance((spec or {}).get("args"), dict) else {}
+            if not name:
+                continue
+            call_started = time.time()
+            try:
+                results[name] = _call(name, args)
+            except Exception as exc:
+                results[name] = {"ok": False, "error": str(exc)}
+            tool_durations[name] = int((time.time() - call_started) * 1000)
+        current["tool_results"] = results
+        current["tool_durations"] = tool_durations
+        current["tool_elapsed_ms"] = int((time.time() - started_at) * 1000)
+        # re-evaluate grounding
+        grounding = enforce_grounding(
+            settings,
+            agent_profile=str(current.get("agent_profile") or "default"),
+            tool_results=results,
+            original_query=str(current.get("message") or ""),
+        )
+        current["guardrails"]["grounding"] = grounding.model_dump(mode="json") if hasattr(grounding, "model_dump") else {"should_fallback": bool(grounding.should_fallback)}
+
+    if grounding.should_fallback:
+        current["response"] = build_triage_fallback_text(
+            risk_level=str(current.get("risk_level") or "unknown"),
+            follow_up_questions=current.get("triage_follow_up_questions") or [],
+            symptoms_collected=current.get("symptoms_collected") or [],
+        ) if current.get("agent_profile") == "triage" else str(grounding.user_message or "").strip() or "Mình chưa có đủ thông tin để trả lời chắc chắn. Bạn cung cấp thêm chi tiết giúp mình nhé."
+        current["actions"] = _fallback_actions(str(current.get("agent_profile") or "default"), current.get("intent"), str(current.get("risk_level") or "unknown"), bool(current.get("ready_for_cta")))
+        current["provider"] = "guardrails"
+        current["model"] = ""
+        current["next_node"] = "END"
         return current
 
-    for spec in additional_requests[:remaining]:
-        name = str((spec or {}).get("name") or "").strip()
-        args = (spec or {}).get("args") if isinstance((spec or {}).get("args"), dict) else {}
-        if not name:
-            continue
-        call_started = time.time()
-        try:
-            results[name] = _call(name, args)
-        except Exception as exc:
-            results[name] = {"ok": False, "error": str(exc)}
-        tool_durations[name] = int((time.time() - call_started) * 1000)
-    current["tool_results"] = results
-    current["tool_durations"] = tool_durations
-    current["tool_elapsed_ms"] = int((time.time() - started_at) * 1000)
+    current["next_node"] = "supervisor"
     return current
 
 
-def node_reasoning(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
+def node_supervisor(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     current = _state_to_dict(state)
     if bool(current.get("blocked")):
+        current["next_node"] = "END"
         return current
 
     decision = run_semantic_triage_router(
@@ -580,6 +669,43 @@ def node_reasoning(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     current["triage_follow_up_questions"] = decision.follow_up_questions
     current["semantic_router_trace"] = [item.model_dump(mode="python") if hasattr(item, "model_dump") else item for item in decision.trace]
 
+    current["clinical_hold"] = bool(decision.clinical_hold)
+    current["stealth_phq9"] = int(decision.stealth_phq9)
+    current["stealth_gad7"] = int(decision.stealth_gad7)
+
+    try:
+        from cpu_server.db import set_conversation_clinical_hold
+    except Exception:
+        try:
+            from db import set_conversation_clinical_hold
+        except Exception:
+            set_conversation_clinical_hold = None
+
+    if set_conversation_clinical_hold is not None and current.get("conversation_id"):
+        try:
+            set_conversation_clinical_hold(
+                current["conversation_id"],
+                current["clinical_hold"],
+                phq9=current["stealth_phq9"],
+                gad7=current["stealth_gad7"]
+            )
+        except Exception:
+            pass
+
+    if current["clinical_hold"]:
+        current["blocked"] = True
+        current["next_node"] = "END"
+        current["response"] = (
+            "Hiện tại, chúng tôi nhận thấy bạn đang có những chia sẻ liên quan đến tự hại hoặc tự tử. "
+            "Để đảm bảo an toàn tối đa cho bạn, hệ thống đã tạm thời đóng băng hội thoại này.\n"
+            "Nếu bạn đang gặp khủng hoảng hoặc cần người lắng nghe ngay lập tức, xin vui lòng liên hệ với các đường dây nóng hỗ trợ khẩn cấp sau:\n"
+            "- Đường dây nóng Ngày Mai (Hỗ trợ trầm cảm & ngăn ngừa tự sát): 096 306 1414\n"
+            "- Tổng đài Cấp cứu Y tế: 115\n"
+            "Bạn không phải đơn độc, hãy tìm kiếm sự giúp đỡ từ những người xung quanh hoặc các chuyên gia y tế ngay lập tức."
+        )
+        current["actions"] = []
+        return current
+
     route_decision = current.get("route_decision") or {}
     route_decision["semantic_router"] = decision.model_dump(mode="json")
     route_decision["router_source"] = decision.router_source
@@ -589,21 +715,26 @@ def node_reasoning(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     if current["agent_profile"] == "triage":
         intent["wants_triage"] = True
     current["intent"] = intent
+
+    profile_mapping = {
+        "triage": "triage_agent",
+        "medication": "medication_agent",
+        "therapy": "therapy_agent",
+        "care_plan": "care_plan_agent",
+        "doctor_referral": "doctor_referral_agent",
+    }
+    current["next_node"] = profile_mapping.get(current["agent_profile"], "default_agent")
     return current
 
 
-def node_llm(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
-    current = _state_to_dict(state)
-    if bool(current.get("blocked")):
-        return current
+def _run_agent_llm(state: Dict[str, Any], agent_profile: str) -> Dict[str, Any]:
+    user_text = str(state.get("message") or "").strip()
+    tool_results = state.get("tool_results") or {}
+    triage_state = _triage_state_payload(state)
+    risk_level = str(state.get("risk_level") or "unknown")
+    ready_for_cta = bool(state.get("ready_for_cta"))
+    intent = state.get("intent") or _detect_intent_flags(user_text)
 
-    user_text = str(current.get("message") or "").strip()
-    agent_profile = str(current.get("agent_profile") or "default").strip() or "default"
-    tool_results = current.get("tool_results") or {}
-    intent = current.get("intent") or _detect_intent_flags(user_text)
-    triage_state = _triage_state_payload(current)
-    risk_level = str(current.get("risk_level") or "unknown")
-    ready_for_cta = bool(current.get("ready_for_cta"))
     settings, _ = _get_llmops()
     rag_context = ""
     rag_contexts: List[str] = []
@@ -621,35 +752,35 @@ def node_llm(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
                 tool_results=tool_results,
                 original_query=user_text,
             )
-            current["guardrails"] = {
-                **(current.get("guardrails") or {}),
+            state["guardrails"] = {
+                **(state.get("guardrails") or {}),
                 "grounding": grounding.model_dump(mode="json") if hasattr(grounding, "model_dump") else {"has_context": bool(grounding.has_context)},
             }
             if not bool(grounding.has_context):
-                current["response"] = build_triage_fallback_text(
+                state["response"] = build_triage_fallback_text(
                     risk_level=risk_level,
-                    follow_up_questions=current.get("triage_follow_up_questions") or [],
-                    symptoms_collected=current.get("symptoms_collected") or [],
+                    follow_up_questions=state.get("triage_follow_up_questions") or [],
+                    symptoms_collected=state.get("symptoms_collected") or [],
                 ) if agent_profile == "triage" else str(grounding.user_message or "").strip() or "Mình chưa có đủ thông tin để trả lời chắc chắn. Bạn cung cấp thêm chi tiết giúp mình nhé."
-                current["actions"] = _fallback_actions(agent_profile, intent, risk_level, ready_for_cta)
-                current["provider"] = "guardrails"
-                current["model"] = ""
-                current["metadata"] = {
+                state["actions"] = _fallback_actions(agent_profile, intent, risk_level, ready_for_cta)
+                state["provider"] = "guardrails"
+                state["model"] = ""
+                state["metadata"] = {
                     "orchestrator": "langgraph",
                     "provider": "guardrails",
                     "agent_profile": agent_profile,
                     "intent": intent,
                     "blocked": False,
-                    "grounding": current.get("guardrails") or {},
+                    "grounding": state.get("guardrails") or {},
                     "triage": triage_state,
                 }
-                return current
+                return state
             if extract_context_text is not None:
                 rag_context = extract_context_text(tool_results)
                 if rag_context.strip():
                     rag_contexts = [rag_context]
 
-    messages = _build_json_prompt(agent_profile, user_text, tool_results, triage_state)
+    messages = _build_agent_prompt(agent_profile, user_text, tool_results, triage_state)
     started_at = time.time()
     try:
         content, metadata = _foza_chat(messages, timeout_s=_foza_timeout_s())
@@ -667,31 +798,31 @@ def node_llm(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
         else:
             fallback_text = build_triage_fallback_text(
                 risk_level=risk_level,
-                follow_up_questions=current.get("triage_follow_up_questions") or [],
-                symptoms_collected=current.get("symptoms_collected") or [],
+                follow_up_questions=state.get("triage_follow_up_questions") or [],
+                symptoms_collected=state.get("symptoms_collected") or [],
             ) if agent_profile == "triage" else (
                 "Mình tạm thời chưa kết nối được với trợ lý AI. Nếu xuất hiện dấu hiệu nặng như khó thở, đau ngực, lơ mơ hoặc sốt cao tăng nhanh, "
                 "bạn nên gọi 115 hoặc đến cơ sở y tế gần nhất ngay."
             )
-        current["response"] = sanitize_user_visible_text(fallback_text)
-        current["actions"] = _fallback_actions(agent_profile, intent, risk_level, ready_for_cta)
-        current["provider"] = "foza"
-        current["model"] = ""
-        current["metadata"] = {
+        state["response"] = sanitize_user_visible_text(fallback_text)
+        state["actions"] = _fallback_actions(agent_profile, intent, risk_level, ready_for_cta)
+        state["provider"] = "foza"
+        state["model"] = ""
+        state["metadata"] = {
             "orchestrator": "langgraph",
             "provider": "foza",
             "agent_profile": agent_profile,
             "intent": intent,
             "duration_ms": int((time.time() - started_at) * 1000),
-            "tool_elapsed_ms": int(current.get("tool_elapsed_ms") or 0),
-            "tool_durations": current.get("tool_durations") or {},
+            "tool_elapsed_ms": int(state.get("tool_elapsed_ms") or 0),
+            "tool_durations": state.get("tool_durations") or {},
             "fallback": "foza_unreachable",
             "error": str(exc)[:300],
             "error_type": type(exc).__name__,
             "triage": triage_state,
             **({"rag_context": rag_context} if rag_context else {}),
         }
-        return current
+        return state
 
     parsed: Dict[str, Any] = {}
     block = _first_json_object(content)
@@ -712,33 +843,63 @@ def node_llm(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
     if not final_text and agent_profile == "triage":
         final_text = build_triage_fallback_text(
             risk_level=risk_level,
-            follow_up_questions=current.get("triage_follow_up_questions") or [],
-            symptoms_collected=current.get("symptoms_collected") or [],
+            follow_up_questions=state.get("triage_follow_up_questions") or [],
+            symptoms_collected=state.get("symptoms_collected") or [],
         )
     final_text = _ensure_text(final_text)
 
-    current["response"] = final_text
-    current["actions"] = final_actions
-    current["provider"] = "foza"
-    current["model"] = str(metadata.get("model") or "")
-    current["metadata"] = {
+    state["response"] = final_text
+    state["actions"] = final_actions
+    state["provider"] = "foza"
+    state["model"] = str(metadata.get("model") or "")
+    state["metadata"] = {
         "orchestrator": "langgraph",
         "provider": "foza",
         "model": str(metadata.get("model") or ""),
         "agent_profile": agent_profile,
         "intent": intent,
         "duration_ms": int((time.time() - started_at) * 1000),
-        "tool_elapsed_ms": int(current.get("tool_elapsed_ms") or 0),
-        "tool_durations": current.get("tool_durations") or {},
-        "tool_calls": [str((item or {}).get("name") or "") for item in (current.get("tool_requests") or [])],
+        "tool_elapsed_ms": int(state.get("tool_elapsed_ms") or 0),
+        "tool_durations": state.get("tool_durations") or {},
+        "tool_calls": [str((item or {}).get("name") or "") for item in (state.get("tool_requests") or [])],
         "triage": triage_state,
         **({"usage": metadata.get("usage")} if isinstance(metadata.get("usage"), dict) else {}),
         **({"rag_context": rag_context} if rag_context else {}),
         **({"rag_contexts": rag_contexts} if rag_contexts else {}),
     }
     if settings is not None:
-        current["metadata"]["guardrails"] = current.get("guardrails") or {}
-    return current
+        state["metadata"]["guardrails"] = state.get("guardrails") or {}
+    return state
+
+
+def node_triage_agent(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
+    current = _state_to_dict(state)
+    return _run_agent_llm(current, "triage")
+
+
+def node_medication_agent(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
+    current = _state_to_dict(state)
+    return _run_agent_llm(current, "medication")
+
+
+def node_therapy_agent(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
+    current = _state_to_dict(state)
+    return _run_agent_llm(current, "therapy")
+
+
+def node_care_plan_agent(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
+    current = _state_to_dict(state)
+    return _run_agent_llm(current, "care_plan")
+
+
+def node_doctor_referral_agent(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
+    current = _state_to_dict(state)
+    return _run_agent_llm(current, "doctor_referral")
+
+
+def node_default_agent(state: AgentState | Dict[str, Any]) -> Dict[str, Any]:
+    current = _state_to_dict(state)
+    return _run_agent_llm(current, "default")
 
 
 def build_graph():
@@ -749,27 +910,63 @@ def build_graph():
 
     graph = StateGraph(AgentState)
     _, observer = _get_llmops()
-    if observer is not None:
-        graph.add_node("route", observer.wrap_node(node_name="route", fn=node_route))
-        graph.add_node("tools", observer.wrap_node(node_name="tools", fn=node_tools))
-        graph.add_node("reasoning", observer.wrap_node(node_name="reasoning", fn=node_reasoning))
-        graph.add_node("llm", observer.wrap_node(node_name="llm", fn=node_llm))
-    else:
-        graph.add_node("route", node_route)
-        graph.add_node("tools", node_tools)
-        graph.add_node("reasoning", node_reasoning)
-        graph.add_node("llm", node_llm)
+
+    nodes = {
+        "route": node_route,
+        "tools": node_tools,
+        "supervisor": node_supervisor,
+        "triage_agent": node_triage_agent,
+        "medication_agent": node_medication_agent,
+        "therapy_agent": node_therapy_agent,
+        "care_plan_agent": node_care_plan_agent,
+        "doctor_referral_agent": node_doctor_referral_agent,
+        "default_agent": node_default_agent,
+    }
+
+    for name, fn in nodes.items():
+        if observer is not None:
+            graph.add_node(name, observer.wrap_node(node_name=name, fn=fn))
+        else:
+            graph.add_node(name, fn)
 
     graph.set_entry_point("route")
 
-    def _route_next(state: AgentState | Dict[str, Any]) -> str:
+    def _route_after_guardrails(state: AgentState | Dict[str, Any]) -> str:
         current = _state_to_dict(state)
-        return "blocked" if bool(current.get("blocked")) else "tools"
+        return "END" if current.get("next_node") == "END" else "tools"
 
-    graph.add_conditional_edges("route", _route_next, {"blocked": END, "tools": "tools"})
-    graph.add_edge("tools", "reasoning")
-    graph.add_edge("reasoning", "llm")
-    graph.add_edge("llm", END)
+    graph.add_conditional_edges("route", _route_after_guardrails, {"END": END, "tools": "tools"})
+
+    def _route_after_tools(state: AgentState | Dict[str, Any]) -> str:
+        current = _state_to_dict(state)
+        return "END" if current.get("next_node") == "END" else "supervisor"
+
+    graph.add_conditional_edges("tools", _route_after_tools, {"END": END, "supervisor": "supervisor"})
+
+    def _route_from_supervisor(state: AgentState | Dict[str, Any]) -> str:
+        current = _state_to_dict(state)
+        return str(current.get("next_node") or "default_agent")
+
+    graph.add_conditional_edges(
+        "supervisor",
+        _route_from_supervisor,
+        {
+            "triage_agent": "triage_agent",
+            "medication_agent": "medication_agent",
+            "therapy_agent": "therapy_agent",
+            "care_plan_agent": "care_plan_agent",
+            "doctor_referral_agent": "doctor_referral_agent",
+            "default_agent": "default_agent",
+            "END": END,
+        }
+    )
+
+    graph.add_edge("triage_agent", END)
+    graph.add_edge("medication_agent", END)
+    graph.add_edge("therapy_agent", END)
+    graph.add_edge("care_plan_agent", END)
+    graph.add_edge("doctor_referral_agent", END)
+    graph.add_edge("default_agent", END)
 
     try:
         from cpu_server.db import get_checkpointer_pool
@@ -783,3 +980,4 @@ def build_graph():
             return graph.compile(checkpointer=MemorySaver())
         except Exception:
             return graph.compile()
+
