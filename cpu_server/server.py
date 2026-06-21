@@ -573,6 +573,7 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     user_id: str
     token: str
+    role: str
 
 class UserProfile(BaseModel):
     user_id: str
@@ -3001,7 +3002,8 @@ async def login(req: LoginRequest):
     if calc != stored_hash:
         raise HTTPException(status_code=401, detail="Thông tin đăng nhập không hợp lệ")
     token = _issue_token(user)
-    return LoginResponse(user_id=str(user["id"]), token=token)
+    role = str(user.get("role") or "PATIENT").strip().upper()
+    return LoginResponse(user_id=str(user["id"]), token=token, role=role)
 
 @app.post("/v1/logout")
 async def logout():

@@ -335,7 +335,8 @@ def _wait_for_json(
 
 
 def _pick_ngrok_public_url(api_base: str) -> str | None:
-    data = _http_get_json(_join_url(api_base, "/api/tunnels"), timeout=2.0)
+    # api_base already is the full tunnels URL (e.g. http://127.0.0.1:4040/api/tunnels)
+    data = _http_get_json(api_base, timeout=2.0)
     if data is None:
         return None
     tunnels = data.get("tunnels")
@@ -633,7 +634,9 @@ def _step_3_graph_status_reachable(settings: LauncherSettings, runtime: BootRunt
 
 def _step_4_ngrok_public_url_ready(settings: LauncherSettings, runtime: BootRuntime) -> None:
     if not settings.ngrok.enabled:
-        raise BootStepError("ngrok_disabled")
+        runtime.ngrok_public_url = runtime.cpu_local_url
+        print("[4/5] ngrok_skipped_using_local", flush=True)
+        return
     _configure_ngrok(settings)
     ngrok_process = _start_process(runtime, "ngrok", _build_ngrok_command(settings), cwd=settings.repo_root, shell=False)
     deadline = time.monotonic() + max(settings.ngrok.start_timeout_s, settings.ngrok.poll_interval_s)
@@ -652,18 +655,20 @@ def _step_4_ngrok_public_url_ready(settings: LauncherSettings, runtime: BootRunt
                     # Update Production environment
                     subprocess.run(
                         [npx_path, "vercel", "env", "add", "CPU_SERVER_URL", "production", "--value", public_url, "--yes", "--force"],
-                        cwd=str(settings.repo_root),
+                        cwd=str(settings.frontend.cwd),
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
-                        check=False
+                        check=False,
+                        timeout=30
                     )
                     # Update Preview environment
                     subprocess.run(
                         [npx_path, "vercel", "env", "add", "CPU_SERVER_URL", "preview", "--value", public_url, "--yes", "--force"],
-                        cwd=str(settings.repo_root),
+                        cwd=str(settings.frontend.cwd),
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
-                        check=False
+                        check=False,
+                        timeout=30
                     )
                     print("[Vercel Sync] CPU_SERVER_URL synced to Vercel production and preview!", flush=True)
                 else:
@@ -844,8 +849,8 @@ def _build_settings(repo_root: Path, args: argparse.Namespace) -> LauncherSettin
         "ngrok": {
             "enabled": not _setting_bool("CPU_NO_NGROK", yaml_data, "launcher.ngrok.disabled", False),
             "executable": _setting_str("NGROK_EXECUTABLE", yaml_data, "launcher.ngrok.executable", "ngrok"),
-            "api_base": _setting_str("NGROK_API", yaml_data, "launcher.ngrok.api_base"),
-            "authtoken": _setting_optional_str("NGROK_AUTHTOKEN", yaml_data, "launcher.ngrok.authtoken"),
+            "api_base": _setting_str("NGROK_API", yaml_data, "launcher.ngrok.api_base", "http://127.0.0.1:4040/api/tunnels"),
+            "authtoken": _setting_optional_str("NGROK_AUTH_TOKEN", yaml_data, "launcher.ngrok.authtoken") or _setting_optional_str("NGROK_AUTHTOKEN", yaml_data, "launcher.ngrok.authtoken"),
             "region": _setting_optional_str("NGROK_REGION", yaml_data, "launcher.ngrok.region"),
             "domain": _setting_optional_str("NGROK_DOMAIN", yaml_data, "launcher.ngrok.domain"),
             "start_timeout_s": _setting_float("NGROK_START_TIMEOUT_S", yaml_data, "launcher.ngrok.start_timeout_s", 45.0),
