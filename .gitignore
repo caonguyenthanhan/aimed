@@ -83,7 +83,12 @@ medical-consultation-app/data/server-registry.json
 Thumbs.db
 
 # Trae & Jupyter artifacts
-.trae/
+.trae/*
+!.trae/rules/
+!.trae/rules/project_rules.md
+!.trae/skills/
+!.trae/skills/project-manager-vibe/
+!.trae/skills/project-manager-vibe/SKILL.md
 .ipynb_checkpoints/
 /gpu_server/server_AI_MCS.ipynb
 
