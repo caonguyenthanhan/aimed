@@ -533,49 +533,49 @@ NGUYÊN TẮC QUAN TRỌNG:
 
     if (!resp || !resp.ok) {
       try {
-        if (modeUsed === 'gpu') {
-          if (process.env.GEMINI_API_KEY) {
-            try {
-              const startGemini = Date.now()
-              const personaForGemini = (typeof persona === 'string' && persona.trim()) ? persona.trim() : (typeof role === 'string' && role.trim() ? role.trim() : '')
-              const category = String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation'
-              const out = await geminiService.generateFromConfig({
-                category: category as any,
-                tier: modeHeader,
-                question: String(userMessage),
-                persona: personaForGemini,
-                messages: Array.isArray(conversationHistory) ? conversationHistory : []
-              })
-              const durationGemini = Date.now() - startGemini
-              const content = String(out?.text || '').trim()
-              if (content) {
-                return json({
-                  response: content,
-                  messages: planResponseMessages(content),
-                  delivery: { mode: deliveryMode },
+        if (process.env.GEMINI_API_KEY) {
+          try {
+            const startGemini = Date.now()
+            const personaForGemini = (typeof persona === 'string' && persona.trim()) ? persona.trim() : (typeof role === 'string' && role.trim() ? role.trim() : '')
+            const category = String(determinedContext) === 'speech_stream' ? 'speech_stream' : 'consultation'
+            const out = await geminiService.generateFromConfig({
+              category: category as any,
+              tier: modeHeader,
+              question: String(userMessage),
+              persona: personaForGemini,
+              messages: Array.isArray(conversationHistory) ? conversationHistory : []
+            })
+            const durationGemini = Date.now() - startGemini
+            const content = String(out?.text || '').trim()
+            if (content) {
+              return json({
+                response: content,
+                messages: planResponseMessages(content),
+                delivery: { mode: deliveryMode },
+                context: determinedContext,
+                model_info: {
+                  model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
+                  provider: 'Gemini'
+                },
+                metadata: withSystemState({
                   context: determinedContext,
-                  model_info: {
-                    model_name: out?.model || process.env.GEMINI_MODEL || 'gemini',
-                    provider: 'Gemini'
-                  },
-                  metadata: withSystemState({
-                    context: determinedContext,
-                    prompt_length: String(userMessage).length,
-                    response_length: content.length,
-                    timestamp: new Date().toISOString(),
-                    mode: 'gpu',
-                    tier: modeHeader,
-                    fallback: true,
-                    provider: 'gemini',
-                    duration_ms: durationGemini
-                  }),
-                  conversation_id: conversation_id || null
-                })
-              }
-            } catch (geminiErr) {
-              console.error('[llm-chat] Gemini fallback failed:', geminiErr)
+                  prompt_length: String(userMessage).length,
+                  response_length: content.length,
+                  timestamp: new Date().toISOString(),
+                  mode: modeUsed,
+                  tier: modeHeader,
+                  fallback: true,
+                  provider: 'gemini',
+                  duration_ms: durationGemini
+                }),
+                conversation_id: conversation_id || null
+              })
             }
+          } catch (geminiErr) {
+            console.error('[llm-chat] Gemini fallback failed:', geminiErr)
           }
+        }
+        if (modeUsed === 'gpu') {
           const fallbackUrl = cpuFallback
           const retry = await fetch(fallbackUrl, {
             method: 'POST',

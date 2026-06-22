@@ -1044,7 +1044,7 @@ export async function POST(req: Request) {
           let mcpToolCallsCount = 0
           const mcpToolNamesSeen: string[] = []
 
-          const forceActions = String(process.env.AGENT_FORCE_ACTIONS || "").trim() === "1"
+          const forceActions = String(process.env.AGENT_FORCE_ACTIONS || "1").trim() !== "0"
           if (!forceActions) {
             let r1: any | null = null
             for (let i = 0; i < 2; i++) {
@@ -1680,7 +1680,7 @@ export async function POST(req: Request) {
       return actions.filter(a => a?.type)
     }
     
-    const forceActionsEnabled = String(process.env.AGENT_FORCE_ACTIONS || "").trim() === "1"
+    const forceActionsEnabled = String(process.env.AGENT_FORCE_ACTIONS || "1").trim() !== "0"
     const forcedActions = forceActionsEnabled ? intelligentActionForcing() : []
     const directTriageMeta = readGatewayTriageMeta()
     const profileForcing = () => {
@@ -1701,6 +1701,9 @@ export async function POST(req: Request) {
       }
       if (agentProfile.id === "care_plan") {
         return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Đang bật chế độ Kế hoạch chăm sóc. Bạn muốn mở module Kế hoạch để tạo plan theo mục tiêu không?" } }]
+      }
+      if (agentProfile.id === "doctor_referral" || agentProfile.id === "doctor") {
+        return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Đang bật chế độ Bác sĩ & Đặt hẹn. Bạn muốn mở mục Bác sĩ để xem hồ sơ và đặt hẹn khám không?" } }]
       }
       return []
     }
