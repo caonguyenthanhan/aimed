@@ -506,13 +506,32 @@ NGUYÊN TẮC QUAN TRỌNG:
 
     const start = Date.now()
     const targetIsCpu = originalTarget === 'cpu' || fastApiUrl.includes('127.0.0.1') || fastApiUrl.includes('localhost')
-    let resp = await fetch(fastApiUrl, {
-      method: 'POST',
-      headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': '1', 'X-Mode': modeHeader } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1', 'X-Mode': modeHeader },
-      body: JSON.stringify(targetIsCpu ? cpuBody : gpuBody)
-    })
+    let resp: Response | null = null
     let modeUsed = fastApiUrl.includes('127.0.0.1') || fastApiUrl.includes('localhost') ? 'cpu' : 'gpu'
-    if (!resp.ok) {
+    let fetchErrMessage = ""
+
+    const upstreamTimeoutMs = (() => {
+      const n = Number.parseInt(String(process.env.LLM_CHAT_UPSTREAM_TIMEOUT_MS || '').trim(), 10)
+      return Number.isFinite(n) && n > 0 ? n : 5000
+    })()
+    const upstreamController = new AbortController()
+    const upstreamTimer = setTimeout(() => upstreamController.abort(), upstreamTimeoutMs)
+    try {
+      resp = await fetch(fastApiUrl, {
+        method: 'POST',
+        headers: auth ? { 'Content-Type': 'application/json', 'Authorization': auth, 'ngrok-skip-browser-warning': '1', 'X-Mode': modeHeader } : { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1', 'X-Mode': modeHeader },
+        body: JSON.stringify(targetIsCpu ? cpuBody : gpuBody),
+        signal: upstreamController.signal,
+      })
+    } catch (e: any) {
+      fetchErrMessage = String(e?.message || e || "")
+      console.warn('[llm-chat] Upstream fetch failed, trying fallback:', fetchErrMessage)
+    } finally {
+      clearTimeout(upstreamTimer)
+    }
+
+
+    if (!resp || !resp.ok) {
       try {
         if (modeUsed === 'gpu') {
           if (process.env.GEMINI_API_KEY) {
@@ -553,7 +572,9 @@ NGUYÊN TẮC QUAN TRỌNG:
                   conversation_id: conversation_id || null
                 })
               }
-            } catch {}
+            } catch (geminiErr) {
+              console.error('[llm-chat] Gemini fallback failed:', geminiErr)
+            }
           }
           const fallbackUrl = cpuFallback
           const retry = await fetch(fallbackUrl, {
@@ -575,11 +596,13 @@ NGUYÊN TẮC QUAN TRỌNG:
             } catch {}
           }
         }
-      } catch {}
+      } catch (fallbackErr) {
+        console.error('[llm-chat] Fallback logic failed:', fallbackErr)
+      }
     }
 
-    if (!resp.ok) {
-      const text = await resp.text()
+    if (!resp || !resp.ok) {
+      const text = resp ? await resp.text() : (fetchErrMessage || 'Unreachable upstream server')
       console.error('LLM server error:', text)
       return json(
         { error: 'LLM server error', details: text, debug: { target: originalTarget, fastApiUrl, cpuFallback } },

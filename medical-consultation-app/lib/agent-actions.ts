@@ -110,6 +110,31 @@ export function normalizeActions(raw: unknown): AgentAction[] {
   return parsed.success ? parsed.data : []
 }
 
+/**
+ * Strict client-side normalizer with per-item validation and warning logs.
+ * Filters out invalid actions individually (unlike normalizeActions which drops all-or-nothing).
+ * Use this on the client to get the most valid actions even from partially-malformed LLM output.
+ */
+export function normalizeActionsStrict(raw: unknown): AgentAction[] {
+  if (!Array.isArray(raw)) return []
+  const result: AgentAction[] = []
+  for (const item of raw) {
+    const parsed = AgentActionSchema.safeParse(item)
+    if (parsed.success) {
+      result.push(parsed.data)
+    } else {
+      if (typeof item === "object" && item !== null) {
+        const type = (item as any)?.type ?? "unknown"
+        console.warn(
+          `[agent-actions] Dropping invalid action type="${type}":`,
+          parsed.error.issues.map((i) => i.message).join(", ")
+        )
+      }
+    }
+  }
+  return result
+}
+
 export const ALLOWED_PATH_PREFIXES = [
   "/sang-loc",
   "/tri-lieu",

@@ -21,7 +21,7 @@ import { LlmChatResponseSchema } from "@/lib/llm-schema"
 import type { LlmMessage } from "@/types/llm"
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer"
 import { loadLocalDoctorPrivate } from "@/lib/doctor-profile-store"
-import { AgentResponseSchema, isAllowedPath, normalizeActions, type AgentAction } from "@/lib/agent-actions"
+import { AgentResponseSchema, isAllowedPath, normalizeActions, normalizeActionsStrict, type AgentAction } from "@/lib/agent-actions"
 import { GoogleGenAI, Modality } from "@google/genai"
 import { ChatSpecialMessage, parseSpecialMessages, type SpecialMessageData } from "@/components/chat-special-message"
 import { VirtualChatList } from "@/components/virtual-chat-list"
@@ -424,16 +424,50 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
   }
 
   const executeAgentActions = async (actions: AgentAction[], opts?: { speakMessageId?: string; fallbackSpeakText?: string }) => {
-    for (const a of actions) {
-      if (a.type === "speak") {
-        const mid = String(opts?.speakMessageId || "").trim()
-        const t = String((a as any)?.args?.text || "").trim() || String(opts?.fallbackSpeakText || "").trim()
-        if (mid && t) {
-          await handleTextToSpeech(mid, t)
-          return
+    try {
+      for (const a of actions) {
+        try {
+          if (a.type === "speak") {
+            const mid = String(opts?.speakMessageId || "").trim()
+            const t = String((a as any)?.args?.text || "").trim() || String(opts?.fallbackSpeakText || "").trim()
+            if (mid && t) {
+              await handleTextToSpeech(mid, t)
+            }
+            continue
+          }
+          if (a.type === "navigate") {
+            const path = String(a.args?.path || "").trim()
+            if (path && isAllowedPath(path)) {
+              router.push(path)
+            }
+            continue
+          }
+          if (a.type === "embed" || a.type === "ask_navigation" || a.type === "play_music" || a.type === "recommend_music") {
+            setSpecialMessages((prev) => {
+              const hasDuplicate = prev.some(
+                (m) => m.kind === a.type && JSON.stringify(m.data) === JSON.stringify(a.args)
+              )
+              if (hasDuplicate) return prev
+              return [
+                ...prev,
+                {
+                  id: `special-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                  kind: a.type as SpecialMessageData["kind"],
+                  data: (a.args || {}) as Record<string, unknown>,
+                  timestamp: new Date(),
+                },
+              ]
+            })
+            continue
+          }
+        } catch (actionErr) {
+          // Error boundary per-action: one failed action does not block others
+          console.warn(`[executeAgentActions] action type="${(a as any)?.type}" failed silently:`, actionErr)
         }
-        continue
       }
+    } catch (err) {
+      // Top-level error boundary: never crash UI
+      console.error("[executeAgentActions] unexpected error:", err)
     }
   }
   const [messages, setMessages] = useState<Message[]>([
@@ -988,7 +1022,9 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
       await fetchConversations()
 
-      const agentActions = agentMode ? normalizeActions((data as any)?.actions) : []
+      // Use normalizeActionsStrict for per-item validation: invalid actions are dropped individually
+      // (unlike normalizeActions which drops the entire array if any item fails Zod parse)
+      const agentActions = agentMode ? normalizeActionsStrict((data as any)?.actions) : []
       if (agentActions.length) {
         const lastId = deliveredIds[deliveredIds.length - 1] || (Date.now() + 1).toString()
         let executionDelay = 1000
