@@ -2396,18 +2396,19 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                 onManageKey={() => setAuthOpen(true)}
               />
             </div>
-
-            {agentMode && (
-              <div className="hidden lg:block w-[320px] flex-shrink-0 h-full overflow-hidden">
-                <AgentRuntimePanel
-                  agentStatus={agentStatus}
-                  systemState={systemState}
-                  labelAgentProfile={labelAgentProfile}
-                />
-              </div>
-            )}
           </div>
+
+          {agentMode && (
+            <div className="hidden lg:block w-[320px] flex-shrink-0 h-full overflow-hidden">
+              <AgentRuntimePanel
+                agentStatus={agentStatus}
+                systemState={systemState}
+                labelAgentProfile={labelAgentProfile}
+              />
+            </div>
+          )}
         </div>
+      </div>
       <Dialog open={llmContextOpen} onOpenChange={setLlmContextOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
