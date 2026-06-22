@@ -561,6 +561,15 @@ export async function POST(req: Request) {
     const buildGatewayFallbackActions = (triageMeta?: GatewayTriageMeta) => {
       const lower = message.toLowerCase()
       const ascii = lower.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      
+      const hasEmergencyRedFlags = 
+        lower.includes("đau ngực") || lower.includes("khó thở") || lower.includes("tự tử") || lower.includes("tự sát") ||
+        ascii.includes("dau nguc") || ascii.includes("kho tho") || ascii.includes("tu tu") || ascii.includes("tu sat")
+
+      if (hasEmergencyRedFlags) {
+        return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Triệu chứng này có thể cần bác sĩ đánh giá sớm để loại trừ nguy cơ cấp cứu." } }]
+      }
+
       if (isEmergencyTriage(triageMeta)) {
         return applyTriageActionGuard([{ type: "ask_navigation", args: { feature: "bac-si", reason: "Đây có thể là tình huống khẩn cấp. Hãy gọi 115 ngay hoặc đến cơ sở y tế gần nhất." } }], triageMeta)
       }

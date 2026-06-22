@@ -590,7 +590,8 @@ def _configure_ngrok(settings: LauncherSettings) -> None:
 
 def _step_1_docker_memgraph_ready(settings: LauncherSettings) -> None:
     if not settings.graph.enabled:
-        raise BootStepError("graph_disabled")
+        print("[1/5] graph_disabled_skipped", flush=True)
+        return
     _start_memgraph_stack(settings.repo_root, settings.graph.compose_path)
     _wait_for_memgraph(settings.repo_root, settings.graph)
     _import_memgraph_data(
@@ -620,6 +621,10 @@ def _step_2_cpu_api_healthy(settings: LauncherSettings, runtime: BootRuntime) ->
 
 
 def _step_3_graph_status_reachable(settings: LauncherSettings, runtime: BootRuntime) -> None:
+    if not settings.graph.enabled:
+        runtime.graph_connected = False
+        print("[3/5] graph_status_skipped", flush=True)
+        return
     cpu_process = next((item for item in runtime.processes if item.name == "cpu_api"), None)
     payload = _wait_for_json(
         _join_url(runtime.cpu_local_url, settings.cpu.graph_status_path),
