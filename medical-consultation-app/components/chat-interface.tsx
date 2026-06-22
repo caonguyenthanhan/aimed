@@ -27,6 +27,7 @@ import { ChatSpecialMessage, parseSpecialMessages, type SpecialMessageData } fro
 import { VirtualChatList } from "@/components/virtual-chat-list"
 import { OptimizedMessage } from "@/components/optimized-message"
 import { AgentRuntimeBanner } from "@/components/consultation/agent-runtime-banner"
+import { AgentRuntimePanel } from "@/components/consultation/agent-runtime-panel"
 import { ConversationHistoryPanel } from "@/components/consultation/conversation-history-panel"
 import { useMultiDeviceSync, useLocalSyncListener } from "@/lib/multi-device-sync"
 import {
@@ -2129,7 +2130,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
             </button>
           </div>
         )}
-        <div className="mx-auto flex w-full max-w-6xl min-w-0 min-h-0 flex-1 flex-col px-3 pb-3 pt-3 sm:px-4">
+        <div className="mx-auto flex w-full max-w-[1350px] min-w-0 min-h-0 flex-1 flex-col px-3 pb-3 pt-3 sm:px-4">
           {!disclaimerDismissed && (
             <div className="mb-3 flex-shrink-0">
               <div className="mx-auto flex w-full max-w-4xl items-center justify-between rounded-[1.35rem] border border-amber-200/50 bg-amber-50/85 px-3 py-2.5 shadow-[0_18px_36px_-28px_rgba(217,119,6,0.5)] dark:border-amber-800/50 dark:bg-amber-950/30">
@@ -2148,14 +2149,17 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
           )}
 
           {agentMode && (
-            <AgentRuntimeBanner
-              agentStatus={agentStatus}
-              systemState={systemState}
-              labelAgentProfile={labelAgentProfile}
-            />
+            <div className="lg:hidden">
+              <AgentRuntimeBanner
+                agentStatus={agentStatus}
+                systemState={systemState}
+                labelAgentProfile={labelAgentProfile}
+              />
+            </div>
           )}
 
-          <div className="glass-panel dark:glass-panel-dark flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.85rem] border border-border/60 shadow-[0_28px_80px_-38px_rgba(15,20,25,0.45)]">
+          <div className="flex flex-1 min-h-0 gap-4 flex-col lg:flex-row overflow-hidden">
+            <div className="glass-panel dark:glass-panel-dark flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.85rem] border border-border/60 shadow-[0_28px_80px_-38px_rgba(15,20,25,0.45)]">
             <div
               ref={messagesContainerRef}
               className={`custom-scrollbar flex-1 min-h-0 overflow-x-hidden ${
@@ -2392,6 +2396,16 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
                 onManageKey={() => setAuthOpen(true)}
               />
             </div>
+
+            {agentMode && (
+              <div className="hidden lg:block w-[320px] flex-shrink-0 h-full overflow-hidden">
+                <AgentRuntimePanel
+                  agentStatus={agentStatus}
+                  systemState={systemState}
+                  labelAgentProfile={labelAgentProfile}
+                />
+              </div>
+            )}
           </div>
         </div>
       <Dialog open={llmContextOpen} onOpenChange={setLlmContextOpen}>
