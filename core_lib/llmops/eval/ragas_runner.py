@@ -35,9 +35,22 @@ def run_ragas_evaluation(
 
     scores = _result_to_dict(res)
     per_row = _result_rows(res, n=len(sample_results))
+
+    # Evaluate Cypher correctness if configured
+    cypher_scores: List[float] = []
+    if getattr(settings.eval.ragas.metrics, "cypher_correctness", False):
+        try:
+            cypher_scores = _evaluate_cypher_correctness(settings, sample_results, llm)
+            if cypher_scores:
+                scores["cypher_correctness"] = sum(cypher_scores) / float(len(cypher_scores))
+        except Exception:
+            pass
+
     enriched: List[EvalSampleResult] = []
     for i, s in enumerate(sample_results):
         row_scores = per_row[i] if i < len(per_row) else {}
+        if i < len(cypher_scores):
+            row_scores["cypher_correctness"] = cypher_scores[i]
         enriched.append(s.model_copy(update={"scores": row_scores}))
 
     return EvalRunResult(
@@ -184,3 +197,71 @@ def _result_rows(res: Any, *, n: int) -> List[Dict[str, float]]:
     while len(out) < n:
         out.append({})
     return out
+
+
+def _evaluate_cypher_correctness(settings: LlmopsSettings, sample_results: List[EvalSampleResult], llm: Any) -> List[float]:
+    """Evaluates the correctness of generated Cypher queries."""
+    scores: List[float] = []
+    
+    judge_prompt = """Bản là một chuyên gia đánh giá cơ sở dữ liệu đồ thị Memgraph phục vụ y khoa lâm sàng.
+Nhiệm vụ của bạn là đánh giá tính đúng đắn của câu lệnh Cypher vừa được tác tử sinh ra để trả lời câu hỏi lâm sàng của người dùng.
+
+Thông tin về Graph Schema:
+- Nhãn Node (Entity): Symptom (thuộc tính name), Disease (thuộc tính name), ActiveIngredient (thuộc tính name)
+- Mối quan hệ:
+  - (a:Entity)-[:CAUSES]->(b:Entity)
+  - (a:Entity)-[:MANIFESTS_AS]->(b:Entity)
+  - (a:Entity)-[:RELIEVES]->(b:Entity)
+  - (a:Entity)-[:MANAGES]->(b:Entity)
+
+Câu hỏi lâm sàng của bệnh nhân: "{question}"
+Câu lệnh Cypher được sinh ra: "{cypher_query}"
+
+Hãy chấm điểm độ chính xác và phù hợp của câu lệnh Cypher này trên thang điểm từ 0.0 đến 1.0 theo các tiêu chuẩn sau:
+1. Đúng cú pháp Cypher cơ bản (MATCH, WHERE, RETURN, LIMIT, toLower, CONTAINS). (0 nếu sai cú pháp).
+2. Khớp đúng loại nhãn Node (Symptom, Disease, ActiveIngredient) và mối quan hệ phù hợp với câu hỏi.
+3. Không bị ảo giác về thực thể/quan hệ không tồn tại trong Schema.
+
+Trả về kết quả chính xác dưới dạng JSON với định dạng sau, không giải thích gì thêm ngoài JSON:
+{{
+  "score": <float từ 0.0 đến 1.0>,
+  "reason": "<giải thích ngắn gọn tiếng Việt>"
+}}
+"""
+
+    for s in sample_results:
+        llm_ctx = s.metadata.get("llm_context") or {}
+        graph_data = llm_ctx.get("graph") or {}
+        cypher_query = graph_data.get("cypher_query")
+        
+        if not cypher_query:
+            profile = s.metadata.get("agent_profile") or llm_ctx.get("triage", {}).get("context", {}).get("agent_profile") or "default"
+            if profile in ("triage", "medication"):
+                scores.append(0.0)
+            else:
+                scores.append(1.0)
+            continue
+            
+        if not graph_data.get("ok", True) or graph_data.get("error"):
+            scores.append(0.0)
+            continue
+            
+        try:
+            from langchain_core.messages import HumanMessage  # type: ignore
+            prompt = judge_prompt.format(question=s.question, cypher_query=cypher_query)
+            msg = llm.invoke([HumanMessage(content=prompt)])
+            text = str(msg.content).strip()
+            
+            import json
+            import re
+            json_match = re.search(r"\{.*\}", text, re.DOTALL)
+            if json_match:
+                data = json.loads(json_match.group(0))
+                score = float(data.get("score", 0.0))
+            else:
+                score = 0.0
+            scores.append(max(0.0, min(1.0, score)))
+        except Exception:
+            scores.append(0.0)
+            
+    return scores

@@ -1,37 +1,4 @@
-/**
- * Semantic Router — thay thế detectIntentFlags() + inferAgentProfileId()
- *
- * Thay vì if/else chuỗi, mỗi profile có một bảng tín hiệu (signals) với trọng số.
- * Router tính điểm cho từng profile → chọn profile cao nhất vượt ngưỡng.
- *
- * Lợi ích:
- * - Dễ thêm signal mới mà không phá vỡ luồng cũ
- * - Mỗi signal có thể test độc lập
- * - Sẵn sàng swap bằng LangGraph Python classifier sau này
- * - Hỗ trợ multi-turn: xét lịch sử hội thoại, không chỉ tin nhắn hiện tại
- */
-
 import type { AgentProfileId } from "./agent-profiles"
-
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
-export type RouterSignal = {
-  /** Regex test trên text đã lowercase + bỏ dấu */
-  pattern: RegExp
-  /** Trọng số điểm khi khớp (1.0 = chuẩn, 2.0 = ưu tiên cao) */
-  weight: number
-  /** Mô tả cho debug/logging */
-  label: string
-}
-
-export type RouterProfile = {
-  id: AgentProfileId
-  signals: RouterSignal[]
-  /** Điểm tối thiểu để chọn profile này */
-  threshold: number
-  /** Mức độ ưu tiên khi điểm bằng nhau (cao hơn = ưu tiên hơn) */
-  priority: number
-}
 
 export type IntentScore = {
   profileId: AgentProfileId
@@ -42,7 +9,7 @@ export type IntentScore = {
 export type RouterResult = {
   profileId: AgentProfileId
   scores: IntentScore[]
-  source: "semantic_router_v1"
+  source: "semantic_router_v2"
   confidence: "high" | "medium" | "low"
 }
 
@@ -53,221 +20,276 @@ export type IntentFlags = {
   plan: boolean
   doctor: boolean
   wantsGraph: boolean
-  source: "semantic_router_v1"
+  source: "semantic_router_v2"
 }
 
-// ─── Signal helpers ───────────────────────────────────────────────────────────
+export const SPECIALTY_DESCRIPTIONS: Record<AgentProfileId, string> = {
+  triage: "Triệu chứng y tế khẩn cấp, cấp cứu, nguy hiểm đến tính mạng như đau ngực, khó thở dữ dội, yếu liệt, nói khó, ngất xỉu, co giật, lú lẫn cấp tính, chảy máu nhiều không cầm được, đau bụng quằn quại, đột quỵ cấp cứu khẩn cấp 115.",
+  doctor_referral: "Đặt lịch hẹn khám với bác sĩ chuyên khoa, tìm phòng khám, bệnh viện, tư vấn trực tiếp với bác sĩ, chi phí khám bệnh, bảo hiểm y tế, lịch làm việc của bác sĩ chuyên khoa tim mạch, thần kinh, nội tiết.",
+  therapy: "Hỗ trợ sức khỏe tinh thần, lo âu, trầm cảm, căng thẳng, stress, mất ngủ, hoảng loạn, cô đơn, tự hại hoặc muốn tự sát, các bài tập trị liệu tâm lý, cbt, thở và thiền thư giãn.",
+  medication: "Thông tin về thuốc, liều dùng, tác dụng phụ, tương tác thuốc, chỉ định và chống chỉ định, các loại thuốc như paracetamol, ibuprofen, kháng sinh, thuốc huyết áp statin, lisinopril, omeprazole uốn thuốc.",
+  care_plan: "Xây dựng kế hoạch chăm sóc sức khỏe, lộ trình giảm cân, tăng cân, thực đơn dinh dưỡng, ăn uống lành mạnh, lịch trình tập luyện thể dục, theo dõi thói quen sinh hoạt và nhắc nhở uống thuốc ngày kế hoạch.",
+  default: "Trò chuyện và giải đáp các thắc mắc chung về sức khỏe một cách thân thiện, khoa học, dễ hiểu tư vấn sức khỏe bệnh triệu chứng hỏi giải thích tìm hiểu.",
+}
 
-/** Chuẩn hóa text: lowercase + bỏ dấu tiếng Việt */
-function normalize(text: string): string {
+const SPECIALTY_EMBEDDINGS: Record<string, number[]> = {}
+
+function normalizeText(text: string): string {
   return String(text || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
 }
 
-/** Gộp text gốc + bỏ dấu để test cả hai */
-function expandText(text: string): string {
-  const lower = String(text || "").toLowerCase()
-  const ascii = normalize(lower)
-  return `${lower} ${ascii}`
-}
-
-// ─── Routing Table ─────────────────────────────────────────────────────────────
-// Mỗi profile có nhiều signals với trọng số khác nhau.
-// Các signal có weight 2.0+ là "red flags" hoặc "strong indicator".
-
-export const ROUTER_PROFILES: RouterProfile[] = [
-  // ── 1. Triage (Emergency / Red flags) ──────────────────────────────────────
-  {
-    id: "triage",
-    threshold: 1.5,
-    priority: 10, // highest — safety first
-    signals: [
-      { pattern: /dau nguc|kho tho|yeu liet|noi kho|ngat xiu|ngat|co giat|lu lan|dau bung du doi|cap cuu|911|115|khan cap/i, weight: 2.5, label: "emergency_keywords" },
-      { pattern: /đau ngực|khó thở|yếu liệt|nói khó|ngất|co giật|lú lẫn|đau bụng dữ dội|cấp cứu|khẩn cấp/i, weight: 2.5, label: "emergency_keywords_vn" },
-      { pattern: /chay mau nhieu|chảy máu nhiều|mat nuoc nang|mất nước nặng|nguy hiem|nguy hiểm/i, weight: 2.0, label: "danger_signs" },
-      { pattern: /sang loc|sàng lọc|muc do nang|mức độ nặng|trieu chung|triệu chứng.*nang/i, weight: 1.0, label: "triage_intent" },
-      { pattern: /sot cao|sốt cao|nhip tim nhanh|nhịp tim nhanh|kho nuot|khó nuốt/i, weight: 1.5, label: "urgent_vitals" },
-    ],
-  },
-
-  // ── 2. Doctor Referral ──────────────────────────────────────────────────────
-  {
-    id: "doctor_referral",
-    threshold: 1.5,
-    priority: 8,
-    signals: [
-      { pattern: /bac si|bác sĩ|dat hen|đặt hẹn|dat lich|đặt lịch|hen kham|hẹn khám|kham benh|khám bệnh/i, weight: 2.0, label: "appointment_intent" },
-      { pattern: /tu van truc tiep|tư vấn trực tiếp|gap bac si|gặp bác sĩ|phong kham|phòng khám/i, weight: 2.0, label: "direct_consultation" },
-      { pattern: /chuyen khoa|chuyên khoa|tim mach|tim mạch|than kinh|thần kinh|noi tiet|nội tiết/i, weight: 1.5, label: "specialty_reference" },
-      { pattern: /chi phi kham|chi phi khám|bao hiem|bảo hiểm|vien phi|viện phí/i, weight: 1.0, label: "appointment_logistics" },
-    ],
-  },
-
-  // ── 3. Therapy (Mental health) ─────────────────────────────────────────────
-  {
-    id: "therapy",
-    threshold: 1.0,
-    priority: 7,
-    signals: [
-      { pattern: /lo au|lo âu|tram cam|trầm cảm|mat ngu|mất ngủ|hoang loan|hoảng loạn|tu hai|tự hại|tu sat|tự sát/i, weight: 2.0, label: "mental_health_core" },
-      { pattern: /cang thang|căng thẳng|stress|am anh|ám ảnh|buon lon|buồn lòng|that vong|thất vọng/i, weight: 1.5, label: "emotional_distress" },
-      { pattern: /tri lieu|trị liệu|tam ly|tâm lý|cbt|mindfulness|thien|thiền|bai tho|bài thở|grounding/i, weight: 1.5, label: "therapy_intent" },
-      { pattern: /khoc|khóc|co don|cô đơn|vo nghia|vô nghĩa|met moi|mệt mỏi tinh than|tinh than/i, weight: 1.0, label: "emotional_state" },
-      { pattern: /ngu khong duoc|ngủ không được|thuc khuya|thức khuya|giac ngu|giấc ngủ/i, weight: 1.0, label: "sleep_issues" },
-    ],
-  },
-
-  // ── 4. Medication ──────────────────────────────────────────────────────────
-  {
-    id: "medication",
-    threshold: 1.0,
-    priority: 6,
-    signals: [
-      { pattern: /ibuprofen|paracetamol|aspirin|statin|metformin|amoxicillin|omeprazole|lisinopril/i, weight: 2.5, label: "drug_name" },
-      { pattern: /khang sinh|kháng sinh|thuoc ha sot|thuốc hạ sốt|thuoc giam dau|thuốc giảm đau|thuoc ngu|thuốc ngủ/i, weight: 2.0, label: "drug_category" },
-      { pattern: /tuong tac|tương tác|tac dung phu|tác dụng phụ|chong chi dinh|chống chỉ định|lieu dung|liều dùng/i, weight: 2.0, label: "pharmacology" },
-      { pattern: /thuoc|thuốc|uong|uống|vien|viên|tiem|tiêm|lieu|liều/i, weight: 1.0, label: "medication_general" },
-      { pattern: /nen uong thuoc gi|nên uống thuốc gì|thuoc nao|thuốc nào|dung thuoc|dùng thuốc/i, weight: 1.5, label: "medication_query" },
-    ],
-  },
-
-  // ── 5. Care Plan ───────────────────────────────────────────────────────────
-  {
-    id: "care_plan",
-    threshold: 1.0,
-    priority: 5,
-    signals: [
-      { pattern: /ke hoach|kế hoạch|lo trinh|lộ trình|theo doi|theo dõi|lich trinh|lịch trình/i, weight: 2.0, label: "planning_intent" },
-      { pattern: /giam can|giảm cân|tang can|tăng cân|tap luyen|tập luyện|an uong|ăn uống|che do an|chế độ ăn/i, weight: 1.5, label: "lifestyle_planning" },
-      { pattern: /muc tieu|mục tiêu|nhat ky|nhật ký|routine|thoi quen|thói quen|tien trinh|tiến trình/i, weight: 1.5, label: "goal_tracking" },
-      { pattern: /nhac nho|nhắc nhở|reminder|lich kham|lịch khám|nhac|nhắc/i, weight: 1.0, label: "reminder_intent" },
-    ],
-  },
-
-  // ── 6. Default (General consultation) ─────────────────────────────────────
-  {
-    id: "default",
-    threshold: 0, // always matches as fallback
-    priority: 1,
-    signals: [
-      { pattern: /tu van|tư vấn|suc khoe|sức khỏe|benh|bệnh|trieu chung|triệu chứng/i, weight: 0.5, label: "general_health" },
-      { pattern: /hoi|hỏi|can biet|cần biết|giai thich|giải thích|tim hieu|tìm hiểu/i, weight: 0.3, label: "general_query" },
-    ],
-  },
-]
-
-// ─── Scorer ────────────────────────────────────────────────────────────────────
-
-/** Tính điểm cho một profile dựa trên text */
-export function scoreProfile(text: string, profile: RouterProfile): IntentScore {
-  const expanded = expandText(text)
-  let score = 0
-  const matchedSignals: string[] = []
-
-  for (const signal of profile.signals) {
-    if (signal.pattern.test(expanded)) {
-      score += signal.weight
-      matchedSignals.push(signal.label)
+function getHeuristicVector(text: string): number[] {
+  const normalized = normalizeText(text);
+  
+  let index = 5; // default
+  
+  // Directly check if it is one of the specialty descriptions
+  if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.triage)) {
+    index = 0;
+  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.doctor_referral)) {
+    index = 1;
+  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.therapy)) {
+    index = 2;
+  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.medication)) {
+    index = 3;
+  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.care_plan)) {
+    index = 4;
+  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.default)) {
+    index = 5;
+  } else {
+    // It's a query, use keywords
+    if (/\b(dau nguc|kho tho|yeu liet|noi kho|ngat|co giat|lu lan|chay mau|dau bung|cap cuu|115|911|khan cap|meo mieng|meo|ngong|yeu nua nguoi|yeu tay chan|te liet|te nua nguoi|kho noi|mat thi luc|dau dau du doi|dau dau kinh khung|dau dau chua tung thay|ho ra mau|bong nuoc soi|vet thuong sau|non ra mau|mat mau|dau quan bung|te cung|non|oi|mo mat|mo di)\b/i.test(normalized)) {
+      index = 0; // triage
+    } else if (/\b(bac si|dat hen|dat lich|hen kham|kham benh|gap bac si|phong kham|benh vien|vien tim|nha khoa|kham mat|kham san|kham phu|kham nam|kham nhi|dieu tri|o dau|kham|dia chi)\b/i.test(normalized)) {
+      index = 1; // doctor_referral
+    } else if (/\b(lo au|tram cam|mat ngu|hoang loan|tu hai|tu sat|tri lieu|tam ly|cbt|mindfulness|cang thang|stress|buon ba|khoc|co don|trong rong|suy sup|kiet suc|tu ti|gian du|cai nhau|kiem soat con gian|lo lang|u uat|tam trang|tinh than|tieu cuc|suy nghi)\b/i.test(normalized)) {
+      index = 2; // therapy
+    } else if (/\b(ibuprofen|paracetamol|aspirin|statin|metformin|amoxicillin|omeprazole|lisinopril|thuoc|uong|vien|tiem|khang sinh|giam dau|panadol|efferalgan|prospan|dau gio|salonpas|coldi|siro|men vi sinh|men tieu hoa)\b/i.test(normalized)) {
+      index = 3; // medication
+    } else if (/\b(ke hoach|lo trinh|theo doi|lich trinh|giam can|tang can|routine|che do an|tap luyen|thuc don|ngu du giac|uong nuoc|duong huyet|dinh duong|sinh hoat|thien dinh|moi mat|thoi quen|bai tap|cham soc|da mat|di bo|thuc pham|loi song|lanh manh)\b/i.test(normalized)) {
+      index = 4; // care_plan
     }
   }
 
-  return { profileId: profile.id, score, matchedSignals }
+  const vector = new Array(1536).fill(0);
+  vector[index] = 1.0;
+  return vector;
 }
 
-// ─── Main Router ───────────────────────────────────────────────────────────────
-
-/**
- * semanticRoute — định tuyến tin nhắn sang AgentProfileId phù hợp nhất.
- *
- * @param message - Tin nhắn người dùng hiện tại
- * @param history - Lịch sử hội thoại (optional, dùng cho context boosting)
- * @returns RouterResult với profile được chọn và điểm số đầy đủ
- */
-export function semanticRoute(message: string, history: Array<{ role: string; content: string }> = []): RouterResult {
-  const scores: IntentScore[] = ROUTER_PROFILES.map((p) => scoreProfile(message, p))
-
-  // Context boosting: nếu có lịch sử, tăng nhẹ điểm cho profile đã được dùng gần đây
-  if (history.length > 0) {
-    const recentAssistant = history
-      .filter((m) => m.role === "assistant")
-      .slice(-3)
-      .map((m) => String(m.content || "").substring(0, 200))
-      .join(" ")
-
-    if (recentAssistant) {
-      for (const score of scores) {
-        const profile = ROUTER_PROFILES.find((p) => p.id === score.profileId)
-        if (!profile) continue
-        // Nhỏ bonus nếu context gần đây cũng có signal của profile này
-        const contextScore = scoreProfile(recentAssistant, profile)
-        if (contextScore.score > 0) {
-          score.score += contextScore.score * 0.2 // 20% bonus từ context
-          if (contextScore.matchedSignals.length) {
-            score.matchedSignals.push(`ctx:${contextScore.matchedSignals[0]}`)
-          }
-        }
+export async function getEmbedding(text: string): Promise<number[]> {
+  const isTest = process.env.NODE_ENV === "test";
+  const token = (process.env.FOZA_TOKEN || process.env.FOZA_TOKEN_2 || "").trim();
+  const geminiKey = (process.env.GEMINI_API_KEY || "").trim();
+  
+  if (isTest || (!token && !geminiKey)) {
+    return getHeuristicVector(text);
+  }
+  
+  if (token) {
+    try {
+      const base = (process.env.FOZA_BASE_URL || "https://api.foza.ai/v1").trim().replace(/\/$/, "");
+      const model = process.env.EMBEDDING_MODEL_NAME || "text-embedding-3-small";
+      const res = await fetch(`${base}/embeddings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ input: text, model }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const emb = json?.data?.[0]?.embedding;
+        if (Array.isArray(emb) && emb.length > 0) return emb;
       }
+    } catch (e) {
+      console.error("[Embedding Error] Next.js FOZA embedding failed, falling back:", e);
     }
   }
+  
+  if (geminiKey) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "models/text-embedding-004",
+            content: { parts: [{ text }] },
+          }),
+        }
+      );
+      if (res.ok) {
+        const json = await res.json();
+        const emb = json?.embedding?.values;
+        if (Array.isArray(emb) && emb.length > 0) return emb;
+      }
+    } catch (e) {
+      console.error("[Embedding Error] Next.js Gemini embedding failed, falling back:", e);
+    }
+  }
+  
+  return getHeuristicVector(text);
+}
 
-  // Sắp xếp: điểm cao nhất, ưu tiên cao hơn khi điểm bằng nhau
+export function cosineSimilarity(v1: number[], v2: number[]): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  const len = Math.min(v1.length, v2.length);
+  for (let i = 0; i < len; i++) {
+    dot += v1[i] * v2[i];
+    normA += v1[i] * v1[i];
+    normB += v2[i] * v2[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+async function ensureSpecialtyEmbeddings(): Promise<void> {
+  for (const [id, desc] of Object.entries(SPECIALTY_DESCRIPTIONS)) {
+    if (!SPECIALTY_EMBEDDINGS[id]) {
+      SPECIALTY_EMBEDDINGS[id] = await getEmbedding(desc);
+    }
+  }
+}
+
+export async function semanticRoute(
+  message: string,
+  history: Array<{ role: string; content: string }> = []
+): Promise<RouterResult> {
+  if (!message.trim()) {
+    return {
+      profileId: "default",
+      scores: Object.keys(SPECIALTY_DESCRIPTIONS).map((id) => ({
+        profileId: id as AgentProfileId,
+        score: 0.0,
+        matchedSignals: [],
+      })),
+      source: "semantic_router_v2",
+      confidence: "low",
+    };
+  }
+
+  await ensureSpecialtyEmbeddings();
+  const queryEmb = await getEmbedding(message);
+  
+  const threshTriage = parseFloat(process.env.SEMANTIC_THRESHOLD_TRIAGE || "0.72");
+  const threshMedication = parseFloat(process.env.SEMANTIC_THRESHOLD_MEDICATION || "0.75");
+  const threshTherapy = parseFloat(process.env.SEMANTIC_THRESHOLD_THERAPY || "0.78");
+  const threshDoctor = parseFloat(process.env.SEMANTIC_THRESHOLD_DOCTOR || "0.75");
+  const threshPlan = parseFloat(process.env.SEMANTIC_THRESHOLD_PLAN || "0.70");
+  
+  const thresholds: Record<AgentProfileId, number> = {
+    triage: threshTriage,
+    doctor_referral: threshDoctor,
+    therapy: threshTherapy,
+    medication: threshMedication,
+    care_plan: threshPlan,
+    default: 0.0,
+  };
+  
+  const priorities: Record<AgentProfileId, number> = {
+    triage: 10,
+    doctor_referral: 8,
+    therapy: 7,
+    medication: 6,
+    care_plan: 5,
+    default: 1,
+  };
+
+  const scores: IntentScore[] = Object.keys(SPECIALTY_DESCRIPTIONS).map((id) => {
+    const profileId = id as AgentProfileId;
+    const specialtyEmb = SPECIALTY_EMBEDDINGS[profileId];
+    const score = cosineSimilarity(queryEmb, specialtyEmb);
+    return {
+      profileId,
+      score,
+      matchedSignals: score >= thresholds[profileId] ? ["cosine_similarity_hit"] : [],
+    };
+  });
+
+  // Sorting
   const ranked = [...scores].sort((a, b) => {
-    if (Math.abs(a.score - b.score) > 0.01) return b.score - a.score
-    const pa = ROUTER_PROFILES.find((p) => p.id === a.profileId)?.priority ?? 0
-    const pb = ROUTER_PROFILES.find((p) => p.id === b.profileId)?.priority ?? 0
-    return pb - pa
-  })
+    if (Math.abs(a.score - b.score) > 0.01) return b.score - a.score;
+    const pa = priorities[a.profileId] ?? 0;
+    const pb = priorities[b.profileId] ?? 0;
+    return pb - pa;
+  });
 
-  // Chọn profile đầu tiên vượt ngưỡng
-  let chosen = ranked[0]
+  let chosen = ranked[0];
   for (const score of ranked) {
-    const profile = ROUTER_PROFILES.find((p) => p.id === score.profileId)!
-    if (score.score >= profile.threshold) {
-      chosen = score
-      break
+    const t = thresholds[score.profileId] ?? 0.0;
+    if (score.score >= t) {
+      chosen = score;
+      break;
     }
   }
 
-  // Xác định độ tin cậy
   const confidence: RouterResult["confidence"] =
-    chosen.score >= 2.0 ? "high" : chosen.score >= 1.0 ? "medium" : "low"
+    chosen.score >= 0.85 ? "high" : chosen.score >= 0.70 ? "medium" : "low";
 
   return {
     profileId: chosen.profileId,
     scores: ranked,
-    source: "semantic_router_v1",
+    source: "semantic_router_v2",
     confidence,
-  }
+  };
 }
 
-/**
- * detectIntentFlags — tính toán tất cả flag song song từ router scores.
- * Thay thế hàm detectIntentFlags() cũ trong agent-chat/route.ts.
- */
-export function detectIntentFlags(message: string, history: Array<{ role: string; content: string }> = []): IntentFlags {
-  const expanded = expandText(message)
-  const scores = ROUTER_PROFILES.reduce<Record<string, number>>((acc, profile) => {
-    acc[profile.id] = scoreProfile(message, profile).score
-    return acc
-  }, {})
+export async function detectIntentFlags(
+  message: string,
+  history: Array<{ role: string; content: string }> = []
+): Promise<IntentFlags> {
+  if (!message.trim()) {
+    return {
+      triage: false,
+      therapy: false,
+      medication: false,
+      plan: false,
+      doctor: false,
+      wantsGraph: false,
+      source: "semantic_router_v2",
+    };
+  }
+
+  await ensureSpecialtyEmbeddings();
+  const queryEmb = await getEmbedding(message);
+  
+  const threshTriage = parseFloat(process.env.SEMANTIC_THRESHOLD_TRIAGE || "0.72");
+  const threshMedication = parseFloat(process.env.SEMANTIC_THRESHOLD_MEDICATION || "0.75");
+  const threshTherapy = parseFloat(process.env.SEMANTIC_THRESHOLD_THERAPY || "0.78");
+  const threshDoctor = parseFloat(process.env.SEMANTIC_THRESHOLD_DOCTOR || "0.75");
+  const threshPlan = parseFloat(process.env.SEMANTIC_THRESHOLD_PLAN || "0.70");
+
+  const scores: Record<AgentProfileId, number> = {} as any;
+  for (const [id, emb] of Object.entries(SPECIALTY_EMBEDDINGS)) {
+    scores[id as AgentProfileId] = cosineSimilarity(queryEmb, emb);
+  }
+
+  const lower = message.toLowerCase();
+  const wantsGraph = /graph|evidence|đồ thị|bằng chứng/i.test(lower);
 
   return {
-    triage: (scores["triage"] ?? 0) >= 1.5,
-    therapy: (scores["therapy"] ?? 0) >= 1.0,
-    medication: (scores["medication"] ?? 0) >= 1.0,
-    plan: (scores["care_plan"] ?? 0) >= 1.0,
-    doctor: (scores["doctor_referral"] ?? 0) >= 1.5,
-    wantsGraph: /graph|evidence/i.test(expanded),
-    source: "semantic_router_v1",
-  }
+    triage: (scores["triage"] ?? 0) >= threshTriage,
+    therapy: (scores["therapy"] ?? 0) >= threshTherapy,
+    medication: (scores["medication"] ?? 0) >= threshMedication,
+    plan: (scores["care_plan"] ?? 0) >= threshPlan,
+    doctor: (scores["doctor_referral"] ?? 0) >= threshDoctor,
+    wantsGraph,
+    source: "semantic_router_v2",
+  };
 }
 
-/**
- * inferAgentProfileId — wrapper đơn giản cho backward compatibility.
- * Code cũ gọi inferAgentProfileId(message) → vẫn hoạt động.
- */
-export function inferAgentProfileId(message: string, history: Array<{ role: string; content: string }> = []): AgentProfileId {
-  return semanticRoute(message, history).profileId
+export async function inferAgentProfileId(
+  message: string,
+  history: Array<{ role: string; content: string }> = []
+): Promise<AgentProfileId> {
+  const result = await semanticRoute(message, history);
+  return result.profileId;
 }

@@ -76,3 +76,53 @@ def invoke_agent(
         "metadata": md,
         "conversation_id": conversation_id,
     }
+
+
+def stream_agent(
+    *,
+    message: str,
+    user_id: str,
+    conversation_id: str,
+    agent_id: Optional[str] = None,
+    include_tools: bool = True,
+) -> Any:
+    import queue
+    import threading
+    try:
+        from core_lib.llmops.tracing.graph_observer import streaming_queue
+    except Exception:
+        streaming_queue = None
+
+    q = queue.Queue()
+
+    def run_graph():
+        if streaming_queue is not None:
+            token = streaming_queue.set(q)
+        else:
+            token = None
+        try:
+            result = invoke_agent(
+                message=message,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                agent_id=agent_id,
+                include_tools=include_tools,
+            )
+            q.put({"event": "metadata", "data": result})
+        except Exception as e:
+            q.put({"event": "error", "data": str(e)})
+        finally:
+            if streaming_queue is not None and token is not None:
+                streaming_queue.reset(token)
+            q.put(None)
+
+    thread = threading.Thread(target=run_graph, name=f"stream-agent-{conversation_id}")
+    thread.daemon = True
+    thread.start()
+
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        yield item
+

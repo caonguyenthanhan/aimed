@@ -159,6 +159,7 @@ class RagasMetricFlags(BaseModel):
     answer_relevance: bool = True
     context_precision: bool = True
     context_recall: bool = True
+    cypher_correctness: bool = True
 
 
 class RagasSettings(BaseModel):

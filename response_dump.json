@@ -1,0 +1,97 @@
+{
+  "response": "Được, mình sẽ mở trang phù hợp.",
+  "messages": [
+    {
+      "content": "Được, mình sẽ mở trang phù hợp.",
+      "delay_ms": 0,
+      "kind": "text"
+    },
+    {
+      "content": "",
+      "delay_ms": 300,
+      "kind": "ask_navigation",
+      "data": {
+        "feature": "tri-lieu",
+        "reason": "Mở trị liệu để xem bài tập thở/grounding và kỹ thuật giảm căng thẳng.",
+        "context": {}
+      }
+    }
+  ],
+  "delivery": {
+    "mode": "chunked"
+  },
+  "actions": [
+    {
+      "type": "ask_navigation",
+      "args": {
+        "feature": "tri-lieu",
+        "reason": "Mở trị liệu để xem bài tập thở/grounding và kỹ thuật giảm căng thẳng."
+      }
+    }
+  ],
+  "metadata": {
+    "mode": "gpu",
+    "provider": "gemini",
+    "requested_provider": "gemini",
+    "fallback": "rule_based",
+    "fallback_chain": [
+      "gemini"
+    ],
+    "access": "user_key",
+    "gemini_error": "Gemini API error: 400 Bad Request {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"API key not valid. Please pass a valid API key.\",\n    \"status\": \"INVALID_ARGUMENT\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"API_KEY_I",
+    "demo_mode": false,
+    "agent_profile": "therapy",
+    "duration_ms": 243,
+    "intent": {
+      "triage": false,
+      "therapy": true,
+      "medication": false,
+      "plan": false,
+      "doctor": false,
+      "wantsGraph": false,
+      "source": "semantic_router_v1"
+    },
+    "llm_context": {
+      "provider": "gemini",
+      "mode": "gpu",
+      "user_message": "Tôi cảm thấy lo âu và mất ngủ kéo dài",
+      "persona": "Bạn là trợ lý hỗ trợ tâm lý theo hướng trị liệu số (không thay thế nhà trị liệu).\nMục tiêu: đồng cảm, giúp người dùng gọi tên cảm xúc, hướng dẫn kỹ thuật an toàn (thở, grounding, CBT cơ bản).\nLuôn sàng lọc nguy cơ: ý định tự hại/hại người, mất ngủ kéo dài, hoảng loạn nặng.\nNếu có dấu hiệu nguy cơ cao: ưu tiên an toàn, khuyến nghị liên hệ người thân/bác sĩ.\n\nAGENT_PROFILE:therapy\nBạn là trợ lý hỗ trợ tâm lý theo hướng trị liệu số (không thay thế nhà trị liệu).\n- Mục tiêu: đồng cảm, giúp người dùng gọi tên cảm xúc, hướng dẫn kỹ thuật an toàn (thở, grounding, CBT cơ bản), và khuyến nghị hỗ trợ chuyên môn khi cần.\n- Luôn sàng lọc nguy cơ: ý định tự hại/hại người, mất ngủ kéo dài, hoảng loạn nặng, ảo giác, lạm dụng chất, bạo lực.\n- Nếu có dấu hiệu nguy cơ cao: khuyến nghị liên hệ người thân/bác sĩ/cấp cứu; ưu tiên an toàn.\n- Khi người dùng muốn bài tập/thiền/thư giãn, hãy gợi ý mở \"tri-lieu\" (ask_navigation feature=tri-lieu).\n- Khi người dùng cần theo dõi tiến trình/cam kết thói quen, gợi ý mở \"ke-hoach\" (ask_navigation feature=ke-hoach).\n- Nếu cần sàng lọc mức độ trầm cảm/lo âu/stress, gợi ý mở \"sang-loc\" (ask_navigation feature=sang-loc).\n\nSAFETY: Nếu có dấu hiệu khẩn cấp (đau ngực, khó thở, ngất, chảy máu nhiều, co giật), hãy khuyến nghị gọi 115 hoặc đến cơ sở y tế ngay lập tức.\n\n\nJSON_ACTIONS_INSTRUCTION:\nDùng ask_navigation feature=tri-lieu khi người dùng muốn bài tập/thiền/thư giãn. Dùng feature=sang-loc khi cần sàng lọc mức độ lo âu/trầm cảm. Dùng feature=ke-hoach khi cần theo dõi tiến trình.\n\nGRAPH_STATUS: KHÔNG KHẢ DỤNG\nKết nối đến đồ thị y tế đang gián đoạn.\nHƯỚNG DẪN: Trả lời dựa trên kiến thức y tế đã huấn luyện.\nNGHIÊM CẤM: Không đề cập đến 'dữ liệu đồ thị', 'bằng chứng đồ thị' hay bất kỳ nguồn nào không tồn tại.",
+      "graph": {
+        "ok": false,
+        "query": "Tôi cảm thấy lo âu và mất ngủ kéo dài",
+        "entities": [],
+        "edges": [],
+        "graph_connected": false,
+        "status_code": 404,
+        "reason": "graph_404",
+        "latency": 47,
+        "elapsed_ms": 47,
+        "error": "Not Found"
+      },
+      "graph_injected": false,
+      "graph_reason": "graph_down",
+      "graph_status_code": 404,
+      "graph_endpoint": "https://miyoko-trichomonadal-reconditely.ngrok-free.dev/v1/graph/evidence"
+    },
+    "system_state": {
+      "provider": "gemini",
+      "mode": "gpu",
+      "graph_connected": false,
+      "graph_injected": false,
+      "graph_reason": "graph_down",
+      "db_ok": null,
+      "fallback": "rule_based",
+      "error": "Gemini API error: 400 Bad Request {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"API key not valid. Please pass a valid API key.\",\n    \"status\": \"INVALID_ARGUMENT\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"API_KEY_I",
+      "demo_mode": false,
+      "fallback_chain": [
+        "gemini"
+      ],
+      "graph_endpoint": "https://miyoko-trichomonadal-reconditely.ngrok-free.dev/v1/graph/evidence",
+      "graph_status_code": 404,
+      "graph_latency_ms": null,
+      "db_latency_ms": null,
+      "internal_pass_matched": false
+    }
+  },
+  "conversation_id": "1ff59d2b-4c81-40f7-850b-ec94afa0af81"
+}

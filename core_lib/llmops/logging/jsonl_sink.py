@@ -65,6 +65,34 @@ class JsonlSink:
         payload = _truncate_payload(metric.model_dump(mode="json"), self.max_record_bytes)
         self._append_json(self.metrics_path, payload)
 
+    def log_eval_run(self, run_result: Any) -> None:
+        import datetime
+        ts = datetime.datetime.utcnow().isoformat()
+        self.emit_event(
+            LlmopsEvent(
+                ts=ts,
+                type="eval_run_result",
+                source="cpu_server.eval",
+                message=f"Evaluation run completed: {run_result.run_id}",
+                severity="info",
+                metadata={
+                    "run_id": run_result.run_id,
+                    "summary_scores": run_result.summary_scores,
+                    "metadata": run_result.metadata,
+                },
+            )
+        )
+        for k, v in run_result.summary_scores.items():
+            self.emit_metric(
+                LlmopsMetric(
+                    ts=ts,
+                    name=f"eval.score.{k}",
+                    value=float(v),
+                    tags={"run_id": run_result.run_id},
+                    metadata={"run_id": run_result.run_id},
+                )
+            )
+
     def _append_json(self, path: Path, payload: Dict[str, Any]) -> None:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)

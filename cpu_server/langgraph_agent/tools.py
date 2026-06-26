@@ -7,6 +7,22 @@ import time
 from typing import Any, Dict, List, Optional
 
 import requests
+from pydantic import BaseModel, Field
+
+class Symptom(BaseModel):
+    name: str = Field(description="Tên của triệu chứng, ví dụ: 'sốt', 'đau ngực', 'khó thở'")
+    label: str = "Symptom"
+    description: Optional[str] = Field(None, description="Mô tả lâm sàng của triệu chứng")
+
+class Disease(BaseModel):
+    name: str = Field(description="Tên của bệnh lý hoặc hội chứng, ví dụ: 'cảm cúm', 'suy tim', 'trầm cảm'")
+    label: str = "Disease"
+    description: Optional[str] = Field(None, description="Mô tả chi tiết bệnh lý")
+
+class ActiveIngredient(BaseModel):
+    name: str = Field(description="Tên của hoạt chất hoặc dược chất, ví dụ: 'paracetamol', 'ibuprofen'")
+    label: str = "ActiveIngredient"
+    description: Optional[str] = Field(None, description="Công dụng, liều dùng và chống chỉ định của hoạt chất")
 
 
 try:
@@ -208,9 +224,56 @@ def graph_status(timeout_s: float = 8.0) -> Dict[str, Any]:
         return {"ok": False, "connected": False, "checked_at": datetime.datetime.utcnow().isoformat(), "latency_ms": int((time.time() - t0) * 1000)}
 
 
-def graph_evidence(query: str, limit: int = 60, entity_limit: int = 5, rel_types: Optional[List[str]] = None, timeout_s: float = 12.0, collection: Optional[str] = None) -> Dict[str, Any]:
+def graph_evidence(
+    query: str,
+    cypher_query: Optional[str] = None,
+    limit: int = 60,
+    entity_limit: int = 5,
+    rel_types: Optional[List[str]] = None,
+    timeout_s: float = 12.0,
+    collection: Optional[str] = None
+) -> Dict[str, Any]:
     timeout_s = timeout_s if timeout_s and timeout_s > 0 else _env_timeout("LG_GRAPH_TIMEOUT_S", 12.0)
     q = (query or "").strip()
+    
+    if cypher_query:
+        driver = get_graph_driver()
+        if driver is None:
+            return {"ok": False, "error": "graph_not_available", "query": q, "entities": [], "edges": []}
+        t0 = time.time()
+        try:
+            with driver.session() as s:
+                res = s.run(cypher_query)
+                records = [r.data() for r in res]
+                
+                entities = []
+                edges = []
+                seen_entities = set()
+                for r in records:
+                    for val in r.values():
+                        if isinstance(val, dict):
+                            if "name" in val and "id" in val:
+                                if val["id"] not in seen_entities:
+                                    seen_entities.add(val["id"])
+                                    entities.append(val)
+                            elif "rel" in val or ("entity_id" in val and "other_id" in val):
+                                edges.append(val)
+                return {
+                    "ok": True,
+                    "query": q,
+                    "cypher_query": cypher_query,
+                    "entities": entities if entities else records,
+                    "edges": edges,
+                    "records": records,
+                    "elapsed_ms": int((time.time() - t0) * 1000)
+                }
+        except Exception as e:
+            try:
+                reset_graph_driver()
+            except Exception:
+                pass
+            return {"ok": False, "query": q, "cypher_query": cypher_query, "entities": [], "edges": [], "error": str(e), "elapsed_ms": int((time.time() - t0) * 1000)}
+
     if not q:
         return {"ok": True, "query": q, "entities": [], "edges": []}
     cache_key = f"graph.evidence|{q}|{int(limit or 60)}|{int(entity_limit or 5)}|{','.join([str(x).strip() for x in (rel_types or []) if str(x).strip()])}|{str(collection or '')}"

@@ -929,15 +929,87 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         throw new Error(`Failed to get AI response: ${response.status} ${response.statusText} ${errorText}`)
       }
 
-      const raw = await response.json()
-      const data = agentMode
-        ? (AgentResponseSchema.safeParse(raw).success ? AgentResponseSchema.parse(raw) : raw)
-        : (LlmChatResponseSchema.safeParse(raw).success ? LlmChatResponseSchema.parse(raw) : raw)
+      let data: any = null
+      let aiResponse = ""
+      let msgId = (Date.now() + Math.random()).toString()
+      const isStream = response.headers.get("content-type")?.includes("text/event-stream")
+
+      if (isStream && response.body) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let done = false
+        let buffer = ""
+        
+        setMessages((prev) => [...prev, { id: msgId, content: "", isUser: false, timestamp: new Date() }])
+        setIsLoading(false)
+
+        while (!done) {
+          const { value, done: readerDone } = await reader.read()
+          done = readerDone
+          if (value) {
+            buffer += decoder.decode(value, { stream: true })
+            let boundary = buffer.indexOf("\n\n")
+            while (boundary !== -1) {
+              const block = buffer.slice(0, boundary).trim()
+              buffer = buffer.slice(boundary + 2)
+              boundary = buffer.indexOf("\n\n")
+              
+              if (!block) continue
+              
+              let event = "message"
+              let dataStr = ""
+              const lines = block.split("\n")
+              for (const line of lines) {
+                if (line.startsWith("event:")) {
+                  event = line.substring(6).trim()
+                } else if (line.startsWith("data:")) {
+                  dataStr = line.substring(5).trim()
+                }
+              }
+              
+              if (dataStr) {
+                try {
+                  const parsed = JSON.parse(dataStr)
+                  if (event === "token") {
+                    aiResponse += parsed.text || ""
+                    setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, content: aiResponse } : m))
+                  } else if (event === "node") {
+                    const nodeName = parsed.node || ""
+                    const status = parsed.status || ""
+                    if (status === "start") {
+                      setAgentStatus((prev) => ({
+                        ...prev,
+                        agent_profile: nodeName,
+                        mode: "cpu",
+                        provider: "foza",
+                      }))
+                    }
+                  } else if (event === "metadata") {
+                    data = parsed
+                  } else if (event === "error" || event === "hold") {
+                    data = parsed
+                    aiResponse = parsed.response || ""
+                    setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, content: aiResponse } : m))
+                  }
+                } catch (err) {
+                  console.error("SSE parse error", err)
+                }
+              }
+            }
+          }
+        }
+      } else {
+        const raw = await response.json()
+        data = agentMode
+          ? (AgentResponseSchema.safeParse(raw).success ? AgentResponseSchema.parse(raw) : raw)
+          : (LlmChatResponseSchema.safeParse(raw).success ? LlmChatResponseSchema.parse(raw) : raw)
+        aiResponse = String(data?.response || data?.choices?.[0]?.message?.content || "").trim()
+      }
 
       const md = (data as any)?.metadata
       requireAuthIfNeeded(md)
       syncRuntimeUi(md)
-      if (agentMode) {
+      if (agentMode && md) {
         const ctx = (md as any)?.llm_context || (md as any)?.debug_context
         if (ctx) setLlmContext(ctx)
         setAgentStatus({
@@ -965,8 +1037,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         setSosOpen(true)
       }
 
-      const aiResponse = String((data as any)?.response || (data as any)?.choices?.[0]?.message?.content || "").trim()
-      const planned = Array.isArray((data as any)?.messages) ? (data as any).messages : null
+      const planned = data ? (Array.isArray((data as any)?.messages) ? (data as any).messages : null) : null
       
       // Parse special messages (embeds, music, navigation prompts)
       const { textMessages: parsedTexts, specialMessages: parsedSpecials } = planned 
@@ -982,26 +1053,30 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         ? parsedTexts.map((content, i) => ({ content, delay_ms: i === 0 ? 0 : 450 }))
         : [{ content: aiResponse || "Không nhận được phản hồi từ máy trả lời", delay_ms: 0 }]
 
-      let liveTextToDeliver = aiResponse || deliverList.map((x) => x.content).join("\n\n")
-      const convForIntro = String(ensuredId || conversationId || "").trim()
-      const shouldShowAgentIntro = agentMode && (agentIntroShownForConvRef.current !== (convForIntro || "__unknown__"))
-      if (shouldShowAgentIntro) {
-        const introText = buildAgentIntroText(md, (md as any)?.llm_context || (md as any)?.debug_context)
-        if (delivery_mode === "live") {
-          liveTextToDeliver = [introText, liveTextToDeliver].filter(Boolean).join("\n\n")
-          deliverList.splice(0, deliverList.length, { content: liveTextToDeliver, delay_ms: 0 })
-        } else {
-          deliverList.unshift({ content: introText, delay_ms: 0 })
-        }
-        agentIntroShownForConvRef.current = convForIntro || "__unknown__"
-      }
-      
       let deliveredIds: string[] = []
-      if (delivery_mode === "live") {
-        const lastId = await deliverLiveText(liveTextToDeliver)
-        if (lastId) deliveredIds = [lastId]
+      if (isStream && response.body) {
+        deliveredIds = [msgId]
       } else {
-        deliveredIds = enqueueAssistantDelivery(deliverList) || []
+        let liveTextToDeliver = aiResponse || deliverList.map((x) => x.content).join("\n\n")
+        const convForIntro = String(ensuredId || conversationId || "").trim()
+        const shouldShowAgentIntro = agentMode && (agentIntroShownForConvRef.current !== (convForIntro || "__unknown__"))
+        if (shouldShowAgentIntro) {
+          const introText = buildAgentIntroText(md, (md as any)?.llm_context || (md as any)?.debug_context)
+          if (delivery_mode === "live") {
+            liveTextToDeliver = [introText, liveTextToDeliver].filter(Boolean).join("\n\n")
+            deliverList.splice(0, deliverList.length, { content: liveTextToDeliver, delay_ms: 0 })
+          } else {
+            deliverList.unshift({ content: introText, delay_ms: 0 })
+          }
+          agentIntroShownForConvRef.current = convForIntro || "__unknown__"
+        }
+        
+        if (delivery_mode === "live") {
+          const lastId = await deliverLiveText(liveTextToDeliver)
+          if (lastId) deliveredIds = [lastId]
+        } else {
+          deliveredIds = enqueueAssistantDelivery(deliverList) || []
+        }
       }
 
       let newId = typeof (data as any).conversation_id === "string" && (data as any).conversation_id ? (data as any).conversation_id : (ensuredId || conversationId)

@@ -48,7 +48,11 @@ def run_inprocess_samples(
                 answer=answer,
                 contexts=contexts,
                 ground_truth=s.ground_truth,
-                metadata={"mode": "inprocess", "ts": datetime.datetime.utcnow().isoformat()},
+                metadata={
+                    "mode": "inprocess",
+                    "ts": datetime.datetime.utcnow().isoformat(),
+                    "llm_context": meta.get("llm_context"),
+                },
             )
         )
     return out

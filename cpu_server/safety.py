@@ -91,7 +91,7 @@ def build_clinical_fallback_response(agent_profile: str, user_text: str, triage_
     # 1. Triage profile
     if profile == "triage":
         is_emergency = (state.get("risk_level") == "emergency") or any(
-            x in text for x in ["đau ngực", "khó thở", "yếu liệt", "nói khó", "ngất", "co giật", "lú lẫn", "chảy máu", "cấp cứu", "bất tỉnh"]
+            x in text for x in ["đau ngực", "khó thở", "yếu liệt", "nói khó", "ngất", "co giật", "lú lẫn", "chảy máu", "cấp cứu", "bất tỉnh", "đột quỵ", "tê cánh tay", "méo miệng", "phản vệ", "sưng môi", "thở rít", "méo", "ngọng", "yếu", "liệt"]
         )
         if is_emergency:
             return (

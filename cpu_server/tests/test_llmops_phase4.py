@@ -439,3 +439,50 @@ class TestDatasetIO:
         from core_lib.llmops.eval.dataset_io import load_jsonl_dataset
         samples = load_jsonl_dataset(tmp_path / "missing.jsonl")
         assert samples == []
+
+    def test_load_jsonl_dataset_auto_generates_id(self, tmp_path):
+        from core_lib.llmops.eval.dataset_io import load_jsonl_dataset
+        f = tmp_path / "test_no_id.jsonl"
+        f.write_text(
+            '{"question": "q1", "ground_truth": "gt1", "contexts": ["c1"]}\n'
+            '{"question": "q2", "ground_truth": "gt2", "contexts": ["c2"]}\n',
+            encoding="utf-8",
+        )
+        samples = load_jsonl_dataset(f)
+        assert len(samples) == 2
+        assert samples[0].id == "sample-1"
+        assert samples[1].id == "sample-2"
+
+    def test_evaluate_cypher_correctness_handles_no_query_and_errors(self):
+        from core_lib.llmops.eval.ragas_runner import _evaluate_cypher_correctness
+        from core_lib.llmops.eval.schemas import EvalSampleResult
+        from core_lib.llmops.settings import load_settings
+        
+        settings = load_settings()
+        sample_no_query = EvalSampleResult(
+            id="1",
+            question="Triệu chứng trầm cảm?",
+            answer="Answer",
+            metadata={"agent_profile": "therapy", "llm_context": {"graph": {}}}
+        )
+        sample_db_error = EvalSampleResult(
+            id="2",
+            question="Triệu chứng sốt?",
+            answer="Answer",
+            metadata={
+                "agent_profile": "triage",
+                "llm_context": {
+                    "graph": {
+                        "cypher_query": "MATCH (n) RETURN n",
+                        "ok": False,
+                        "error": "Memgraph connection lost"
+                    }
+                }
+            }
+        )
+        
+        # Test evaluator doesn't call LLM and directly assigns expected scores
+        scores = _evaluate_cypher_correctness(settings, [sample_no_query, sample_db_error], llm=None)
+        assert len(scores) == 2
+        assert scores[0] == 1.0  # profile "therapy" doesn't require context/Cypher -> 1.0
+        assert scores[1] == 0.0  # has db connection error -> 0.0

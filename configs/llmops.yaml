@@ -105,6 +105,7 @@ eval:
       answer_relevance: true    # Câu trả lời có liên quan đến câu hỏi không?
       context_precision: true   # Context được truy xuất có chính xác không?
       context_recall: true      # Context có đủ để trả lời không?
+      cypher_correctness: true  # Đánh giá tính chính xác của câu truy vấn Cypher
 
     llm:
       provider: openai_like
@@ -136,12 +137,14 @@ eval:
       faithfulness: 0.75        # Độ trung thành tối thiểu 75%
       answer_quality: 0.70      # Chất lượng câu trả lời tối thiểu 70%
       context_quality: 0.65     # Chất lượng context tối thiểu 65%
+      cypher_quality: 0.70      # Chất lượng câu truy vấn Cypher tối thiểu 70%
 
   reporting:
     labels:
       faithfulness: "Độ Trung thành (Faithfulness)"
       answer_quality: "Chất lượng Câu trả lời (Answer Relevance)"
       context_quality: "Chất lượng Context (Context Precision/Recall)"
+      cypher_quality: "Chất lượng Cypher (Cypher Correctness)"
     metric_map:
       faithfulness:
         - faithfulness
@@ -150,3 +153,5 @@ eval:
       context_quality:
         - context_precision
         - context_recall
+      cypher_quality:
+        - cypher_correctness

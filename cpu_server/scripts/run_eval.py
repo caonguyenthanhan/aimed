@@ -166,7 +166,7 @@ def _print_results_table(run_result: Any, gate_decision: Any) -> None:
 
     print("\n  Per-sample latency:")
     for s in run_result.samples:
-        status = "✓" if not s.error else f"ERR:{s.error}"
+        status = "✓" if not s.metadata.get("error") else f"ERR:{s.metadata.get('error')}"
         q_short = (s.question or "")[:55] + ("…" if len(s.question or "") > 55 else "")
         latency = s.metadata.get("latency_ms", "?") if s.metadata else "?"
         print(f"    [{status:>10}] {q_short:<57} {latency}ms")
@@ -236,17 +236,18 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         sample_results.append(
             EvalSampleResult(
+                id=str(sample.get("id") or f"sample-{i}"),
                 question=question,
                 answer=answer,
                 contexts=contexts,
                 ground_truth=ground_truth,
                 scores={},
-                error=error,
                 metadata={
                     "agent_profile": out.get("agent_profile", ""),
                     "latency_ms": latency_ms,
                     "tags": tags,
                     "adapter": args.adapter,
+                    "error": error,
                 },
             )
         )
@@ -283,8 +284,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Log to JSONL
     try:
         from core_lib.llmops.logging.jsonl_sink import JsonlSink
-        sink = JsonlSink(settings)
-        sink.log_eval_run(run_result)
+        sink = JsonlSink.from_settings(settings)
+        if sink is not None:
+            sink.log_eval_run(run_result)
     except Exception as e:
         print(f"[WARN] Failed to write metrics log: {e}", file=sys.stderr)
 

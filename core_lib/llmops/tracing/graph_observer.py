@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import datetime
 import time
 from typing import Any, Callable, Dict, Optional, TypeVar
@@ -10,10 +11,13 @@ from ..logging.enrich import redact_keys, safe_snapshot
 from ..logging.jsonl_sink import JsonlSink
 from ..logging.models import LlmopsEvent, LlmopsMetric
 from ..settings import LlmopsSettings
-from .langsmith import LangsmithRun, get_langsmith_tracer
+from .langsmith import LangsmithRun, get_langsmith_tracer, active_span
 
 
 TState = TypeVar("TState", bound=Dict[str, Any])
+
+# ContextVar to push streaming events to the SSE generator
+streaming_queue: contextvars.ContextVar[Optional[Any]] = contextvars.ContextVar("streaming_queue", default=None)
 
 
 class GraphObserver:
@@ -36,6 +40,28 @@ class GraphObserver:
                     metadata={"node": node_name},
                 )
 
+            conv_id = state.get("conversation_id") if hasattr(state, "get") else getattr(state, "conversation_id", None)
+            run_id_str = None
+            if run is not None and hasattr(run, "run") and hasattr(run.run, "id"):
+                run_id_str = str(run.run.id)
+
+            # Stream node start to SSE if active
+            q = streaming_queue.get()
+            if q is not None:
+                try:
+                    q.put_nowait({
+                        "event": "node",
+                        "data": {
+                            "node": node_name,
+                            "status": "start",
+                            "ts": ts,
+                            "conversation_id": conv_id,
+                            "langsmith_run_id": run_id_str,
+                        }
+                    })
+                except Exception:
+                    pass
+
             self._emit_event(
                 LlmopsEvent(
                     ts=ts,
@@ -43,12 +69,17 @@ class GraphObserver:
                     source="cpu_server.langgraph",
                     message=f"LangGraph node start: {node_name}",
                     severity="info",
-                    metadata={"node": node_name},
+                    metadata={
+                        "node": node_name,
+                        "conversation_id": conv_id,
+                        "langsmith_run_id": run_id_str,
+                    },
                 )
             )
 
             err: Optional[str] = None
             out_state: Optional[TState] = None
+            token = active_span.set(run)
             try:
                 out_state = fn(state)
                 return out_state
@@ -56,17 +87,41 @@ class GraphObserver:
                 err = str(e)
                 raise
             finally:
+                active_span.reset(token)
                 elapsed_ms = int((time.time() - t0) * 1000)
                 out_ts = datetime.datetime.utcnow().isoformat()
                 out_snapshot = safe_snapshot(redact_keys(dict(out_state or {}), keys=("authorization", "api_key", "token")), max_chars=self._settings.tracing.langsmith.max_payload_chars)
+                
+                # Stream node end to SSE if active
+                if q is not None:
+                    try:
+                        q.put_nowait({
+                            "event": "node",
+                            "data": {
+                                "node": node_name,
+                                "status": "end",
+                                "elapsed_ms": elapsed_ms,
+                                "error": err,
+                                "ts": out_ts,
+                                "conversation_id": conv_id,
+                                "langsmith_run_id": run_id_str,
+                            }
+                        })
+                    except Exception:
+                        pass
+
                 self._emit_metric(
                     LlmopsMetric(
                         ts=out_ts,
                         name="langgraph.node.latency_ms",
                         value=float(elapsed_ms),
                         unit="ms",
-                        tags={"node": node_name},
-                        metadata={"node": node_name},
+                        tags={"node": node_name, "conversation_id": str(conv_id or "")},
+                        metadata={
+                            "node": node_name,
+                            "conversation_id": conv_id,
+                            "langsmith_run_id": run_id_str,
+                        },
                     )
                 )
                 self._emit_event(
@@ -76,7 +131,13 @@ class GraphObserver:
                         source="cpu_server.langgraph",
                         message=f"LangGraph node end: {node_name}",
                         severity="error" if err else "info",
-                        metadata={"node": node_name, "elapsed_ms": elapsed_ms, "error": err},
+                        metadata={
+                            "node": node_name,
+                            "elapsed_ms": elapsed_ms,
+                            "error": err,
+                            "conversation_id": conv_id,
+                            "langsmith_run_id": run_id_str,
+                        },
                     )
                 )
                 if self._tracer is not None:
@@ -93,4 +154,5 @@ class GraphObserver:
         if self._sink is None:
             return
         self._sink.emit_metric(metric)
+
 

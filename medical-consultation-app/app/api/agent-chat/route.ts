@@ -111,7 +111,9 @@ export async function POST(req: Request) {
           if (auth) headers["authorization"] = auth
           const apiKey = req.headers.get("x-api-key")
           if (apiKey) headers["x-api-key"] = apiKey
-          const resp = await fetch(`${cpuBase}/v1/agent-chat`, {
+          const isLive = proxyBody?.delivery_mode === "live" || proxyBody?.stream === true
+          const endpoint = isLive ? "/v1/agent-chat/stream" : "/v1/agent-chat"
+          const resp = await fetch(`${cpuBase}${endpoint}`, {
             method: "POST",
             headers,
             body: JSON.stringify({
@@ -124,6 +126,15 @@ export async function POST(req: Request) {
             signal: controller.signal,
           })
           if (resp.ok) {
+            if (isLive && resp.body) {
+              return new Response(resp.body, {
+                headers: {
+                  "Content-Type": "text/event-stream; charset=utf-8",
+                  "Cache-Control": "no-cache",
+                  "Connection": "keep-alive",
+                }
+              })
+            }
             const raw = await resp.json().catch(() => null)
             const parsed = AgentResponseSchema.safeParse(raw)
             if (parsed.success) {
@@ -314,9 +325,9 @@ export async function POST(req: Request) {
     const agentProfileSource = !requestedAgentId || requestedAgentId.toLowerCase() === "auto" ? "auto" : "explicit"
 
     // Phase 2: Semantic Router — thay thế inline detectIntentFlags + inferAgentProfileId
-    const intentFlags = semanticDetectIntentFlags(message, Array.isArray(messages) ? messages : [])
+    const intentFlags = await semanticDetectIntentFlags(message, Array.isArray(messages) ? messages : [])
     const agentProfileId = !requestedAgentId || requestedAgentId.toLowerCase() === "auto"
-      ? semanticInferProfileId(message, Array.isArray(messages) ? messages : [])
+      ? await semanticInferProfileId(message, Array.isArray(messages) ? messages : [])
       : requestedAgentId
     agentProfileIdForError = agentProfileId
     const agentProfile = getAgentProfile(agentProfileId)

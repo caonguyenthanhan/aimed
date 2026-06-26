@@ -59,7 +59,11 @@ def run_blackbox_samples(
                 answer=answer,
                 contexts=contexts,
                 ground_truth=s.ground_truth,
-                metadata={"mode": "blackbox", "ts": datetime.datetime.utcnow().isoformat()},
+                metadata={
+                    "mode": "blackbox",
+                    "ts": datetime.datetime.utcnow().isoformat(),
+                    "llm_context": meta.get("llm_context"),
+                },
             )
         )
     return out

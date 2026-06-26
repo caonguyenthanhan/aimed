@@ -86,7 +86,93 @@ def _strip_accents(text: str) -> str:
     return unicodedata.normalize("NFD", normalized).encode("ascii", "ignore").decode("ascii")
 
 
-def _infer_agent_profile(text: str) -> str:
+SPECIALTY_DESCRIPTIONS = {
+    "triage": (
+        "Triệu chứng y tế khẩn cấp, cấp cứu, nguy hiểm đến tính mạng như đau ngực, khó thở dữ dội, "
+        "yếu liệt, nói khó, ngất xỉu, co giật, lú lẫn cấp tính, chảy máu nhiều không cầm được, đau bụng quằn quại, đột quỵ."
+    ),
+    "doctor_referral": (
+        "Đặt lịch hẹn khám với bác sĩ chuyên khoa, tìm phòng khám, bệnh viện, tư vấn trực tiếp với bác sĩ, "
+        "chi phí khám bệnh, bảo hiểm y tế, lịch làm việc của bác sĩ chuyên khoa tim mạch, thần kinh, nội tiết."
+    ),
+    "therapy": (
+        "Hỗ trợ sức khỏe tinh thần, lo âu, trầm cảm, căng thẳng, stress, mất ngủ, hoảng loạn, cô đơn, "
+        "tự hại hoặc muốn tự sát, các bài tập trị liệu tâm lý, cbt, thở và thiền thư giãn."
+    ),
+    "medication": (
+        "Thông tin về thuốc, liều dùng, tác dụng phụ, tương tác thuốc, chỉ định và chống chỉ định, "
+        "các loại thuốc như paracetamol, ibuprofen, kháng sinh, thuốc huyết áp statin, lisinopril, omeprazole."
+    ),
+    "care_plan": (
+        "Xây dựng kế hoạch chăm sóc sức khỏe, lộ trình giảm cân, tăng cân, thực đơn dinh dưỡng, ăn uống lành mạnh, "
+        "lịch trình tập luyện thể dục, theo dõi thói quen sinh hoạt và nhắc nhở uống thuốc hàng ngày."
+    ),
+}
+
+_SPECIALTY_EMBEDDINGS: Dict[str, List[float]] = {}
+_LOCAL_EMBEDDING_MODEL = None
+
+def get_embedding(text: str) -> List[float]:
+    """Get embedding of a text using FOZA embeddings or local sentence-transformers."""
+    base = (os.environ.get("FOZA_BASE_URL") or "https://api.foza.ai/v1").strip().rstrip("/")
+    token = (os.environ.get("FOZA_TOKEN") or os.environ.get("FOZA_TOKEN_2") or "").strip()
+    model = os.environ.get("EMBEDDING_MODEL_NAME") or "text-embedding-3-small"
+    
+    if token:
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        }
+        payload = {
+            "input": text,
+            "model": model,
+        }
+        try:
+            response = requests.post(f"{base}/embeddings", json=payload, headers=headers, timeout=10.0)
+            if response.ok:
+                data = response.json()
+                emb = data.get("data", [{}])[0].get("embedding")
+                if isinstance(emb, list) and len(emb) > 0:
+                    return emb
+        except Exception as e:
+            print(f"[Embedding Error] Failed to get embedding from FOZA: {e}")
+
+    # Fallback to local sentence-transformers
+    global _LOCAL_EMBEDDING_MODEL
+    try:
+        if _LOCAL_EMBEDDING_MODEL is None:
+            from sentence_transformers import SentenceTransformer
+            # Using the cached Vietnamese model
+            _LOCAL_EMBEDDING_MODEL = SentenceTransformer("bkai-foundation-models/vietnamese-bi-encoder")
+        emb = _LOCAL_EMBEDDING_MODEL.encode(text).tolist()
+        if isinstance(emb, list) and len(emb) > 0:
+            return emb
+    except Exception as e:
+        print(f"[Embedding Fallback Error] Local sentence-transformers failed: {e}")
+
+    return [0.0] * 1536
+
+def cosine_similarity(v1: List[float], v2: List[float]) -> float:
+    import math
+    dot = 0.0
+    norm_a = 0.0
+    norm_b = 0.0
+    for a, b in zip(v1, v2):
+        dot += a * b
+        norm_a += a * a
+        norm_b += b * b
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return dot / (math.sqrt(norm_a) * math.sqrt(norm_b))
+
+def ensure_specialty_embeddings():
+    global _SPECIALTY_EMBEDDINGS
+    for name, desc in SPECIALTY_DESCRIPTIONS.items():
+        if name not in _SPECIALTY_EMBEDDINGS or not _SPECIALTY_EMBEDDINGS[name] or all(x == 0.0 for x in _SPECIALTY_EMBEDDINGS[name]):
+            emb = get_embedding(desc)
+            _SPECIALTY_EMBEDDINGS[name] = emb
+
+def _infer_agent_profile_regex(text: str) -> str:
     lower = str(text or "").lower()
     ascii_text = _strip_accents(lower)
     if re.search(r"(bác sĩ|đặt hẹn|đặt lịch|khám|tư vấn trực tiếp|hẹn khám)", lower) or re.search(
@@ -115,8 +201,7 @@ def _infer_agent_profile(text: str) -> str:
         return "care_plan"
     return "default"
 
-
-def _detect_intent_flags(text: str) -> Dict[str, Any]:
+def _detect_intent_flags_regex(text: str) -> Dict[str, Any]:
     lower = str(text or "").lower()
     ascii_text = _strip_accents(lower)
     return {
@@ -149,6 +234,106 @@ def _detect_intent_flags(text: str) -> Dict[str, Any]:
             or re.search(r"(youtube|video|tra cuu|tim|search|source|nguon)", ascii_text)
         ),
     }
+
+def _infer_agent_profile(text: str) -> str:
+    if not text.strip():
+        return "default"
+    try:
+        ensure_specialty_embeddings()
+        query_emb = get_embedding(text)
+        if all(x == 0.0 for x in query_emb):
+            return _infer_agent_profile_regex(text)
+            
+        scores = {}
+        for name, emb in _SPECIALTY_EMBEDDINGS.items():
+            if not all(x == 0.0 for x in emb):
+                scores[name] = cosine_similarity(query_emb, emb)
+            else:
+                scores[name] = 0.0
+
+        thresh_triage = float(os.environ.get("SEMANTIC_THRESHOLD_TRIAGE", "0.72"))
+        thresh_medication = float(os.environ.get("SEMANTIC_THRESHOLD_MEDICATION", "0.75"))
+        thresh_therapy = float(os.environ.get("SEMANTIC_THRESHOLD_THERAPY", "0.78"))
+        thresh_doctor = float(os.environ.get("SEMANTIC_THRESHOLD_DOCTOR", "0.75"))
+        thresh_plan = float(os.environ.get("SEMANTIC_THRESHOLD_PLAN", "0.70"))
+        
+        thresholds = {
+            "triage": thresh_triage,
+            "medication": thresh_medication,
+            "therapy": thresh_therapy,
+            "doctor_referral": thresh_doctor,
+            "care_plan": thresh_plan
+        }
+        
+        priorities = {
+            "triage": 10,
+            "doctor_referral": 8,
+            "therapy": 7,
+            "medication": 6,
+            "care_plan": 5,
+        }
+
+        sorted_scores = sorted(scores.items(), key=lambda x: (x[1], priorities.get(x[0], 0)), reverse=True)
+        for name, score in sorted_scores:
+            t = thresholds.get(name, 0.0)
+            if score >= t:
+                return name
+        return "default"
+    except Exception as e:
+        print(f"[Routing Error] Embedding routing failed, falling back to regex: {e}")
+        return _infer_agent_profile_regex(text)
+
+def _detect_intent_flags(text: str) -> Dict[str, Any]:
+    if not text.strip():
+        return {
+            "wants_doctor": False,
+            "wants_triage": False,
+            "wants_medication": False,
+            "wants_plan": False,
+            "wants_therapy": False,
+            "wants_graph": False,
+            "wants_tools": False,
+        }
+    try:
+        ensure_specialty_embeddings()
+        query_emb = get_embedding(text)
+        if all(x == 0.0 for x in query_emb):
+            return _detect_intent_flags_regex(text)
+            
+        scores = {}
+        for name, emb in _SPECIALTY_EMBEDDINGS.items():
+            if not all(x == 0.0 for x in emb):
+                scores[name] = cosine_similarity(query_emb, emb)
+            else:
+                scores[name] = 0.0
+
+        thresh_triage = float(os.environ.get("SEMANTIC_THRESHOLD_TRIAGE", "0.72"))
+        thresh_medication = float(os.environ.get("SEMANTIC_THRESHOLD_MEDICATION", "0.75"))
+        thresh_therapy = float(os.environ.get("SEMANTIC_THRESHOLD_THERAPY", "0.78"))
+        thresh_doctor = float(os.environ.get("SEMANTIC_THRESHOLD_DOCTOR", "0.75"))
+        thresh_plan = float(os.environ.get("SEMANTIC_THRESHOLD_PLAN", "0.70"))
+        
+        lower = text.lower()
+        ascii_text = _strip_accents(lower)
+        
+        return {
+            "wants_doctor": scores.get("doctor_referral", 0.0) >= thresh_doctor,
+            "wants_triage": scores.get("triage", 0.0) >= thresh_triage,
+            "wants_medication": scores.get("medication", 0.0) >= thresh_medication,
+            "wants_plan": scores.get("care_plan", 0.0) >= thresh_plan,
+            "wants_therapy": scores.get("therapy", 0.0) >= thresh_therapy,
+            "wants_graph": bool(
+                re.search(r"(graph|evidence|đồ thị|bằng chứng|trích dẫn|nguồn)", lower)
+                or re.search(r"(graph|evidence|do thi|bang chung|trich dan|nguon)", ascii_text)
+            ),
+            "wants_tools": bool(
+                re.search(r"(youtube|video|tra cứu|tìm|search|source|nguồn)", lower)
+                or re.search(r"(youtube|video|tra cuu|tim|search|source|nguon)", ascii_text)
+            ),
+        }
+    except Exception as e:
+        print(f"[Routing Error] Embedding intent flags failed, falling back to regex: {e}")
+        return _detect_intent_flags_regex(text)
 
 
 def _fallback_actions(agent_profile: str, intent: Dict[str, Any], risk_level: str, ready_for_cta: bool) -> List[Dict[str, Any]]:
@@ -188,11 +373,73 @@ def _fallback_actions(agent_profile: str, intent: Dict[str, Any], risk_level: st
     return []
 
 
+def generate_cypher_query_via_llm(user_text: str, agent_profile: str) -> str:
+    """Ask the reasoning model (Foza) to write a Cypher query corresponding to the case."""
+    schema_instructions = (
+        "Bạn là chuyên gia cơ sở dữ liệu đồ thị Memgraph phục vụ y khoa lâm sàng.\n"
+        "Nhiệm vụ của bạn là dịch câu hỏi lâm sàng của người dùng thành câu lệnh Cypher để truy vấn đồ thị Memgraph.\n\n"
+        "Cơ sở dữ liệu có các nhãn Node (Entity) với các Pydantic schema như sau:\n\n"
+        "class Symptom(BaseModel):\n"
+        "    name: str  # Tên triệu chứng (ví dụ: 'sốt', 'đau ngực', 'khó thở')\n"
+        "    label: str = \"Symptom\"\n"
+        "    description: Optional[str]\n\n"
+        "class Disease(BaseModel):\n"
+        "    name: str  # Tên bệnh lý (ví dụ: 'cảm cúm', 'tăng huyết áp')\n"
+        "    label: str = \"Disease\"\n"
+        "    description: Optional[str]\n\n"
+        "class ActiveIngredient(BaseModel):\n"
+        "    name: str  # Hoạt chất hoặc dược chất (ví dụ: 'paracetamol', 'ibuprofen')\n"
+        "    label: str = \"ActiveIngredient\"\n"
+        "    description: Optional[str]\n\n"
+        "Mỗi thực thể đều có thuộc tính 'name' (chuỗi tiếng Việt có dấu, viết thường hoặc viết chuẩn) và nhãn là 'Entity'.\n"
+        "Các mối quan hệ (Relationships) hợp lệ trong đồ thị:\n"
+        "- (a:Entity)-[:CAUSES]->(b:Entity) (Bệnh gây ra triệu chứng hoặc triệu chứng gây ra biến chứng)\n"
+        "- (a:Entity)-[:MANIFESTS_AS]->(b:Entity) (Bệnh biểu hiện thành triệu chứng)\n"
+        "- (a:Entity)-[:RELIEVES]->(b:Entity) (Hoạt chất làm giảm triệu chứng)\n"
+        "- (a:Entity)-[:MANAGES]->(b:Entity) (Hoạt chất kiểm soát bệnh lý)\n\n"
+        "Hãy viết câu lệnh Cypher tối ưu nhất để tìm kiếm các thực thể liên quan đến ca bệnh và các mối quan hệ trực tiếp (1-hop) của chúng.\n"
+        "Chú ý:\n"
+        "1. Luôn dùng toLower() hoặc khớp tương đối qua CONTAINS nếu cần để tăng tính linh hoạt khi tìm kiếm theo tên.\n"
+        "2. Trả về thực thể gốc và các thực thể lân cận cùng mối quan hệ kết nối chúng.\n"
+        "3. Không giải thích, không viết ```cypher. Chỉ trả về chuỗi câu lệnh Cypher duy nhất.\n"
+        "Ví dụ:\n"
+        "MATCH (e:Entity) WHERE toLower(e.name) CONTAINS 'sốt' MATCH (e)-[r]-(n) RETURN e, r, n LIMIT 30"
+    )
+    
+    messages = [
+        {"role": "system", "content": schema_instructions},
+        {"role": "user", "content": f"Câu hỏi của bệnh nhân: '{user_text}'\nAgent Profile hiện tại: {agent_profile}"}
+    ]
+    try:
+        cypher_query, _ = _foza_chat(messages, timeout_s=15.0)
+        cypher_query = cypher_query.replace("```cypher", "").replace("```", "").strip()
+        if cypher_query.startswith('"') and cypher_query.endswith('"'):
+            cypher_query = cypher_query[1:-1].strip()
+        print(f"[Agentic GraphRAG] Generated Cypher: {cypher_query}")
+        return cypher_query
+    except Exception as e:
+        print(f"[Agentic GraphRAG Error] Failed to generate Cypher: {e}")
+        return f"MATCH (e:Entity) WHERE toLower(e.name) CONTAINS 'sốt' MATCH (e)-[r]-(n) RETURN e, r, n LIMIT 30"
+
+
 def _plan_tools(text: str, agent_profile: str = "default") -> List[Dict[str, Any]]:
     lower = str(text or "").lower()
     ascii_text = _strip_accents(lower)
     col = "therapy" if agent_profile == "therapy" else None
-    requests_plan: List[Dict[str, Any]] = [{"name": "graph.evidence", "args": {"query": text, "limit": 60, "entity_limit": 6, "collection": col}}]
+    
+    # Generate Cypher query dynamically using the LLM
+    cypher_query = generate_cypher_query_via_llm(text, agent_profile)
+    
+    requests_plan: List[Dict[str, Any]] = [{
+        "name": "graph.evidence", 
+        "args": {
+            "query": text, 
+            "cypher_query": cypher_query,
+            "limit": 60, 
+            "entity_limit": 6, 
+            "collection": col
+        }
+    }]
     if "youtube" in lower or "video" in lower or "nhạc" in lower or "nhac" in ascii_text:
         requests_plan.append({"name": "youtube.search", "args": {"query": text, "maxResults": 5}})
     if re.search(r"\b(tìm|tra cứu|tim|tra cuu|nguồn|source|search)\b", ascii_text):
@@ -324,12 +571,105 @@ def _foza_timeout_s() -> float:
     return value
 
 
+class StreamingTokenExtractor:
+    def __init__(self):
+        self.buffer = ""
+        self.is_json = None
+        self.found_key = False
+        self.inside_string = False
+        self.escaped = False
+
+    def feed(self, text: str) -> list[str]:
+        self.buffer += text
+        tokens = []
+        
+        if self.is_json is None:
+            stripped = self.buffer.strip()
+            if len(stripped) > 0:
+                if stripped.startswith("{"):
+                    self.is_json = True
+                else:
+                    self.is_json = False
+                    tokens.append(self.buffer)
+                    self.buffer = ""
+                    return tokens
+            else:
+                return []
+        
+        if not self.is_json:
+            tokens.append(text)
+            return tokens
+
+        # It is JSON, find "response" : "
+        if not self.found_key:
+            match = re.search(r'"response"\s*:\s*"', self.buffer)
+            if match:
+                self.found_key = True
+                self.inside_string = True
+                self.buffer = self.buffer[match.end():]
+            else:
+                if len(self.buffer) > 60:
+                    self.buffer = self.buffer[-60:]
+                return []
+
+        if self.inside_string:
+            output = []
+            consume_count = 0
+            for char in self.buffer:
+                consume_count += 1
+                if self.escaped:
+                    if char == 'n':
+                        output.append('\n')
+                    elif char == 't':
+                        output.append('\t')
+                    elif char == '"':
+                        output.append('"')
+                    elif char == '\\':
+                        output.append('\\')
+                    else:
+                        output.append('\\' + char)
+                    self.escaped = False
+                    continue
+                if char == '\\':
+                    self.escaped = True
+                    continue
+                if char == '"':
+                    self.inside_string = False
+                    break
+                output.append(char)
+            
+            self.buffer = self.buffer[consume_count:]
+            if output:
+                tokens.append("".join(output))
+        
+        return tokens
+
+
 def _foza_chat(messages: List[Dict[str, Any]], timeout_s: float = 45.0) -> Tuple[str, Dict[str, Any]]:
     base = (os.environ.get("FOZA_BASE_URL") or "https://api.foza.ai/v1").strip().rstrip("/")
     token = (os.environ.get("FOZA_TOKEN") or os.environ.get("FOZA_TOKEN_2") or "").strip()
     model = (os.environ.get("LLM_MODEL_NAME") or "").strip()
     if not token or not model:
         raise RuntimeError("missing_foza_env")
+
+    # Trace LLM run if active parent span is present
+    tracer = None
+    run = None
+    try:
+        from core_lib.llmops.settings import load_settings
+        from core_lib.llmops.tracing.langsmith import get_langsmith_tracer, active_span
+        settings = load_settings()
+        tracer = get_langsmith_tracer(settings)
+        if tracer is not None and active_span.get() is not None:
+            run = tracer.start_run(
+                name="foza_chat_llm",
+                run_type="llm",
+                inputs={"messages": messages, "model": model},
+                metadata={"model": model},
+            )
+    except Exception:
+        pass
+
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -340,34 +680,100 @@ def _foza_chat(messages: List[Dict[str, Any]], timeout_s: float = 45.0) -> Tuple
     attempts = 0
     last_error = None
     data = None
-    while attempts < 2:
-        attempts += 1
-        try:
-            response = _FOZA_SESSION.post(f"{base}/chat/completions", headers=headers, json=payload, timeout=timeout_s)
-            response.encoding = "utf-8"
-            raw_text = response.text or ""
-            if response.ok:
-                data = response.json()
-                break
-            if response.status_code in (408, 429, 500, 502, 503, 504) and attempts < 2:
-                time.sleep(0.6 * attempts)
-                continue
-            raise RuntimeError(f"foza_error:{response.status_code}:{raw_text[:400]}")
-        except Exception as exc:
-            last_error = exc
-            if attempts < 2:
-                time.sleep(0.6 * attempts)
-                continue
-            raise
-    if data is None and last_error is not None:
-        raise last_error
-    message = (((data.get("choices") or [{}])[0] or {}).get("message") or {})
-    content = str(message.get("content") or "").strip()
-    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+    content = ""
     metadata = {"model": model}
-    if usage:
-        metadata["usage"] = usage
-    return content, metadata
+    
+    # Import streaming queue if present
+    try:
+        from core_lib.llmops.tracing.graph_observer import streaming_queue
+        q = streaming_queue.get()
+    except Exception:
+        q = None
+
+    try:
+        while attempts < 2:
+            attempts += 1
+            try:
+                if q is not None:
+                    # Stream mode
+                    payload["stream"] = True
+                    response = _FOZA_SESSION.post(f"{base}/chat/completions", headers=headers, json=payload, timeout=timeout_s, stream=True)
+                    response.encoding = "utf-8"
+                    if not response.ok:
+                        raw_text = response.text or ""
+                        raise RuntimeError(f"foza_error:{response.status_code}:{raw_text[:400]}")
+                    
+                    full_content = []
+                    extractor = StreamingTokenExtractor()
+                    for line in response.iter_lines():
+                        if not line:
+                            continue
+                        line_str = line.decode("utf-8").strip()
+                        if line_str.startswith("data:"):
+                            data_part = line_str[5:].strip()
+                            if data_part == "[DONE]":
+                                break
+                            try:
+                                chunk_data = json.loads(data_part)
+                                delta = chunk_data.get("choices", [{}])[0].get("delta", {})
+                                chunk_text = delta.get("content", "")
+                                if chunk_text:
+                                    full_content.append(chunk_text)
+                                    for token_yielded in extractor.feed(chunk_text):
+                                        q.put_nowait({
+                                            "event": "token",
+                                            "data": {
+                                                "text": token_yielded
+                                            }
+                                        })
+                            except Exception:
+                                pass
+                    content = "".join(full_content)
+                    data = {
+                        "choices": [{"message": {"role": "assistant", "content": content}}],
+                        "usage": {}
+                    }
+                    break
+                else:
+                    # Blocking mode
+                    response = _FOZA_SESSION.post(f"{base}/chat/completions", headers=headers, json=payload, timeout=timeout_s)
+                    response.encoding = "utf-8"
+                    raw_text = response.text or ""
+                    if response.ok:
+                        data = response.json()
+                        break
+                    if response.status_code in (408, 429, 500, 502, 503, 504) and attempts < 2:
+                        time.sleep(0.6 * attempts)
+                        continue
+                    raise RuntimeError(f"foza_error:{response.status_code}:{raw_text[:400]}")
+            except Exception as exc:
+                last_error = exc
+                if attempts < 2:
+                    time.sleep(0.6 * attempts)
+                    continue
+                raise
+        if data is None and last_error is not None:
+            raise last_error
+        message = (((data.get("choices") or [{}])[0] or {}).get("message") or {})
+        content = str(message.get("content") or "").strip()
+        usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+        if usage:
+            metadata["usage"] = usage
+        return content, metadata
+    except Exception as e:
+        last_error = e
+        raise
+    finally:
+        if tracer is not None and run is not None:
+            try:
+                err_str = str(last_error) if last_error else None
+                tracer.end_run(
+                    run,
+                    outputs={"response": content, "metadata": metadata} if not last_error else None,
+                    error=err_str
+                )
+            except Exception:
+                pass
 
 
 def _triage_state_payload(state: Dict[str, Any]) -> Dict[str, Any]:
@@ -380,7 +786,7 @@ def _triage_state_payload(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-SYSTEM_INSTRUCTIONS = {
+_STATIC_SYSTEM_INSTRUCTIONS = {
     "triage": (
         "Bạn là Tác tử Sàng lọc & Phân tầng Nguy cơ Y tế chuyên nghiệp.\n"
         "Nhiệm vụ: Đánh giá triệu chứng khách quan qua câu thoại (tính toán ngầm GAD-7, PHQ-9 dựa trên ngữ nghĩa của cuộc trò chuyện).\n"
@@ -426,6 +832,25 @@ SYSTEM_INSTRUCTIONS = {
         "Nhiệm vụ: Trò chuyện và giải đáp các thắc mắc chung về sức khỏe một cách thân thiện, khoa học, dễ hiểu."
     ),
 }
+
+def load_system_instructions() -> Dict[str, str]:
+    from pathlib import Path
+    import json
+    p = Path(__file__).resolve().parents[2] / "data" / "optimized_prompts.json"
+    instructions = dict(_STATIC_SYSTEM_INSTRUCTIONS)
+    if p.exists():
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    for k, v in data.items():
+                        if isinstance(v, str) and v.strip():
+                            instructions[k] = v.strip()
+        except Exception:
+            pass
+    return instructions
+
+SYSTEM_INSTRUCTIONS = load_system_instructions()
 
 
 def _build_agent_prompt(
@@ -757,11 +1182,32 @@ def _run_agent_llm(state: Dict[str, Any], agent_profile: str) -> Dict[str, Any]:
                 "grounding": grounding.model_dump(mode="json") if hasattr(grounding, "model_dump") else {"has_context": bool(grounding.has_context)},
             }
             if not bool(grounding.has_context):
-                state["response"] = build_triage_fallback_text(
-                    risk_level=risk_level,
-                    follow_up_questions=state.get("triage_follow_up_questions") or [],
-                    symptoms_collected=state.get("symptoms_collected") or [],
-                ) if agent_profile == "triage" else str(grounding.user_message or "").strip() or "Mình chưa có đủ thông tin để trả lời chắc chắn. Bạn cung cấp thêm chi tiết giúp mình nhé."
+                is_emergency = (risk_level == "emergency") or any(
+                    x in user_text.lower() for x in ["đau ngực", "khó thở", "yếu liệt", "nói khó", "ngất", "co giật", "lú lẫn", "chảy máu", "cấp cứu", "bất tỉnh", "đột quỵ", "tê cánh tay", "méo miệng", "phản vệ", "sưng môi", "thở rít", "méo", "ngọng", "yếu", "liệt"]
+                )
+                if is_emergency:
+                    try:
+                        from cpu_server.safety import build_clinical_fallback_response
+                    except Exception:
+                        try:
+                            from safety import build_clinical_fallback_response
+                        except Exception:
+                            build_clinical_fallback_response = None
+                    if build_clinical_fallback_response is not None:
+                        fallback_text = build_clinical_fallback_response(agent_profile, user_text, triage_state)
+                    else:
+                        fallback_text = (
+                            "Dựa trên các triệu chứng bạn mô tả, đây có thể là tình huống y tế khẩn cấp cần được xử trí ngay lập tức.\n\n"
+                            "Vui lòng gọi ngay cấp cứu 115 hoặc đến phòng cấp cứu của bệnh viện gần nhất để được hỗ trợ kịp thời."
+                        )
+                else:
+                    fallback_text = build_triage_fallback_text(
+                        risk_level=risk_level,
+                        follow_up_questions=state.get("triage_follow_up_questions") or [],
+                        symptoms_collected=state.get("symptoms_collected") or [],
+                    ) if agent_profile == "triage" else str(grounding.user_message or "").strip() or "Mình chưa có đủ thông tin để trả lời chắc chắn. Bạn cung cấp thêm chi tiết giúp mình nhé."
+                
+                state["response"] = sanitize_user_visible_text(fallback_text)
                 state["actions"] = _fallback_actions(agent_profile, intent, risk_level, ready_for_cta)
                 state["provider"] = "guardrails"
                 state["model"] = ""

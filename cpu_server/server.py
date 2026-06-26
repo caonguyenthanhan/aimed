@@ -612,7 +612,8 @@ class PhenotypingDailyRequest(BaseModel):
 
 
 class GraphEvidenceRequest(BaseModel):
-    query: str
+    query: Optional[str] = None
+    cypher_query: Optional[str] = None
     limit: Optional[int] = 60
     entity_limit: Optional[int] = 5
     rel_types: Optional[List[str]] = None
@@ -646,6 +647,7 @@ class GraphEvidenceResponse(BaseModel):
     latency: int
     elapsed_ms: int
     error: Optional[str] = None
+    records: Optional[List[Dict[str, Any]]] = None
 
 # Load model once at startup
 llm_pro: Optional[Llama] = None
@@ -719,6 +721,7 @@ def _build_graph_evidence_response(
     entities: Optional[List[Dict[str, Any]]] = None,
     edges: Optional[List[Dict[str, Any]]] = None,
     error: Optional[str] = None,
+    records: Optional[List[Dict[str, Any]]] = None,
 ) -> GraphEvidenceResponse:
     latency = _graph_latency_ms(started_at)
     return GraphEvidenceResponse(
@@ -732,6 +735,7 @@ def _build_graph_evidence_response(
         latency=latency,
         elapsed_ms=latency,
         error=error,
+        records=records,
     )
 
 def _hash_password(password: str, salt: str) -> str:
@@ -1751,6 +1755,226 @@ async def agent_chat(req: AgentChatRequest, request: Request):
             },
             media_type="application/json; charset=utf-8",
         )
+
+
+@app.post("/v1/agent-chat/stream")
+async def agent_chat_stream(req: AgentChatRequest, request: Request):
+    token_user = get_current_user(request)
+    user_id = (token_user if token_user and token_user != "anonymous" else (req.user_id or "anonymous")).strip() or "anonymous"
+    conversation_id = (req.conversation_id or "").strip() or None
+    if not conversation_id:
+        conversation_id = create_conversation(user_id)
+
+    # Check clinical hold before starting stream
+    if conversation_id and _db_is_conversation_on_clinical_hold is not None:
+        try:
+            if _db_is_conversation_on_clinical_hold(conversation_id):
+                hold_msg = (
+                    "Hiện tại, chúng tôi nhận thấy bạn đang có những chia sẻ liên quan đến tự hại hoặc tự tử. "
+                    "Để đảm bảo an toàn tối đa cho bạn, hệ thống đã tạm thời đóng băng hội thoại này.\n"
+                    "Nếu bạn đang gặp khủng hoảng hoặc cần người lắng nghe ngay lập tức, xin vui lòng liên hệ với các đường dây nóng hỗ trợ khẩn cấp sau:\n"
+                    "- Đường dây nóng Ngày Mai (Hỗ trợ trầm cảm & ngăn ngừa tự sát): 096 306 1414\n"
+                    "- Tổng đài Cấp cứu Y tế: 115\n"
+                    "Bạn không phải đơn độc, hãy tìm kiếm sự giúp đỡ từ những người xung quanh hoặc các chuyên gia y tế ngay lập tức."
+                )
+                
+                async def hold_generator():
+                    yield f"event: hold\ndata: {json.dumps({'response': hold_msg, 'conversation_id': conversation_id}, ensure_ascii=False)}\n\n"
+                
+                return StreamingResponse(hold_generator(), media_type="text/event-stream; charset=utf-8")
+        except Exception:
+            pass
+
+    async def sse_generator():
+        started = time.time()
+        now = datetime.datetime.utcnow().isoformat()
+        try:
+            from .langgraph_agent.runtime import stream_agent
+            stream_gen = stream_agent(
+                message=str(req.message or "").strip(),
+                user_id=user_id,
+                conversation_id=conversation_id,
+                agent_id=(req.agent_id or "auto").strip() or "auto",
+                include_tools=bool(req.include_tools if req.include_tools is not None else True),
+            )
+            
+            for item in stream_gen:
+                ev = item.get("event")
+                data = item.get("data")
+                
+                if ev == "metadata":
+                    md = data.get("metadata") if isinstance(data, dict) else None
+                    if not isinstance(md, dict):
+                        md = {}
+                    md["mode"] = "cpu"
+                    md["duration_ms"] = int((time.time() - started) * 1000)
+                    data["metadata"] = md
+                    try:
+                        _append_runtime_event({"type": "agent_chat", "orchestrator": "langgraph", "provider": md.get("provider"), "user_id": user_id, "conversation_id": conversation_id, "ok": True, "ts": now})
+                    except Exception:
+                        pass
+                    try:
+                        _append_runtime_metric({"ts": now, "orchestrator": "langgraph", "provider": md.get("provider"), "duration_ms": md.get("duration_ms"), "conversation_id": conversation_id})
+                    except Exception:
+                        pass
+                
+                yield f"event: {ev}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+                
+        except Exception as e:
+            msg = str(e)[:400]
+            try:
+                _append_runtime_event({"type": "agent_chat", "orchestrator": "langgraph", "user_id": user_id, "conversation_id": conversation_id, "ok": False, "error": msg, "ts": now})
+            except Exception:
+                pass
+            try:
+                _append_runtime_metric({"ts": now, "orchestrator": "langgraph", "provider": "foza", "duration_ms": int((time.time() - started) * 1000), "conversation_id": conversation_id, "ok": False})
+            except Exception:
+                pass
+            
+            err_payload = {
+                "response": "Xin lỗi, hiện agent đang gặp sự cố khi chạy LangGraph. Bạn thử lại giúp mình nhé.",
+                "actions": [],
+                "metadata": {"mode": "cpu", "orchestrator": "langgraph", "provider": "foza", "fallback": "langgraph_failed", "error": msg, "duration_ms": int((time.time() - started) * 1000)},
+                "conversation_id": conversation_id,
+            }
+            yield f"event: error\ndata: {json.dumps(err_payload, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(sse_generator(), media_type="text/event-stream; charset=utf-8")
+
+
+@app.get("/v1/llmops/metrics")
+async def get_llmops_metrics():
+    metrics_path = os.path.join(REPO_ROOT, "logs", "llmops_metrics.jsonl")
+    if not os.path.exists(metrics_path):
+        return {
+            "request_count": 0,
+            "avg_latency_ms": 0.0,
+            "min_latency_ms": 0.0,
+            "max_latency_ms": 0.0,
+            "p95_latency_ms": 0.0,
+            "node_stats": {},
+        }
+    
+    latencies = []
+    node_latencies = {}
+    try:
+        with open(metrics_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    m = json.loads(line)
+                    if m.get("name") == "langgraph.node.latency_ms":
+                        val = float(m.get("value", 0))
+                        node = m.get("metadata", {}).get("node", "unknown")
+                        latencies.append(val)
+                        node_latencies.setdefault(node, []).append(val)
+                except Exception:
+                    pass
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"failed_to_read_metrics:{str(e)}")
+
+    count = len(latencies)
+    avg_lat = sum(latencies) / count if count > 0 else 0.0
+    min_lat = min(latencies) if count > 0 else 0.0
+    max_lat = max(latencies) if count > 0 else 0.0
+    
+    sorted_lat = sorted(latencies)
+    p95_lat = sorted_lat[int(count * 0.95)] if count > 0 else 0.0
+
+    node_stats = {}
+    for node, vals in node_latencies.items():
+        n_count = len(vals)
+        node_stats[node] = {
+            "count": n_count,
+            "avg_latency_ms": round(sum(vals) / n_count, 2) if n_count > 0 else 0.0,
+            "max_latency_ms": round(max(vals), 2) if n_count > 0 else 0.0,
+        }
+
+    return {
+        "request_count": count,
+        "avg_latency_ms": round(avg_lat, 2),
+        "min_latency_ms": round(min_lat, 2),
+        "max_latency_ms": round(max_lat, 2),
+        "p95_latency_ms": round(p95_lat, 2),
+        "node_stats": node_stats,
+    }
+
+
+@app.get("/v1/llmops/traces")
+async def get_llmops_traces(limit: int = 50):
+    events_path = os.path.join(REPO_ROOT, "logs", "llmops_events.jsonl")
+    if not os.path.exists(events_path):
+        return {"traces": []}
+
+    events = []
+    try:
+        with open(events_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    events.append(json.loads(line))
+                except Exception:
+                    pass
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"failed_to_read_events:{str(e)}")
+
+    traces = []
+    active_runs = {}
+    
+    for ev in events:
+        ts = ev.get("ts")
+        ev_type = ev.get("type")
+        meta = ev.get("metadata") or {}
+        node = meta.get("node")
+        conv_id = meta.get("conversation_id") or "unknown_session"
+        ls_run_id = meta.get("langsmith_run_id")
+
+        if ev_type == "langgraph_node_start":
+            if conv_id not in active_runs:
+                active_runs[conv_id] = {
+                    "conversation_id": conv_id,
+                    "started_at": ts,
+                    "ended_at": None,
+                    "steps": [],
+                    "status": "running",
+                    "langsmith_run_id": ls_run_id
+                }
+            
+            active_runs[conv_id]["steps"].append({
+                "node": node,
+                "started_at": ts,
+                "ended_at": None,
+                "elapsed_ms": None,
+                "error": None,
+                "status": "running"
+            })
+            if ls_run_id and not active_runs[conv_id]["langsmith_run_id"]:
+                active_runs[conv_id]["langsmith_run_id"] = ls_run_id
+                
+        elif ev_type == "langgraph_node_end":
+            if conv_id in active_runs:
+                trace = active_runs[conv_id]
+                for step in reversed(trace["steps"]):
+                    if step["node"] == node and step["status"] == "running":
+                        step["ended_at"] = ts
+                        step["elapsed_ms"] = meta.get("elapsed_ms")
+                        step["error"] = meta.get("error")
+                        step["status"] = "failed" if meta.get("error") else "completed"
+                        break
+                
+                if node in ("default_agent", "triage_agent", "therapy_agent", "care_plan_agent", "medication_agent", "doctor_referral_agent", "END"):
+                    trace["ended_at"] = ts
+                    trace["status"] = "failed" if any(s.get("error") for s in trace["steps"]) else "completed"
+                    traces.append(trace)
+                    del active_runs[conv_id]
+
+    for conv_id, trace in active_runs.items():
+        traces.append(trace)
+
+    traces.sort(key=lambda t: t.get("started_at", ""), reverse=True)
+    return {"traces": traces[:limit]}
 
 
 @app.post("/v1/vision-multi")
@@ -3228,6 +3452,40 @@ async def graph_evidence(req: GraphEvidenceRequest, request: Request):
             raise HTTPException(status_code=401, detail="Unauthorized")
 
     t0 = time.time()
+    
+    if req.cypher_query:
+        driver = _get_graph_driver()
+        if driver is None:
+            return _build_graph_evidence_response(t0, req.query or "", False, 503, "graph_down", error="Graph not available")
+        try:
+            with driver.session() as s:
+                res = s.run(req.cypher_query)
+                records = [r.data() for r in res]
+                
+                entities = []
+                edges = []
+                seen_entities = set()
+                for r in records:
+                    for val in r.values():
+                        if isinstance(val, dict):
+                            if "name" in val and "id" in val:
+                                if val["id"] not in seen_entities:
+                                    seen_entities.add(val["id"])
+                                    entities.append(val)
+                            elif "rel" in val or ("entity_id" in val and "other_id" in val):
+                                edges.append(val)
+                                
+                return _build_graph_evidence_response(
+                    t0, req.query or "", True, 200, "graph_ok",
+                    entities=entities if entities else records,
+                    edges=edges,
+                    records=records
+                )
+        except Exception as e:
+            _reset_graph_driver()
+            status_code, reason, error = _map_graph_exception(e)
+            return _build_graph_evidence_response(t0, req.query or "", False, status_code, reason, error=error)
+
     q = (req.query or "").strip()
     if not q:
         return _build_graph_evidence_response(t0, q, True, 200, "graph_ok", entities=[], edges=[])

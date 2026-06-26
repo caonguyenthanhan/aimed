@@ -9,10 +9,13 @@ This module uses the `langsmith` SDK directly to create runs for:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import contextvars
 import os
 from typing import Any, Dict, Optional
 
 from ..settings import LlmopsSettings
+
+active_span: contextvars.ContextVar[Optional[LangsmithRun]] = contextvars.ContextVar("active_span", default=None)
 
 
 def _truncate(obj: Any, *, max_chars: int) -> Any:
@@ -57,6 +60,8 @@ class LangsmithTracer:
         except Exception:
             return None
         try:
+            if parent is None:
+                parent = active_span.get()
             payload_inputs = inputs if (self.log_inputs and inputs is not None) else {}
             payload_outputs: Dict[str, Any] = {}
             rt = RunTree(
