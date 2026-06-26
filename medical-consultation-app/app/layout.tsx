@@ -1,4 +1,4 @@
-﻿import type React from "react"
+import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { GeistMono } from "geist/font/mono"
@@ -63,7 +63,7 @@ export default function RootLayout({
                 <div className="absolute top-[10%] -right-[15%] w-[50%] h-[50%] rounded-full bg-teal-200/15 dark:bg-teal-400/8 blur-[120px] animate-blob animation-delay-2000" />
                 <div className="absolute -bottom-[10%] left-[25%] w-[40%] h-[40%] rounded-full bg-blue-100/15 dark:bg-blue-500/5 blur-[120px] animate-blob animation-delay-4000" />
               </div>
-              <div className="flex-1 flex flex-col min-h-0 w-full">
+              <div className="flex-1 flex flex-col min-h-0 w-full overflow-y-auto">
                 <Suspense fallback={null}>{children}</Suspense>
               </div>
             </div>
