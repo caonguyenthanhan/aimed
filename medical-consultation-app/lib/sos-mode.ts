@@ -31,6 +31,15 @@ export function assessSos(text: string, history?: any[]): SosAssessment {
     }
   }
   const combined = parts.join("\n")
+  
+  // Normalize for checking indirect helper pattern (e.g., helping a friend)
+  const normalizedCombined = combined.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d")
+  const isIndirect = /\b(giup ban|khuyen ban|cho ban|ban toi|ban cua toi|giup nguoi ban)\b/i.test(normalizedCombined)
+  
+  if (isIndirect) {
+    return { triggered: false, score: 0, reasons: [], hotlines: HOTLINES }
+  }
+
   let score = 0
   const reasons: string[] = []
   for (const k of KEYWORDS) {
