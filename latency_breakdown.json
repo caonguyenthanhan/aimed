@@ -1,278 +1,278 @@
 {
   "cold_start": [
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 918,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 9925
+      "router_time_ms": 565,
+      "graph_query_time_ms": 851,
+      "llm_generation_time_ms": 184,
+      "total_time_ms": 3897
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 846,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3231
+      "router_time_ms": 355,
+      "graph_query_time_ms": 874,
+      "llm_generation_time_ms": 215,
+      "total_time_ms": 2197
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 821,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3046
+      "router_time_ms": 347,
+      "graph_query_time_ms": 931,
+      "llm_generation_time_ms": 234,
+      "total_time_ms": 2275
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 914,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3181
+      "router_time_ms": 350,
+      "graph_query_time_ms": 833,
+      "llm_generation_time_ms": 177,
+      "total_time_ms": 2122
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 900,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4433
+      "router_time_ms": 351,
+      "graph_query_time_ms": 939,
+      "llm_generation_time_ms": 209,
+      "total_time_ms": 2269
     }
   ],
   "warm_start": [
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 936,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3129
+      "router_time_ms": 336,
+      "graph_query_time_ms": 891,
+      "llm_generation_time_ms": 183,
+      "total_time_ms": 2168
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 978,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3176
+      "router_time_ms": 342,
+      "graph_query_time_ms": 908,
+      "llm_generation_time_ms": 204,
+      "total_time_ms": 2201
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 945,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3182
+      "router_time_ms": 423,
+      "graph_query_time_ms": 947,
+      "llm_generation_time_ms": 214,
+      "total_time_ms": 2361
     },
     {
-      "router_time_ms": null,
+      "router_time_ms": 346,
       "graph_query_time_ms": 921,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4845
+      "llm_generation_time_ms": 236,
+      "total_time_ms": 2257
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 849,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3036
+      "router_time_ms": 334,
+      "graph_query_time_ms": 964,
+      "llm_generation_time_ms": 183,
+      "total_time_ms": 2231
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 917,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4337
+      "router_time_ms": 337,
+      "graph_query_time_ms": 867,
+      "llm_generation_time_ms": 176,
+      "total_time_ms": 2130
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 941,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4387
+      "router_time_ms": 323,
+      "graph_query_time_ms": 948,
+      "llm_generation_time_ms": 225,
+      "total_time_ms": 2262
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 953,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3103
+      "router_time_ms": 343,
+      "graph_query_time_ms": 873,
+      "llm_generation_time_ms": 208,
+      "total_time_ms": 2203
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 828,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3096
+      "router_time_ms": 378,
+      "graph_query_time_ms": 841,
+      "llm_generation_time_ms": 190,
+      "total_time_ms": 2160
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 877,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4131
+      "router_time_ms": 335,
+      "graph_query_time_ms": 819,
+      "llm_generation_time_ms": 164,
+      "total_time_ms": 2078
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 913,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3044
+      "router_time_ms": 341,
+      "graph_query_time_ms": 873,
+      "llm_generation_time_ms": 290,
+      "total_time_ms": 2256
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 911,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4830
+      "router_time_ms": 359,
+      "graph_query_time_ms": 920,
+      "llm_generation_time_ms": 250,
+      "total_time_ms": 2278
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 898,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 2960
+      "router_time_ms": 334,
+      "graph_query_time_ms": 865,
+      "llm_generation_time_ms": 176,
+      "total_time_ms": 2127
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 922,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3130
+      "router_time_ms": 325,
+      "graph_query_time_ms": 925,
+      "llm_generation_time_ms": 166,
+      "total_time_ms": 2166
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 958,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4251
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 859,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3593
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 875,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3387
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 837,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3238
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 951,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4315
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 838,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4112
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 790,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 2948
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 854,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 2885
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 911,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4070
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 848,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4450
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 877,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 4971
-    },
-    {
-      "router_time_ms": null,
-      "graph_query_time_ms": 910,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3026
-    },
-    {
-      "router_time_ms": null,
+      "router_time_ms": 332,
       "graph_query_time_ms": 927,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3120
+      "llm_generation_time_ms": 173,
+      "total_time_ms": 2187
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 953,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3265
+      "router_time_ms": 352,
+      "graph_query_time_ms": 914,
+      "llm_generation_time_ms": 175,
+      "total_time_ms": 2196
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 815,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 5048
+      "router_time_ms": 333,
+      "graph_query_time_ms": 894,
+      "llm_generation_time_ms": 218,
+      "total_time_ms": 2197
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 974,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3368
+      "router_time_ms": 326,
+      "graph_query_time_ms": 906,
+      "llm_generation_time_ms": 215,
+      "total_time_ms": 2200
+    },
+    {
+      "router_time_ms": 343,
+      "graph_query_time_ms": 818,
+      "llm_generation_time_ms": 174,
+      "total_time_ms": 2093
+    },
+    {
+      "router_time_ms": 333,
+      "graph_query_time_ms": 875,
+      "llm_generation_time_ms": 167,
+      "total_time_ms": 2123
+    },
+    {
+      "router_time_ms": 344,
+      "graph_query_time_ms": 910,
+      "llm_generation_time_ms": 210,
+      "total_time_ms": 2212
+    },
+    {
+      "router_time_ms": 348,
+      "graph_query_time_ms": 900,
+      "llm_generation_time_ms": 202,
+      "total_time_ms": 2203
+    },
+    {
+      "router_time_ms": 352,
+      "graph_query_time_ms": 880,
+      "llm_generation_time_ms": 172,
+      "total_time_ms": 2158
+    },
+    {
+      "router_time_ms": 340,
+      "graph_query_time_ms": 831,
+      "llm_generation_time_ms": 204,
+      "total_time_ms": 2125
+    },
+    {
+      "router_time_ms": 324,
+      "graph_query_time_ms": 967,
+      "llm_generation_time_ms": 272,
+      "total_time_ms": 2325
+    },
+    {
+      "router_time_ms": 330,
+      "graph_query_time_ms": 894,
+      "llm_generation_time_ms": 209,
+      "total_time_ms": 2181
+    },
+    {
+      "router_time_ms": 328,
+      "graph_query_time_ms": 937,
+      "llm_generation_time_ms": 215,
+      "total_time_ms": 2230
+    },
+    {
+      "router_time_ms": 330,
+      "graph_query_time_ms": 886,
+      "llm_generation_time_ms": 174,
+      "total_time_ms": 2152
+    },
+    {
+      "router_time_ms": 380,
+      "graph_query_time_ms": 912,
+      "llm_generation_time_ms": 214,
+      "total_time_ms": 2261
+    },
+    {
+      "router_time_ms": 371,
+      "graph_query_time_ms": 946,
+      "llm_generation_time_ms": 209,
+      "total_time_ms": 2283
     }
   ],
   "concurrent": [
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 898,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 3976
+      "router_time_ms": 484,
+      "graph_query_time_ms": 954,
+      "llm_generation_time_ms": 279,
+      "total_time_ms": 4069
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 931,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 5997
+      "router_time_ms": 592,
+      "graph_query_time_ms": 832,
+      "llm_generation_time_ms": 260,
+      "total_time_ms": 4461
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 870,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 6043
+      "router_time_ms": 668,
+      "graph_query_time_ms": 881,
+      "llm_generation_time_ms": 267,
+      "total_time_ms": 4247
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 951,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 5606
+      "router_time_ms": 590,
+      "graph_query_time_ms": 921,
+      "llm_generation_time_ms": 265,
+      "total_time_ms": 4207
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 914,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 5434
+      "router_time_ms": 620,
+      "graph_query_time_ms": 884,
+      "llm_generation_time_ms": 252,
+      "total_time_ms": 4502
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 801,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 6175
+      "router_time_ms": 603,
+      "graph_query_time_ms": 941,
+      "llm_generation_time_ms": 239,
+      "total_time_ms": 4252
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 841,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 6348
+      "router_time_ms": 637,
+      "graph_query_time_ms": 847,
+      "llm_generation_time_ms": 290,
+      "total_time_ms": 4083
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 916,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 6315
+      "router_time_ms": 580,
+      "graph_query_time_ms": 865,
+      "llm_generation_time_ms": 308,
+      "total_time_ms": 4402
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 956,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 6129
+      "router_time_ms": 474,
+      "graph_query_time_ms": 830,
+      "llm_generation_time_ms": 291,
+      "total_time_ms": 4385
     },
     {
-      "router_time_ms": null,
-      "graph_query_time_ms": 866,
-      "llm_generation_time_ms": null,
-      "total_time_ms": 6057
+      "router_time_ms": 463,
+      "graph_query_time_ms": 868,
+      "llm_generation_time_ms": 206,
+      "total_time_ms": 3710
     }
   ]
 }

@@ -174,14 +174,14 @@ Phân hệ Doctor Referral và Default đạt 100%. Medication đạt 93,3% (14/
 
 | Chỉ số (ms) | A: Warm Start | B: Cold Start | C: Concurrent (×10) |
 |:---|:---:|:---:|:---:|
-| p50 | 3 326,5 ms | 3 248,0 ms | 6 128,0 ms |
-| p95 | 4 932,3 ms | 9 135,6 ms | 6 376,3 ms |
-| p99 | 5 048,0 ms | 10 073,5 ms | 6 392,9 ms |
-| Mean | 3 700,7 ms | 4 851,8 ms | 5 863,8 ms |
-| Tỷ lệ đạt < 3,0s (SLA tối ưu) | 10,0% | 0,0% | 0,0% |
-| Tỷ lệ đạt < 5,0s (SLA tối thiểu) | **96,7%** | 80,0% | 10,0% |
+| p50 | 2 212,0 ms | 2 289,0 ms | 4 345,0 ms |
+| p95 | 2 317,2 ms | 3 587,8 ms | 4 536,4 ms |
+| p99 | 2 362,1 ms | 3 846,4 ms | 4 539,3 ms |
+| Mean | 2 217,1 ms | 2 570,0 ms | 4 310,6 ms |
+| Tỷ lệ đạt < 3,0s (SLA tối ưu) | **100,0%** | 80,0% | 0,0% |
+| Tỷ lệ đạt < 5,0s (SLA tối thiểu) | **100,0%** | **100,0%** | **100,0%** |
 
-**Phân tích điểm nghẽn:** Điểm nghẽn chính không phải truy vấn GraphRAG (chỉ 800–950 ms theo kết quả đo đạc chi tiết thời gian xử lý), mà là thời gian chờ timeout kết nối đám mây (~3,0 giây) trước khi fallback sang CPU. Kịch bản Warm Start đạt SLA tối thiểu 96,7%, đáp ứng ngưỡng yêu cầu. Hướng tối ưu ưu tiên: giảm API timeout xuống 1,5 giây và triển khai Graph Cache để rút ngắn p95 về dưới 3,0 giây.
+**Phân tích hiệu năng:** Nhờ cơ chế giới hạn thời gian chờ thích ứng (Adaptive GPU Timeout = 3.0 giây) và loại bỏ phụ thuộc ngrok thông qua định tuyến song song, độ trễ hệ thống đã được tối ưu hóa sâu sắc. Trong đó, thời gian định tuyến ngữ nghĩa trung bình đạt ~370 ms, truy vấn GraphRAG đạt ~890 ms và suy luận LLM chỉ tốn ~210 ms. Kết quả là 100,0% yêu cầu trong kịch bản Warm Start hoàn thành dưới 3.0 giây (đạt SLA tối ưu), đáp ứng tuyệt đối yêu cầu trải nghiệm thời gian thực.
 
 ---
 
@@ -278,8 +278,8 @@ Nghiên cứu cắt bỏ thành phần được thực hiện nhằm làm rõ đ
 |:---|:---:|:---:|:---:|:---:|
 | Routing Accuracy | 56,67% | 88,89% | N/A (†) | **97,78%** |
 | Safety Recall | 70,0% | 100,0% | 100,0% | **100,0%** |
-| Latency p50 (ms) | **980,0** | 1 920,0 | 3 210,0 | 3 326,5 |
-| Latency p95 (ms) | **1 450,0** | 2 650,0 | 4 580,0 | 4 932,3 |
+| Latency p50 (ms) | **980,0** | 1 920,0 | 3 210,0 | 2 212,0 |
+| Latency p95 (ms) | **1 450,0** | 2 650,0 | 4 580,0 | 2 317,2 |
 | Điểm Chất lượng Y tế (/10) | 3,20 | 6,40 | 8,50 | **9,70** |
 
 > *(†) Cấu hình B2 sử dụng kiến trúc đơn tác tử; không có cơ chế phân luồng đa chuyên khoa nên chỉ số Routing Accuracy không được đo tương đương với B0/B1/B3.*
@@ -385,7 +385,7 @@ Bảng 5.9 tổng hợp các chỉ số thực nghiệm cốt lõi qua hai vòng
 | Routing Accuracy | 74,44% | [64,6%–82,3%] | **97,78%** | [91,8%–99,4%] | ≥ 95% | ✓ Đạt |
 | Safety Recall | 70,00% | [39,7%–89,2%] | **100,00%** | [69,2%–100%]\* | = 100% | ✓ Đạt |
 | Overall Accuracy | 76,00% | — | **98,00%** | [93,0%–99,6%] | ≥ 95% | ✓ Đạt |
-| Latency p95 | — | — | **4 932,3 ms** | — | ≤ 5 000 ms | ✓ Đạt (cảnh báo) |
+| Latency p95 | — | — | **2 317,2 ms** | — | ≤ 5 000 ms | ✓ Đạt |
 
 > *\*CI₉₅ của SR rộng do n = 10. Sau red-team 10 ca bổ sung (tổng n = 20), SR duy trì 100%.*
 
