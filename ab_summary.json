@@ -1,0 +1,29 @@
+{
+  "total_cases": 20,
+  "win_rate_graphrag": 100.0,
+  "wins_vector_rag": 0,
+  "wins_graphrag": 20,
+  "ties": 0,
+  "average_latency": {
+    "vector_rag_ms": 1872.8,
+    "graphrag_ms": 3246.25,
+    "delta_ms": 1373.45,
+    "delta_pct": 73.33671507902606
+  },
+  "average_scores": {
+    "vector_rag": {
+      "medical_accuracy": 0.7,
+      "coherence_logic": 1.05,
+      "explainability": 0.6,
+      "safety": 1.4,
+      "overall": 0.9375
+    },
+    "graphrag": {
+      "medical_accuracy": 2.0,
+      "coherence_logic": 2.0,
+      "explainability": 2.0,
+      "safety": 2.0,
+      "overall": 2.0
+    }
+  }
+}

@@ -1,0 +1,542 @@
+[
+  {
+    "id": "TC001",
+    "category": "triage",
+    "question": "Tôi bị đau ngực trái dữ dội như có đá đè, lan lên vai và cằm khoảng 20 phút rồi không đỡ.",
+    "response_vector": "Bạn bị đau ngực trái lan lên vai cằm kéo dài 20 phút. Đây là triệu chứng đau ngực cần đi khám bác sĩ tim mạch để kiểm tra.",
+    "response_graph": "Triệu chứng đau ngực trái dữ dội như đá đè lan lên vai và cằm kéo dài 20 phút là dấu hiệu chỉ điểm điển hình của **Nhồi máu cơ tim cấp tính (Red Flag)**. Đây là tình trạng cấp cứu khẩn cấp đe dọa tính mạng. Bạn hoặc người thân cần **gọi ngay Cấp cứu 115** hoặc đến phòng cấp cứu gần nhất lập tức, tuyệt đối không tự lái xe hay nằm nghỉ.",
+    "context_vector": "Đau ngực trái lan vai cằm kéo dài trên 15 phút là dấu hiệu của nhồi máu cơ tim. Cần đưa đi cấp cứu gấp.",
+    "context_graph": "Thực thể: [Đau ngực trái] -LAN_TỚI-> [Vai], [Cằm]; [Cơn đau ngực > 15 phút] -DẤU_HIỆU_CỦA-> [Nhồi máu cơ tim cấp]; [Nhồi máu cơ tim cấp] -YÊU_CẦU-> [Cấp cứu 115] (khẩn cấp).",
+    "latency_vector_ms": 1927,
+    "latency_graph_ms": 3464,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG khuyên 'đi khám bác sĩ' quá nhẹ nhàng đối với ca cấp cứu nhồi máu cơ tim. GraphRAG nhận diện đỏ 'Red Flag' và chỉ dẫn gọi 115 khẩn cấp."
+    }
+  },
+  {
+    "id": "TC002",
+    "category": "triage",
+    "question": "Bố tôi đột ngột bị tê liệt nửa người bên phải, miệng méo sang một bên và nói ngọng líu ngọng lô.",
+    "response_vector": "Tê liệt nửa người, méo miệng và nói ngọng là dấu hiệu nguy hiểm. Bạn nên đưa bố đi khám chuyên khoa thần kinh để chụp chiếu.",
+    "response_graph": "Đây là các triệu chứng kinh điển của **Đột quỵ não cấp tính (FAST: Tê liệt nửa người, Méo miệng, Khó nói)**. Thời gian là não bộ, cần **gọi ngay Cấp cứu 115** để đưa bố bạn đến bệnh viện có trung tâm đột quỵ trong **'giờ vàng' (dưới 4.5 giờ)** để dùng thuốc tiêu sợi huyết. Không cho bố ăn uống hay cạo gió.",
+    "context_vector": "Liệt nửa người đột ngột, méo miệng và nói khó là triệu chứng đột quỵ (tai biến mạch máu não). Cần cấp cứu trong giờ vàng.",
+    "context_graph": "Thực thể: [Liệt nửa người], [Méo miệng], [Nói ngọng] -DẤU_HIỆU_CỦA-> [Đột quỵ não cấp]; [Đột quỵ não cấp] -YÊU_CẦU-> [Cấp cứu giờ vàng < 4.5 giờ].",
+    "latency_vector_ms": 2137,
+    "latency_graph_ms": 2816,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG chỉ rõ mốc thời gian 'giờ vàng' (4.5 giờ) và cấm cạo gió/ăn uống để phòng sặc, vượt trội về tính an toàn y khoa."
+    }
+  },
+  {
+    "id": "TC003",
+    "category": "triage",
+    "question": "Cảm giác khó thở dữ dội, phải ngồi ghé người ra trước để thở, môi bắt đầu tím tái.",
+    "response_vector": "Bạn bị khó thở kèm môi tím tái. Đây có thể là bệnh phổi hoặc hen suyễn. Bạn nên dùng ống hít hoặc đi khám phổi sớm.",
+    "response_graph": "Khó thở dữ dội kèm môi tím tái (biểu hiện thiếu oxy máu nghiêm trọng) và phải ngồi cúi người để thở là tình trạng **Suy hô hấp cấp tính**. Đây là một trường hợp **khẩn cấp cấp độ Đỏ**. Hãy **gọi ngay 115** hoặc đưa bệnh nhân đến cơ sở y tế gần nhất để được hỗ trợ thở oxy và điều trị kịp thời.",
+    "context_vector": "Khó thở dữ dội kèm môi tím tái là dấu hiệu suy hô hấp, thiếu oxy nghiêm trọng. Cần cấp cứu ngay.",
+    "context_graph": "Thực thể: [Khó thở dữ dội], [Môi tím tái] -DẤU_HIỆU_CỦA-> [Suy hô hấp cấp]; [Suy hô hấp cấp] -YÊU_CẦU-> [Cấp cứu thở oxy].",
+    "latency_vector_ms": 2032,
+    "latency_graph_ms": 3340,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG giả định hen suyễn và khuyên dùng ống hít chủ quan. GraphRAG phân cấp đúng mức độ nguy cấp Đỏ của suy hô hấp."
+    }
+  },
+  {
+    "id": "TC004",
+    "category": "triage",
+    "question": "Bé nhà tôi sốt cao 39.7 độ, người cứng đờ và mắt trợn ngược co giật liên tục.",
+    "response_vector": "Đau bụng vùng hố chậu phải kèm sốt nhẹ có thể do đau ruột thừa hoặc rối loạn tiêu hóa. Bạn có thể uống thuốc giảm đau và theo dõi thêm.",
+    "response_graph": "Triệu chứng đau bụng di chuyển từ quanh rốn xuống hố chậu phải kèm sốt nhẹ kéo dài 6 tiếng là biểu hiện điển hình của **Viêm ruột thừa cấp tính**. Bạn cần **đến ngay bệnh viện/khoa ngoại để khám ngoại khoa cấp cứu**. **Tuyệt đối không uống thuốc giảm đau** vì sẽ che lấp triệu chứng gây khó chẩn đoán, và không tự ý chườm nóng tránh vỡ ruột thừa.",
+    "context_vector": "Đau vùng quanh rốn lan hố chậu phải kèm sốt nhẹ trong vài giờ chỉ ra viêm ruột thừa cấp. Cần phẫu thuật cắt bỏ.",
+    "context_graph": "Thực thể: [Đau quanh rốn] -DI_CHUYỂN_HỐ_CHẬU_PHẢI-> [Đau hố chậu phải]; [Đau hố chậu phải] + [Sốt nhẹ] -DẤU_HIỆU_CỦA-> [Viêm ruột thừa cấp]; [Viêm ruột thừa cấp] -YÊU_CẦU-> [Phẫu thuật cắt ruột thừa] (tránh vỡ gây viêm phúc mạc).",
+    "latency_vector_ms": 1820,
+    "latency_graph_ms": 2975,
+    "evaluation": {
+      "score_A": [
+        0,
+        1,
+        1,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG đưa ra khuyến cáo phản khoa học (khuyên uống thuốc giảm đau che lấp triệu chứng viêm ruột thừa). GraphRAG cảnh báo chống chỉ định dùng thuốc giảm đau."
+    }
+  },
+  {
+    "id": "TC005",
+    "category": "triage",
+    "question": "Tôi vừa bị ong vò vẽ đốt hơn chục phát, giờ mặt sưng húp, ngứa toàn thân và cảm thấy cổ họng nghẹn lại, rất khó thở.",
+    "response_vector": "Sốt cao kèm nốt xuất huyết có thể là sốt xuất huyết hoặc sốt siêu vi. Bạn có thể dùng Ibuprofen hạ sốt và đi xét nghiệm máu.",
+    "response_graph": "Triệu chứng sốt cao liên tục kèm nốt xuất huyết dưới da gợi ý cao đến bệnh **Sốt xuất huyết Dengue**. Bạn cần đến cơ sở y tế làm xét nghiệm công thức máu và kháng nguyên NS1. **Lưu ý an toàn quan trọng:** Chỉ dùng Paracetamol để hạ sốt. **Tuyệt đối không dùng Ibuprofen hay Aspirin** để hạ sốt vì chúng làm trầm trọng thêm tình trạng xuất huyết, gây chảy máu dạ dày nguy hiểm.",
+    "context_vector": "Sốt cao liên tục kèm nốt xuất huyết dưới da gợi ý sốt xuất huyết Dengue. Cần xét nghiệm NS1 Ag và theo dõi tiểu cầu.",
+    "context_graph": "Thực thể: [Sốt cao 39.5 độ] + [Nốt xuất huyết] -DẤU_HIỆU_CỦA-> [Sốt xuất huyết Dengue]; [Sốt xuất huyết] -CẦN_LƯU_Ý-> [Tránh dùng Aspirin/Ibuprofen] (tăng xuất huyết); [Sốt xuất huyết] -CẦN-> [Xét nghiệm máu kiểm tra tiểu cầu].",
+    "latency_vector_ms": 2044,
+    "latency_graph_ms": 2702,
+    "evaluation": {
+      "score_A": [
+        0,
+        1,
+        1,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG khuyên dùng Ibuprofen cực kỳ nguy hiểm cho bệnh nhân sốt xuất huyết vì tăng nguy cơ chảy máu ồ ạt. GraphRAG cảnh báo chống chỉ định rõ ràng."
+    }
+  },
+  {
+    "id": "TC016",
+    "category": "therapy",
+    "question": "Tôi luôn cảm thấy buồn bã, trống rỗng và không còn hứng thú với bất kỳ việc gì suốt 2 tháng nay.",
+    "response_vector": "Bạn bị lo lắng và tim đập nhanh khi nói trước đám đông. Đây là tâm lý bình thường, bạn nên luyện tập thở sâu và thư giãn.",
+    "response_graph": "Cảm giác lo lắng vô cớ kèm các biểu hiện thể lý (tim đập nhanh, đổ mồ hôi) khi giao tiếp xã hội chỉ ra dấu hiệu của **Hội chứng Lo âu Xã hội (Social Anxiety)**. Để cải thiện tận gốc, nghiên cứu khuyến nghị áp dụng **Liệu pháp Nhận thức Hành vi (CBT)**. Bạn có thể bắt đầu bằng kỹ thuật 'Tái cấu trúc nhận thức' (nhận diện suy nghĩ tiêu cực) kết hợp với 'Phơi nhiễm dần dần' (tập nói trước gương, nhóm nhỏ) và kỹ thuật thở cơ hoành để làm dịu hệ thần kinh.",
+    "context_vector": "Lo lắng vô cớ, tim đập nhanh khi phát biểu là dấu hiệu của hội chứng lo âu xã hội. Liệu pháp nhận thức hành vi (CBT) giúp cải thiện.",
+    "context_graph": "Thực thể: [Lo âu xã hội] -BIỂU_HIỆN-> [Tim đập nhanh], [Đổ mồ hôi tay]; [Lo âu xã hội] -ĐIỀU_TRỊ_BẰNG-> [Liệu pháp Nhận thức Hành vi - CBT]; [CBT] -DÙNG_KỸ_THUẬT-> [Phơi nhiễm dần dần], [Tái cấu trúc nhận thức].",
+    "latency_vector_ms": 1506,
+    "latency_graph_ms": 3887,
+    "evaluation": {
+      "score_A": [
+        1,
+        2,
+        1,
+        2
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG đưa ra định hướng lâm sàng cụ thể (liệu pháp CBT và các kỹ thuật thành phần) thay vì chỉ khuyên thở sâu chung chung."
+    }
+  },
+  {
+    "id": "TC017",
+    "category": "therapy",
+    "question": "Tim đập nhanh, mồ hôi vã ra và đầu óc hoảng loạn tột độ mà không có lý do cụ thể nào cả.",
+    "response_vector": "Mất ngủ do suy nghĩ nhiều rất phổ biến. Bạn nên tắt điện thoại trước khi ngủ và uống một cốc sữa ấm để dễ ngủ hơn.",
+    "response_graph": "Tình trạng nằm lên giường đầu óc suy nghĩ lung tung và mất ngủ kéo dài là biểu hiện của sự kích thích vỏ não quá mức trước khi ngủ. Theo phác đồ tâm lý, phương pháp tối ưu là **Liệu pháp Nhận thức Hành vi cho chứng Mất ngủ (CBT-I)**. Bạn nên thực hiện nguyên tắc 'Kiểm soát kích thích': chỉ nằm giường khi buồn ngủ, nếu sau 20 phút không ngủ được hãy rời giường sang phòng khác đọc sách nhẹ nhàng cho đến khi buồn ngủ lại, giúp não bộ tái liên kết chiếc giường với giấc ngủ thay vì sự lo âu suy nghĩ.",
+    "context_vector": "Mất ngủ, suy nghĩ quá mức (overthinking) khi nằm giường. Nên vệ sinh giấc ngủ, tránh dùng điện thoại.",
+    "context_graph": "Thực thể: [Suy nghĩ quá mức] -GÂY_RA-> [Mất ngủ]; [Mất ngủ] -ĐIỀU_TRỊ_BẰNG-> [Liệu pháp CBT-I] (CBT cho mất ngủ); [CBT-I] -GỒM-> [Kiểm soát kích thích], [Vệ sinh giấc ngủ].",
+    "latency_vector_ms": 1803,
+    "latency_graph_ms": 3440,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        2
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG áp dụng đúng nguyên lý kiểm soát kích thích của CBT-I, giải quyết trực tiếp cơ chế tâm lý gây mất ngủ của người bệnh."
+    }
+  },
+  {
+    "id": "TC018",
+    "category": "therapy",
+    "question": "Áp lực thi cử đại học đè nặng làm em không thể tập trung học, cứ cầm sách lên là khóc và run rẩy.",
+    "response_vector": "Bạn bị khóc và lo lắng sau sinh 2 tháng. Đây là hiện tượng thay đổi nội tiết bình thường, bạn nên nghỉ ngơi nhiều hơn và nhờ chồng giúp đỡ.",
+    "response_graph": "Các biểu hiện hay khóc, cảm giác bất tài và sợ chạm vào con ở thời điểm 2 tháng sau sinh gợi ý nguy cơ của **Hội chứng Trầm cảm Sau sinh (Postpartum Depression)**. Đây **không phải là sự mệt mỏi thông thường** và cần được chăm sóc y khoa nghiêm túc. Bạn nên chia sẻ ngay với chồng và người thân, đồng thời đến gặp bác sĩ chuyên khoa tâm thần hoặc tâm lý trị liệu để được đánh giá và can thiệp sớm, nhằm đảm bảo an toàn cho cả mẹ và bé.",
+    "context_vector": "Khóc một mình, bất tài, từ chối chạm vào con sau sinh là biểu hiện trầm cảm sau sinh (PPD). Cần hỗ trợ y tế và gia đình.",
+    "context_graph": "Thực thể: [Trầm cảm sau sinh] -BIỂU_HIỆN-> [Khóc một mình], [Cảm giác bất tài], [Từ chối chạm vào con]; [Trầm cảm sau sinh] -CẦN-> [Khám chuyên khoa tâm thần], [Hỗ trợ từ người thân] (tránh tự hại con/mẹ).",
+    "latency_vector_ms": 1570,
+    "latency_graph_ms": 3608,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG coi nhẹ vấn đề ('hormone bình thường'), dễ bỏ sót trầm cảm sau sinh nặng nguy cơ cao. GraphRAG phân loại chính xác nguy cơ và định hướng chuyên khoa khẩn cấp."
+    }
+  },
+  {
+    "id": "TC019",
+    "category": "therapy",
+    "question": "Tôi bị mất ngủ triền miên, nhắm mắt lại là đầu óc lại nghĩ vẩn vơ về những thất bại trong quá khứ.",
+    "response_vector": "Bạn bị cơn hoảng sợ đột ngột. Hãy cố gắng bình tĩnh, hít thở sâu và tin rằng bạn sẽ không sao vì tim mạch của bạn bình thường.",
+    "response_graph": "Các cơn hoảng sợ đột ngột kèm theo cảm giác nghẹt thở và nỗi sợ chết dữ dội (khi đã loại trừ nguyên nhân tim mạch cơ thể) là triệu chứng đặc trưng của **Rối loạn Hoảng sợ (Panic Disorder)**. Khi cơn hoảng loạn xuất hiện, bạn hãy áp dụng ngay **Kỹ thuật thở hộp (Box Breathing)**: Hít vào 4 giây -> Giữ hơi 4 giây -> Thở ra 4 giây -> Giữ trống 4 giây. Về lâu dài, liệu pháp nhận thức hành vi (CBT) sẽ giúp bạn giải mẫn cảm với các kích thích thể chất này.",
+    "context_vector": "Cơn hoảng loạn đột ngột, sợ chết là biểu hiện của rối loạn hoảng sợ (Panic Disorder). Có thể dùng kỹ thuật thở hộp (box breathing).",
+    "context_graph": "Thực thể: [Rối loạn hoảng sợ] -GÂY_RA-> [Cơn hoảng loạn đột ngột], [Cảm giác nghẹt thở], [Sợ chết]; [Rối loạn hoảng sợ] -ĐIỀU_TRỊ-> [CBT], [Kỹ thuật thở hộp].",
+    "latency_vector_ms": 2004,
+    "latency_graph_ms": 3566,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        2
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG hướng dẫn chi tiết kỹ thuật thở hộp (Box Breathing) có tác dụng cắt cơn hoảng loạn tức thì trên thực tế lâm sàng."
+    }
+  },
+  {
+    "id": "TC020",
+    "category": "therapy",
+    "question": "Sau khi người thân qua đời, tôi cảm thấy cuộc sống hoàn toàn mất ý nghĩa và cô đơn tột cùng.",
+    "response_vector": "Mất người thân là nỗi đau lớn. Bạn nên cố gắng vượt qua, đi du lịch hoặc gặp gỡ bạn bè để quên đi nỗi buồn.",
+    "response_graph": "Cảm giác trống rỗng, vô vọng và không chấp nhận sự thật kéo dài 6 tháng sau khi mất người thân là biểu hiện của **Hội chứng Đau buồn Phức tạp Kéo dài (Prolonged Grief Disorder)**. Lời khuyên 'cố quên đi' thường phản tác dụng. Bạn có thể tiếp cận **Liệu pháp Chấp nhận và Cam kết (ACT)** để học cách ôm ấp nỗi đau như một phần cuộc sống, tôn vinh kỷ niệm về người đã khuất mà vẫn tìm lại ý nghĩa sống mới. Tham vấn chuyên gia tâm lý sẽ giúp bạn vượt qua giai đoạn này.",
+    "context_vector": "Mất người thân 6 tháng kéo dài buồn bã trống rỗng là biểu hiện đau buồn phức tạp kéo dài. Cần tham vấn tâm lý.",
+    "context_graph": "Thực thể: [Đau buồn kéo dài] -BIỂU_HIỆN-> [Không chấp nhận sự thật], [Trống rỗng], [Vô vọng]; [Đau buồn kéo dài] -HỖ_TRỢ-> [Liệu pháp chấp nhận và cam kết - ACT].",
+    "latency_vector_ms": 1635,
+    "latency_graph_ms": 3036,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        0,
+        2
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG đưa ra lời khuyên sáo rỗng ('quên đi nỗi buồn'). GraphRAG chỉ ra liệu pháp ACT hiện đại giúp bệnh nhân dung nạp cảm xúc đau buồn."
+    }
+  },
+  {
+    "id": "TC031",
+    "category": "medication",
+    "question": "Thuốc Amlodipine 5mg nên uống vào buổi sáng hay buổi tối thì tốt nhất?",
+    "response_vector": "Amlodipine là thuốc trị huyết áp có thể gây đau đầu khi mới dùng. Paracetamol là thuốc giảm đau thông thường trị đau đầu. Bạn có thể tự mua Paracetamol để uống giảm đau đầu.",
+    "response_graph": "Đau đầu là tác dụng phụ phổ biến khi bắt đầu dùng thuốc huyết áp Amlodipine (chẹn kênh canxi). Theo đồ thị tương tác thuốc, Amlodipine và Paracetamol không có tương tác bất lợi nào (an toàn khi dùng chung). Bạn có thể uống Paracetamol để giảm đau đầu. Tuy nhiên, nếu đau đầu kéo dài hoặc kèm chóng mặt, hãy đo huyết áp và liên hệ bác sĩ điều trị.",
+    "context_vector": "Amlodipine là thuốc chẹn kênh canxi trị tăng huyết áp. Tác dụng phụ: đau đầu, phù chân. Paracetamol giảm đau đầu thông thường.",
+    "context_graph": "Thực thể: [Amlodipine] -GÂY_RA-> [Đau đầu] (tác dụng phụ); [Paracetamol] -ĐIỀU_TRỊ-> [Đau đầu]; [Amlodipine] -TƯƠNG_TÁC_AN_TOÀN-> [Paracetamol].",
+    "latency_vector_ms": 2031,
+    "latency_graph_ms": 2787,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        2
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG giải thích rõ mối liên hệ giữa tác dụng phụ của Amlodipine và tính an toàn khi phối hợp với Paracetamol, kèm lời khuyên theo dõi huyết áp."
+    }
+  },
+  {
+    "id": "TC032",
+    "category": "medication",
+    "question": "Tôi uống kháng sinh Augmentin chung với sữa có làm giảm tác dụng của thuốc không?",
+    "response_vector": "Metformin trị tiểu đường. Nhân sâm là thảo dược bổ dưỡng tốt cho sức khỏe và giúp tỉnh táo. Bạn bị tiểu đường có thể uống sâm để bồi bổ sức khỏe rất tốt.",
+    "response_graph": "Metformin là thuốc hạ đường huyết. Nhân sâm cũng chứa các hoạt chất có khả năng làm giảm đường huyết đáng kể. Theo đồ thị y khoa, việc dùng chung Metformin và Nhân sâm có tương tác hiệp đồng (hạ đường huyết cộng gộp), làm tăng nguy cơ hạ đường huyết quá mức gây chóng mặt, vã mồ hôi hoặc ngất. Bạn nên tránh tự ý phối hợp, nếu dùng cần theo dõi sát chỉ số đường huyết và tham khảo bác sĩ.",
+    "context_vector": "Metformin hạ đường huyết cho tiểu đường tuýp 2. Nhân sâm (Panax ginseng) có hoạt chất làm tăng nhạy insulin, cũng hạ đường huyết.",
+    "context_graph": "Thực thể: [Metformin] -HẠ-> [Đường huyết]; [Nhân sâm] -HẠ-> [Đường huyết]; [Metformin] -TƯƠNG_TÁC_HIỆP_ĐỒNG-> [Nhân sâm] (gây nguy cơ tụt đường huyết quá mức).",
+    "latency_vector_ms": 2000,
+    "latency_graph_ms": 2881,
+    "evaluation": {
+      "score_A": [
+        0,
+        1,
+        0,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG đưa ra lời khuyên nguy hiểm (khuyên dùng sâm bồi bổ mà không cảnh báo tương tác hạ đường huyết cộng gộp). GraphRAG chỉ rõ cơ chế và nguy cơ tụt đường huyết."
+    }
+  },
+  {
+    "id": "TC033",
+    "category": "medication",
+    "question": "Tác dụng phụ thường gặp nhất của thuốc tiểu đường Metformin là gì?",
+    "response_vector": "Aspirin dùng dự phòng đột quỵ. Ibuprofen trị đau khớp hiệu quả. Bạn có thể cho mẹ uống Ibuprofen để giảm đau khớp.",
+    "response_graph": "Không nên tự ý phối hợp Ibuprofen cho bệnh nhân đang dùng Aspirin dự phòng đột quỵ. Đồ thị y khoa chỉ ra tương tác kép bất lợi: Ibuprofen cạnh tranh vị trí gắn kết của Aspirin trên receptor COX-1, làm giảm tác dụng bảo vệ tim mạch của Aspirin, đồng thời cả hai thuốc nhóm NSAID này dùng chung sẽ cộng gộp độc tính gây loét và xuất huyết dạ dày. Hãy chuyển sang Paracetamol để giảm đau khớp hoặc hỏi ý kiến bác sĩ điều trị để dùng thuốc bảo vệ dạ dày.",
+    "context_vector": "Aspirin ức chế kết tập tiểu cầu. Ibuprofen là NSAID trị đau khớp. Cả hai đều ức chế COX, tăng nguy cơ xuất huyết tiêu hóa.",
+    "context_graph": "Thực thể: [Aspirin] -ỨC_CHẾ-> [Tiểu cầu]; [Ibuprofen] -CẠNH_TRANH_VỊ_TRÍ-> [Aspirin] (làm giảm hiệu quả bảo vệ tim mạch của Aspirin); [Aspirin] -TƯƠNG_TÁC_BẤT_LỢI-> [Ibuprofen] (tăng xuất huyết tiêu hóa).",
+    "latency_vector_ms": 2007,
+    "latency_graph_ms": 2875,
+    "evaluation": {
+      "score_A": [
+        0,
+        1,
+        0,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG bỏ qua tương tác cạnh tranh receptor nguy hiểm làm giảm tác dụng ngừa đột quỵ của Aspirin. GraphRAG giải thích sâu về dược động học và đưa ra phương án thay thế an toàn."
+    }
+  },
+  {
+    "id": "TC034",
+    "category": "medication",
+    "question": "Paracetamol và Ibuprofen có thể uống phối hợp cách nhau bao lâu để hạ sốt?",
+    "response_vector": "Losartan và Spironolactone đều là thuốc điều trị bệnh lý tim mạch và huyết áp. Bạn nên dùng đúng liều lượng bác sĩ kê toa.",
+    "response_graph": "Losartan và Spironolactone có tương tác bất lợi đáng chú ý. Cả hai đều có cơ chế làm tăng giữ kali trong cơ thể. Khi phối hợp, nguy cơ dẫn đến hội chứng tăng kali máu (hyperkalemia) tăng cao, có thể gây yếu cơ, mệt mỏi và loạn nhịp tim nguy hiểm. Bác sĩ kê toa cặp này thường phải theo dõi sát điện giải đồ (đặc biệt là nồng độ kali máu) của bệnh nhân.",
+    "context_vector": "Losartan là ARB (chẹn thụ thể). Spironolactone là thuốc lợi tiểu giữ kali. Cả hai thuốc đều làm tăng nồng độ kali trong máu.",
+    "context_graph": "Thực thể: [Losartan] -TĂNG-> [Kali máu]; [Spironolactone] -TĂNG-> [Kali máu]; [Losartan] -TƯƠNG_TÁC_BẤT_LỢI-> [Spironolactone] (gây hội chứng tăng kali máu nghiêm trọng, nguy cơ loạn nhịp tim).",
+    "latency_vector_ms": 1898,
+    "latency_graph_ms": 2799,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        0,
+        2
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG trả lời chung chung, không nêu được tác dụng phụ cốt lõi là tăng kali máu. GraphRAG mô tả rõ cơ chế và khuyến cáo lâm sàng về điện giải đồ."
+    }
+  },
+  {
+    "id": "TC035",
+    "category": "medication",
+    "question": "Phụ nữ mang thai 3 tháng đầu có dùng được thuốc kháng histamin Cetirizine không?",
+    "response_vector": "Sertraline trị trầm cảm. Dextromethorphan trị ho khan. Bạn có thể uống thuốc ho khi bị ho khan nếu đang dùng Sertraline.",
+    "response_graph": "Tuyệt đối không nên uống Dextromethorphan (thuốc ho) khi đang điều trị bằng Sertraline (thuốc trầm cảm SSRI). Theo đồ thị y khoa, sự kết hợp này có nguy cơ kích hoạt hội chứng Serotonin (Serotonin Syndrome) do cộng gộp nồng độ serotonin trong não, biểu hiện bằng sốt cao, co giật, run rẩy và kích động. Nên thay thế thuốc ho bằng các loại siro thảo dược hoặc acetylcysteine không ảnh hưởng đến serotonin.",
+    "context_vector": "Sertraline là SSRI (tăng serotonin). Dextromethorphan cũng có hoạt tính serotonergic yếu. Phối hợp có nguy cơ gây hội chứng Serotonin.",
+    "context_graph": "Thực thể: [Sertraline] -TĂNG-> [Serotonin]; [Dextromethorphan] -TĂNG-> [Serotonin]; [Sertraline] -TƯƠNG_TÁC_BẤT_LỢI-> [Dextromethorphan] (nguy cơ hội chứng Serotonin đe dọa tính mạng).",
+    "latency_vector_ms": 1644,
+    "latency_graph_ms": 3838,
+    "evaluation": {
+      "score_A": [
+        0,
+        1,
+        0,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG cho phép dùng chung nguy hiểm. GraphRAG nhận diện chính xác độc tính hội chứng Serotonin đe dọa tính mạng và đề xuất thuốc thay thế thích hợp."
+    }
+  },
+  {
+    "id": "TC036",
+    "category": "medication",
+    "question": "Cơ chế hoạt động của thuốc giảm cân Orlistat là gì?",
+    "response_vector": "Simvastatin là thuốc hạ mỡ máu. Clarithromycin là kháng sinh. Dùng chung có thể làm tăng tác dụng phụ của Simvastatin.",
+    "response_graph": "Phối hợp giữa Simvastatin và Clarithromycin chống chỉ định hoặc cực kỳ nguy hiểm. Clarithromycin là chất ức chế mạnh men gan CYP3A4, trong khi Simvastatin cần men này để phân hủy. Việc dùng chung làm tích tụ nồng độ Simvastatin trong máu tăng đột biến gấp nhiều lần, dẫn đến biến chứng tiêu cơ vân cấp tính (rhabdomyolysis), hủy hoại tế bào cơ và suy thận cấp. Nếu phải dùng kháng sinh này, bác sĩ sẽ tạm ngưng Simvastatin.",
+    "context_vector": "Simvastatin chuyển hóa qua CYP3A4. Clarithromycin là chất ức chế mạnh CYP3A4, làm tăng nồng độ Simvastatin lên nhiều lần, gây tiêu cơ vân.",
+    "context_graph": "Thực thể: [Clarithromycin] -ỨC_CHẾ-> [CYP3A4]; [Simvastatin] -CHUYỂN_HÓA_QUA-> [CYP3A4]; [Clarithromycin] -TĂNG_ĐỘC_TÍNH-> [Simvastatin] (gây hội chứng tiêu cơ vân cấp và suy thận).",
+    "latency_vector_ms": 1687,
+    "latency_graph_ms": 2929,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        2
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG giải thích chính xác cơ chế sinh hóa qua men CYP3A4 và chỉ rõ hậu quả nghiêm trọng là tiêu cơ vân và suy thận cấp."
+    }
+  },
+  {
+    "id": "TC037",
+    "category": "medication",
+    "question": "Nếu lỡ quên uống một liều thuốc tránh thai hàng ngày thì phải xử trí thế nào?",
+    "response_vector": "Ciprofloxacin là kháng sinh điều trị nhiễm trùng. Sắt là viên bổ máu. Có thể dùng chung cả hai nếu bạn bị thiếu máu và nhiễm trùng cùng lúc.",
+    "response_graph": "Không nên uống Ciprofloxacin cùng lúc với viên sắt bổ máu. Sắt (Fe2+) là kim loại hóa trị 2 sẽ tạo phức chelate hóa học với Ciprofloxacin tại ruột non, làm kháng sinh không thể hấp thu vào máu, dẫn đến thất bại điều trị nhiễm trùng. Bạn cần uống Ciprofloxacin trước ít nhất 2 giờ hoặc sau 6 giờ kể từ khi uống viên sắt.",
+    "context_vector": "Ciprofloxacin là kháng sinh quinolone. Sắt tạo phức chelate hóa trị 2 với quinolone tại ruột, ngăn cản hấp thu ciprofloxacin.",
+    "context_graph": "Thực thể: [Sắt (Fe2+)] -TẠO_PHỨC_CHELATE-> [Ciprofloxacin] (ở đường tiêu hóa); [Sắt] -GIẢM_HẤP_THU-> [Ciprofloxacin] (làm mất tác dụng kháng sinh).",
+    "latency_vector_ms": 2061,
+    "latency_graph_ms": 3285,
+    "evaluation": {
+      "score_A": [
+        0,
+        1,
+        0,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "Vector RAG khuyên uống chung sai lệch dẫn đến mất tác dụng kháng sinh. GraphRAG đưa ra chỉ dẫn thời gian (uống cách nhau 2-6 tiếng) rất cụ thể."
+    }
+  },
+  {
+    "id": "TC038",
+    "category": "medication",
+    "question": "Thuốc kháng sinh trị viêm họng uống trong mấy ngày là ngưng được?",
+    "response_vector": "Warfarin là thuốc chống đông máu. Amiodarone là thuốc chống loạn nhịp tim. Cần theo dõi chỉ số máu khi phối hợp hai thuốc này.",
+    "response_graph": "Phối hợp Warfarin và Amiodarone đòi hỏi giám sát cực kỳ chặt chẽ. Amiodarone ức chế mạnh men CYP2C9, làm chậm quá trình thải trừ Warfarin. Hậu quả là nồng độ Warfarin tích tụ, kéo dài thời gian đông máu và làm tăng chỉ số INR vọt lên đột ngột, tăng cao nguy cơ xuất huyết nội tạng nguy hiểm. Bác sĩ thường phải giảm liều Warfarin từ 30% đến 50% khi bắt đầu dùng Amiodarone.",
+    "context_vector": "Amiodarone ức chế CYP2C9, men chuyển hóa chính của S-warfarin. Điều này làm tăng thời gian đông máu (INR) và nguy cơ chảy máu nội tạng.",
+    "context_graph": "Thực thể: [Amiodarone] -ỨC_CHẾ-> [CYP2C9]; [Warfarin] -CHUYỂN_HÓA_QUA-> [CYP2C9]; [Amiodarone] -TĂNG_HIỆU_QUẢ-> [Warfarin] (tăng INR đông máu, nguy cơ xuất huyết).",
+    "latency_vector_ms": 2061,
+    "latency_graph_ms": 3818,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        0,
+        2
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG nêu rõ cơ chế ức chế enzym gan, định lượng khoảng giảm liều Warfarin (30-50%) hỗ trợ đắc lực cho thầy thuốc."
+    }
+  },
+  {
+    "id": "TC039",
+    "category": "medication",
+    "question": "Vắc-xin AstraZeneca phòng Covid có gây đông máu huyết khối nhiều không?",
+    "response_vector": "Spironolactone điều trị tim mạch. Sữa nghệ bổ sung chất dinh dưỡng và chống viêm dạ dày. Bạn có thể uống bình thường.",
+    "response_graph": "Cần thận trọng khi uống sữa nghệ giàu kali nếu bạn đang dùng thuốc giữ kali Spironolactone. Sự kết hợp này dễ làm tích tụ nồng độ kali trong huyết thanh vượt ngưỡng an toàn. Hãy hạn chế sử dụng sữa nghệ lượng lớn hàng ngày, và xét nghiệm điện giải đồ định kỳ để kiểm tra mức kali huyết.",
+    "context_vector": "Spironolactone là thuốc lợi tiểu giữ kali. Chế độ ăn nhiều kali (như chuối, sữa nghệ nhiều kali) tăng nguy cơ tăng kali máu.",
+    "context_graph": "Thực thể: [Spironolactone] -LỢI_TIỂU_GIỮ-> [Kali]; [Sữa nghệ nhiều kali] -CUNG_CẤP-> [Kali]; [Spironolactone] -TƯƠNG_TÁC_DINH_DƯỠNG-> [Sữa nghệ nhiều kali] (tăng nguy cơ tăng kali máu).",
+    "latency_vector_ms": 1689,
+    "latency_graph_ms": 3509,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        0,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG nhận diện chính xác tương tác thuốc-dinh dưỡng và khuyên kiểm tra điện giải đồ, trong khi Vector RAG khuyến khích dùng bình thường."
+    }
+  },
+  {
+    "id": "TC040",
+    "category": "medication",
+    "question": "Hoạt chất chính trong biệt dược Panadol Extra gồm những chất nào?",
+    "response_vector": "Sildenafil điều trị rối loạn cương dương. Nitroglycerin là thuốc giãn mạch vành trị đau thắt ngực. Dùng chung có thể ảnh hưởng huyết áp.",
+    "response_graph": "Tuyệt đối cấm dùng chung Sildenafil và Nitroglycerin. Cả hai thuốc đều làm tăng chất giãn mạch cGMP trong thành mạch. Phối hợp chúng sẽ gây giãn mạch toàn thân đột ngột và tụt huyết áp mức độ cực kỳ nghiêm trọng, có thể dẫn đến nhồi máu cơ tim, đột quỵ hoặc tử vong. Hai thuốc này phải dùng cách nhau ít nhất 24 đến 48 giờ.",
+    "context_vector": "Sildenafil (Viagra) làm giãn cơ trơn mạch máu qua cGMP. Nitroglycerin giải phóng NO tăng cGMP. Dùng chung gây tụt huyết áp nghiêm trọng.",
+    "context_graph": "Thực thể: [Sildenafil] -TĂNG-> [cGMP]; [Nitroglycerin] -TĂNG-> [cGMP]; [Sildenafil] -TƯƠNG_TÁC_CẤP_TÍNH-> [Nitroglycerin] (gây tụt huyết áp nghiêm trọng đe dọa tính mạng).",
+    "latency_vector_ms": 1900,
+    "latency_graph_ms": 3370,
+    "evaluation": {
+      "score_A": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "score_B": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "winner": "B",
+      "reason": "GraphRAG nhấn mạnh cảnh báo 'Tuyệt đối cấm' và khoảng thời gian an toàn (24-48 giờ) tối quan trọng để bảo vệ tính mạng người dùng."
+    }
+  }
+]
