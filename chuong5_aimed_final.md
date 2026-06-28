@@ -326,7 +326,7 @@ Nghiên cứu thực hiện 4 kịch bản lỗi liên tiếp để đánh giá 
 
 ### 5.5.2. Kết quả trên nhật ký log máy chủ
 
-Nhật ký thực nghiệm từ script **`test_fallback.py`** ghi nhận chi tiết chuỗi sự kiện (Khung 5.1):
+Quá trình kích hoạt cơ chế tự động chuyển đổi chịu lỗi được ghi nhận chi tiết qua nhật ký hoạt động của hệ thống (Khung 5.1):
 
 **Khung 5.1: Nhật ký thực nghiệm Smart Routing Fallback**
 
