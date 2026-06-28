@@ -24,21 +24,22 @@ Cấu hình chi tiết của phần cứng và phần mềm trong hệ thống t
 ---
 
 ### 5.1.2. Bộ dữ liệu kiểm thử
-Bộ dữ liệu kiểm thử được xây dựng chuẩn hóa mang tên `test_cases_v2.json`, chứa tổng cộng 100 tình huống hội thoại giả định mô phỏng ngôn ngữ tự nhiên thường gặp của bệnh nhân Việt Nam. Bộ dữ liệu được phát triển dựa trên việc dịch thuật, tinh chỉnh từ các kịch bản lâm sàng quốc tế và được tham chiếu chuyên môn y tế để đảm bảo tính thực tế.
+Bộ dữ liệu kiểm thử `test_cases_v2.json` chứa 100 tình huống hội thoại mô phỏng ngôn ngữ tự nhiên tiếng Việt. Bộ dữ liệu được xây dựng dựa trên các kịch bản lâm sàng quốc tế, được dịch thuật và tinh chỉnh cho bối cảnh y tế Việt Nam, bao gồm cả các câu hỏi dùng tiếng lóng, từ viết tắt và cách diễn đạt gián tiếp phổ biến.
 
-Bộ dữ liệu được phân chia thành 7 phân tầng (categories) chuyên biệt nhằm thử nghiệm toàn diện các khía cạnh nghiệp vụ và tính an toàn của hệ thống, chi tiết phân bổ được tổng hợp trong Bảng 5.2.
+📎 Xem toàn bộ 100 kịch bản tại Phụ lục A.1 — bảng chi tiết với ID, câu hỏi, tác tử kỳ vọng và ghi chú lâm sàng cho từng ca.
 
-#### Bảng 5.2: Phân bổ dữ liệu kiểm thử chuẩn hóa
+##### Bảng 5.3: Phân bổ bộ dữ liệu kiểm thử chuẩn hóa
 
-| Phân tầng chuyên khoa | Số lượng ca | Mô tả mục tiêu kiểm thử |
+| Phân tầng chuyên khoa | Số lượng | Mô tả mục tiêu kiểm thử |
 | :--- | :---: | :--- |
-| **Sàng lọc cấp cứu (Triage)** | 15 | Các tình huống triệu chứng nguy kịch (như nhồi máu cơ tim, đột quỵ, suy hô hấp cấp) yêu cầu phát hiện dấu hiệu cảnh báo đỏ (Red Flags) nhanh chóng. |
-| **Hỗ trợ tâm lý (Therapy)** | 15 | Hội thoại mô phỏng các rối loạn tâm lý thường gặp (như lo âu xã hội, mất ngủ kéo dài, trầm cảm sau sinh) kiểm tra khả năng thấu cảm và phản hồi liệu pháp. |
-| **Tra cứu dược học (Medication)** | 15 | Truy vấn thông tin liều dùng, tác dụng phụ, và đặc biệt là các tương tác thuốc phức tạp liên kết nhiều loại dược chất. |
-| **Tìm kiếm bác sĩ (Doctor Referral)**| 15 | Tình huống yêu cầu kết nối phòng khám, đặt lịch hẹn bác sĩ chuyên khoa phù hợp với bệnh lý cụ thể. |
-| **Kế hoạch chăm sóc (Care Plan)** | 15 | Yêu cầu thiết lập chế độ dinh dưỡng, thói quen sinh hoạt và luyện tập phục hồi sức khỏe. |
-| **Trò chuyện thông thường (Default)** | 15 | Các câu hỏi chitchat, chào hỏi, hoặc truy vấn thông tin phi lâm sàng không liên quan trực tiếp đến sức khỏe. |
-| **Tình huống nguy hại (Dangerous)** | 10 | Các trường hợp thể hiện ý định tự hại, tự tử, hoặc bạo lực hành vi, dùng để kiểm thử khả năng phản ứng và refusenik của hệ thống an toàn. |
+| **Sàng lọc cấp cứu (Triage)** | 15 | Triệu chứng nguy kịch: nhồi máu, đột quỵ, suy hô hấp, ngộ độc cấp. Có 5 ca borderline Triage/Medication |
+| **Hỗ trợ tâm lý (Therapy)** | 15 | Rối loạn lo âu, trầm cảm, OCD, burnout. Có 5 ca borderline Therapy/Care Plan |
+| **Tra cứu dược học (Medication)** | 15 | Liều dùng, tác dụng phụ, tương tác thuốc. Có 3 ca dùng tiếng lóng |
+| **Tìm kiếm bác sĩ (Doctor Referral)**| 15 | Đặt lịch khám, kết nối chuyên khoa theo địa lý |
+| **Kế hoạch chăm sóc (Care Plan)** | 15 | Dinh dưỡng, luyện tập, phục hồi sau phẫu thuật |
+| **Trò chuyện thông thường (Default)** | 15 | Câu hỏi phi lâm sàng, chào hỏi, dịch thuật, chitchat |
+| **Tình huống nguy hại (Dangerous)** | 10 | Ý định tự hại, tự tử, bạo lực, hỏi chế tạo độc dược |
+| **Tổng cộng** | **100** | |
 
 ---
 
