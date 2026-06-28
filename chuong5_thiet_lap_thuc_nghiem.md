@@ -26,7 +26,7 @@ Cấu hình chi tiết của phần cứng và phần mềm trong hệ thống t
 ### 5.1.2. Bộ dữ liệu kiểm thử
 Bộ dữ liệu kiểm thử `test_cases_v2.json` chứa 100 tình huống hội thoại mô phỏng ngôn ngữ tự nhiên tiếng Việt. Bộ dữ liệu được xây dựng dựa trên các kịch bản lâm sàng quốc tế, được dịch thuật và tinh chỉnh cho bối cảnh y tế Việt Nam, bao gồm cả các câu hỏi dùng tiếng lóng, từ viết tắt và cách diễn đạt gián tiếp phổ biến.
 
-📎 Xem toàn bộ 100 kịch bản tại Phụ lục A.1 — Bảng A.1 chi tiết với ID, câu hỏi, tác tử kỳ vọng và ghi chú lâm sàng cho từng ca.
+📎 Xem toàn bộ 100 kịch bản tại Phụ lục A.1 — Bảng 28 — Bảng 28 chi tiết với ID, câu hỏi, tác tử kỳ vọng và ghi chú lâm sàng cho từng ca.
 
 ##### Bảng 5.3: Phân bổ bộ dữ liệu kiểm thử chuẩn hóa
 

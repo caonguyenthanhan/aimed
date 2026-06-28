@@ -44,7 +44,7 @@
 
 Bộ dữ liệu kiểm thử **`test_cases_v2.json`** chứa 100 tình huống hội thoại mô phỏng ngôn ngữ tự nhiên tiếng Việt. Bộ dữ liệu được xây dựng dựa trên các kịch bản lâm sàng quốc tế, được dịch thuật và tinh chỉnh cho bối cảnh y tế Việt Nam, bao gồm cả các câu hỏi dùng tiếng lóng, từ viết tắt và cách diễn đạt gián tiếp phổ biến.
 
-> 📎 **Xem toàn bộ 100 kịch bản tại Phụ lục A.1** — bảng chi tiết với ID, câu hỏi, tác tử kỳ vọng và ghi chú lâm sàng cho từng ca.
+> 📎 **Xem toàn bộ 100 kịch bản tại Phụ lục A.1 — Bảng 28** — bảng chi tiết với ID, câu hỏi, tác tử kỳ vọng và ghi chú lâm sàng cho từng ca.
 
 **Bảng 5.3: Phân bổ bộ dữ liệu kiểm thử chuẩn hóa**
 
@@ -73,8 +73,8 @@ Chất lượng câu trả lời được đánh giá qua 5 chiều độc lập
 
 Gemini 2.5 Flash API đóng vai trò **AI Judge** chấm điểm tự động theo rubric trên. Nhóm thực hiện giám sát thủ công (human-in-the-loop) với 20 ca ngẫu nhiên để kiểm tra độ đồng thuận giữa AI Judge và người đánh giá.
 
-> 📎 **Xem chi tiết 5 chiều chấm điểm tại Phụ lục A.5** (rubric_v1.json dạng bảng).  
-> 📎 **Xem hướng dẫn đánh giá thủ công tại Phụ lục A.6** (rubric_guide.md — quy trình 4 bước, mẫu bảng chấm 20 ca).
+> 📎 **Xem chi tiết 5 chiều chấm điểm tại Phụ lục A.2.4** (Bảng 30) (Bảng 31).  
+> 📎 **Xem hướng dẫn đánh giá thủ công tại Phụ lục A.2.4** (Bảng 30) (Bảng 31) (Quy trình đánh giá thủ công — quy trình 4 bước, mẫu bảng chấm 20 ca).
 
 ---
 
@@ -122,8 +122,8 @@ TC011 *"uống Amlodipine bị tức ngực thở rít"* → hệ thống nhận
 **Nhóm 4 — Lỗi Safety từ khóa thiếu ẩn dụ:**
 *"ngủ luôn không tỉnh lại nữa"* (TC097), *"rạch đùi"* (TC096), *"đầu độc người khác"* (TC095) không nằm trong từ điển keyword tĩnh.
 
-> 📎 **Xem phân tích đầy đủ 23 ca lỗi tại Phụ lục A.2** — phân loại chi tiết từng ca, nguyên nhân cụ thể.  
-> 📎 **Xem 3 ca safety lọt lưới và phương án vá tại Phụ lục A.4** — TC095, TC096, TC097 với root cause analysis.
+> 📎 **Xem phân tích đầy đủ 23 ca lỗi tại Phụ lục A.2** (Bảng 29) — phân loại chi tiết từng ca, nguyên nhân cụ thể.  
+> 📎 **Xem 3 ca safety lọt lưới và phương án vá tại Phụ lục A.2.4** (Bảng 30) — TC095, TC096, TC097 với root cause analysis.
 
 Nhóm thực hiện **4 cải tiến kỹ thuật** dựa trên `routing_fix_suggestions.json`:
 
@@ -134,7 +134,7 @@ Nhóm thực hiện **4 cải tiến kỹ thuật** dựa trên `routing_fix_sug
 
 Đồng thời, **18 cụm từ ẩn dụ tự hại** mới và **Semantic Safety Guardrail dự phòng** được tích hợp vào `safety.ts`.
 
-> 📎 **Xem chi tiết Regex trước/sau của 4 cải tiến tại Phụ lục A.3** (routing_fix_suggestions.json dạng bảng).
+> 📎 **Xem chi tiết Regex trước/sau của 4 cải tiến tại Phụ lục A.2.4** (Đề xuất khắc phục kỹ thuật dạng bảng).
 
 ---
 
@@ -194,7 +194,7 @@ Nhóm chọn lọc **20 kịch bản lâm sàng đặc thù** từ `test_cases_v
 
 Mỗi câu hỏi được gửi song song đến: **(A)** Vector RAG thuần — ChromaDB only; **(B)** GraphRAG — Neo4j/Memgraph + ChromaDB. Gemini 2.5 Flash đóng vai **AI Judge** chấm điểm mù theo 4 tiêu chí, thang 0–2.
 
-> 📎 **Xem kết quả đầy đủ 20 cặp câu trả lời tại Phụ lục A.7** — bao gồm context được truy xuất, response thực tế, điểm số từng ca.
+> 📎 **Xem kết quả đầy đủ 20 cặp câu trả lời tại Phụ lục A.6** (Bảng 32) — bao gồm context được truy xuất, response thực tế, điểm số từng ca.
 
 ---
 
@@ -264,7 +264,7 @@ Nghiên cứu cắt bỏ thành phần được thực hiện nhằm làm rõ đ
 - **RQ2:** GraphRAG (B2) cải thiện bao nhiêu điểm chất lượng so với Vector RAG thuần (B1)?
 - **RQ3:** Semantic Router (B1) cải thiện bao nhiêu % so với Rule-based cứng (B0)?
 
-> 📎 **Xem giả thuyết đầy đủ cho từng câu hỏi tại Phụ lục B.2** — cơ sở khoa học và kỳ vọng định lượng trước khi chạy thực nghiệm.
+> 📎 **Xem giả thuyết đầy đủ cho từng câu hỏi tại Phụ lục B.2** (Bảng 35) — cơ sở khoa học và kỳ vọng định lượng trước khi chạy thực nghiệm.
 
 ---
 
@@ -282,7 +282,7 @@ Nghiên cứu cắt bỏ thành phần được thực hiện nhằm làm rõ đ
 
 > *(†) Cấu hình B2 sử dụng kiến trúc đơn tác tử; không có cơ chế phân luồng đa chuyên khoa nên chỉ số Routing Accuracy không được đo tương đương với B0/B1/B3.*
 
-> 📎 **Xem cấu hình chi tiết của 4 baseline tại Phụ lục B.1** (experiment\_config.json — endpoint, components, expected\_strength/weakness của từng cấu hình).
+> 📎 **Xem cấu hình chi tiết của 4 baseline tại Phụ lục B.1** (Bảng 34) (experiment\_config.json — endpoint, components, expected\_strength/weakness của từng cấu hình).
 
 ---
 
@@ -389,7 +389,7 @@ Bảng 5.9 tổng hợp các chỉ số thực nghiệm cốt lõi qua hai vòng
 
 Quá trình hai vòng đánh giá thể hiện vòng lặp cải tiến liên tục (iterative improvement loop) phù hợp với phương pháp luận MLOps trong phát triển hệ thống AI y tế: phát hiện vấn đề thực tế → phân tích gốc rễ → áp dụng cải tiến → xác nhận kết quả.
 
-> 📎 **Xem báo cáo kiểm định chất lượng Chương 5 tại Phụ lục D.1** — checklist 10 tiêu chí QC với trạng thái từng mục và ghi chú chi tiết các lỗi đã phát hiện và sửa.
+> 📎 **Xem báo cáo kiểm định chất lượng Chương 5 tại Phụ lục B.3 và B.4** (Bảng 36 và Bảng 37) — checklist 10 tiêu chí QC với trạng thái từng mục và ghi chú chi tiết các lỗi đã phát hiện và sửa.
 
 ---
 
@@ -429,7 +429,7 @@ Nghiên cứu đóng góp bộ dữ liệu kiểm thử **`test_cases_v2.json`**
 
 Nghiên cứu hiện thực hóa mô hình chăm sóc phân tầng Stepped Care gồm 4 cấp độ can thiệp vào giao diện Chatbot AI. Hệ thống tự động phân loại mức độ rủi ro sức khỏe tinh thần từ PHQ-9/GAD-7 để cung cấp lộ trình cá nhân hóa: từ video thiền chánh niệm (Cấp 1), lịch kích hoạt hành vi CBT-BA (Cấp 2), trò chuyện trị liệu thấu cảm (Cấp 3), đến kích hoạt hộp thoại SOS và số điện thoại 115 (Cấp 4).
 
-> 📎 **Xem minh chứng 4 cấp độ Stepped Care trên giao diện tại Phụ lục C.2.**
+> 📎 **Xem minh chứng 4 cấp độ Stepped Care trên giao diện tại Phụ lục C.2 (Bảng 38: Giao diện minh chứng theo từng cấp độ can thiệp Stepped Care).**
 
 ---
 
