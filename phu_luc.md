@@ -664,8 +664,8 @@ AI chặn đứng câu hội thoại nguy hại, hiển thị thẻ cảnh báo 
 ## C.3. Nhật ký chuyển đổi chịu lỗi dự phòng của hệ thống (Fallback Terminal Log)
 Nhật ký log máy chủ ghi nhận chuỗi sự kiện phát hiện sự cố mất kết nối GPU chính và tự động chuyển hướng cuộc gọi sang máy chủ CPU cục bộ được dẫn chiếu chi tiết tại **Khung 5.1, Chương 5, Mục 5.5.2** của luận văn tốt nghiệp.
 
-# PHỤ LỤC D: TÀI LIỆU BỔ TRỢ HỌC THUẬT & PHÁP LÝ
-## D.1. Báo cáo kiểm định chất lượng Chương 5 luận văn (QC Report)
+# PHỤ LỤC E: TÀI LIỆU BỔ TRỢ HỌC THUẬT & PHÁP LÝ
+## E.1. Báo cáo kiểm định chất lượng Chương 5 luận văn (QC Report)
 Báo cáo này tổng hợp kết quả kiểm định chất lượng (Quality Check) đối với toàn bộ các mục đã soạn thảo thuộc Chương 5 của Luận văn tốt nghiệp hệ thống AiMed, nhằm đối chiếu với danh sách tiêu chí kiểm duyệt y khoa và văn phong học thuật.
 
 ---
@@ -708,12 +708,24 @@ Báo cáo này tổng hợp kết quả kiểm định chất lượng (Quality 
     *   *Nội dung cũ:* "...thử nghiệm loại bỏ thành phần..."
     *   *Nội dung sửa:* "...thử nghiệm cắt bỏ thành phần..." hoặc "...thử nghiệm loại bỏ thành phần..."
 
-# PHỤ LỤC E: DANH SÁCH SYSTEM PROMPTS VÀ PROMPT TEMPLATES CỦA HỆ THỐNG
+# PHỤ LỤC D: DANH SÁCH SYSTEM PROMPTS VÀ PROMPT TEMPLATES CỦA HỆ THỐNG
+## D. Dẫn nhập về Kiến trúc Prompt và Chỉ thị Hệ thống
+
+Kiến trúc đa tác tử (Multi-Agent) của hệ thống AiMed vận hành dựa trên sự phối hợp đồng bộ giữa các tác tử chuyên khoa độc lập. Để định hình hành vi, phong cách giao tiếp thấu cảm và đảm bảo tính an toàn y học cho từng tác tử, nhóm nghiên cứu đã thiết lập một hệ thống các chỉ thị hệ thống (system prompts) và khuôn mẫu gợi ý (prompt templates) được tối ưu hóa riêng biệt. 
+
+Phụ lục này tổng hợp toàn văn hoặc tóm tắt cấu trúc của các chỉ thị cốt lõi, được phân chia thành 4 nhóm phân hệ chính:
+1. **Tác tử Điều phối và Sàng lọc (Supervisor / Triage Agent):** Quản lý luồng hội thoại, định tuyến yêu cầu và sàng lọc khẩn cấp y tế.
+2. **Tác tử Tâm lý (Psychological Agent):** Tương tác thấu cảm, hỗ trợ các bài tập kích hoạt hành vi vi mô và liệu pháp nhận thức hành vi (CBT).
+3. **Tác tử Y khoa (Medical Agent):** Truy xuất thông tin dược học từ đồ thị tri thức (GraphRAG), bảo vệ ranh giới y học an toàn.
+4. **Các tác tử hỗ trợ khác (Auxiliary Agents):** Quản lý kế hoạch chăm sóc cá nhân hóa (Care Plan) và hỗ trợ kết nối bác sĩ chuyên khoa.
+
+Mỗi chỉ thị bao gồm hai phần: (1) **Chỉ thị Vai trò Lâm sàng (Clinical Role Prompt)** định hình hành vi ứng xử, giọng điệu thấu cảm; và (2) **Lớp bọc kỹ thuật (Technical System Wrapper)** ép buộc định dạng đầu ra (JSON/Schema) để đảm bảo tính ổn định khi kết nối với giao diện ứng dụng.
+
 Phụ lục này tổng hợp toàn văn (hoặc tóm tắt cấu trúc) các chỉ thị hệ thống (system prompts) định hình hành vi cho từng tác tử trong kiến trúc đa tác tử của hệ thống AiMed. Đường dẫn mã nguồn được rút gọn chỉ còn tên tệp, không bao gồm đường dẫn thư mục cá nhân trên máy phát triển.
 
 Một số mục dưới đây được giữ nguyên cấu trúc đề mục nhưng chưa có nội dung nguyên bản đầy đủ — các vị trí này được đánh dấu rõ để tác giả tự bổ sung trước khi nộp bản chính thức.
 
-## E.I. Tác tử Điều phối và Sàng lọc (Supervisor / Triage Agent)
+## D.I. Tác tử Điều phối và Sàng lọc (Supervisor / Triage Agent)
 
 ### 1. Bộ định tuyến ngữ nghĩa (Semantic Router)
 * **Vị trí định nghĩa (tên tệp mã nguồn):** `triage_router.py`
@@ -736,7 +748,7 @@ Một số mục dưới đây được giữ nguyên cấu trúc đề mục nh
 * **Nội dung chỉ thị hệ thống nguyên bản:**
   [CẦN BỔ SUNG: nội dung nguyên bản của system prompt này chưa có sẵn trong tài liệu nguồn — tác giả tự điền khi hoàn thiện bản nộp cuối cùng.]
 
-## E.II. Tác tử Tâm lý (Psychological Agent — CBT và Bạn tâm giao)
+## D.II. Tác tử Tâm lý (Psychological Agent — CBT và Bạn tâm giao)
 
 ### 1. Tác tử Tâm lý Trị liệu (Therapy Agent Node)
 * **Vị trí định nghĩa (tên tệp mã nguồn):** `graph.py`
@@ -779,7 +791,7 @@ Một số mục dưới đây được giữ nguyên cấu trúc đề mục nh
 * **Nội dung chỉ thị hệ thống nguyên bản:**
   [CẦN BỔ SUNG: nội dung nguyên bản của system prompt này chưa có sẵn trong tài liệu nguồn — tác giả tự điền khi hoàn thiện bản nộp cuối cùng.]
 
-## E.III. Tác tử Y khoa (Medical Agent — GraphRAG và tra cứu)
+## D.III. Tác tử Y khoa (Medical Agent — GraphRAG và tra cứu)
 
 ### 1. Tác tử Dược phẩm (Medication Agent Node)
 * **Vị trí định nghĩa (tên tệp mã nguồn):** `graph.py`
@@ -821,7 +833,7 @@ Một số mục dưới đây được giữ nguyên cấu trúc đề mục nh
 * **Nội dung chỉ thị hệ thống nguyên bản:**
   [CẦN BỔ SUNG: nội dung nguyên bản của system prompt này chưa có sẵn trong tài liệu nguồn — tác giả tự điền khi hoàn thiện bản nộp cuối cùng.]
 
-## E.IV. Các tác tử hỗ trợ khác (Auxiliary Agents)
+## D.IV. Các tác tử hỗ trợ khác (Auxiliary Agents)
 
 ### 1. Tác tử Kế hoạch Chăm sóc (Care Plan Agent)
 * **Vị trí định nghĩa (tên tệp mã nguồn):** `graph.py` (hoặc chưa xác định vị trí định nghĩa cụ thể)

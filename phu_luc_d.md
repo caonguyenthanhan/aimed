@@ -1,8 +1,20 @@
-# PHỤ LỤC E: DANH SÁCH SYSTEM PROMPTS VÀ PROMPT TEMPLATES CỦA HỆ THỐNG
+# PHỤ LỤC D: DANH SÁCH SYSTEM PROMPTS VÀ PROMPT TEMPLATES CỦA HỆ THỐNG
+## D. Dẫn nhập về Kiến trúc Prompt và Chỉ thị Hệ thống
+
+Kiến trúc đa tác tử (Multi-Agent) của hệ thống AiMed vận hành dựa trên sự phối hợp đồng bộ giữa các tác tử chuyên khoa độc lập. Để định hình hành vi, phong cách giao tiếp thấu cảm và đảm bảo tính an toàn y học cho từng tác tử, nhóm nghiên cứu đã thiết lập một hệ thống các chỉ thị hệ thống (system prompts) và khuôn mẫu gợi ý (prompt templates) được tối ưu hóa riêng biệt. 
+
+Phụ lục này tổng hợp toàn văn hoặc tóm tắt cấu trúc của các chỉ thị cốt lõi, được phân chia thành 4 nhóm phân hệ chính:
+1. **Tác tử Điều phối và Sàng lọc (Supervisor / Triage Agent):** Quản lý luồng hội thoại, định tuyến yêu cầu và sàng lọc khẩn cấp y tế.
+2. **Tác tử Tâm lý (Psychological Agent):** Tương tác thấu cảm, hỗ trợ các bài tập kích hoạt hành vi vi mô và liệu pháp nhận thức hành vi (CBT).
+3. **Tác tử Y khoa (Medical Agent):** Truy xuất thông tin dược học từ đồ thị tri thức (GraphRAG), bảo vệ ranh giới y học an toàn.
+4. **Các tác tử hỗ trợ khác (Auxiliary Agents):** Quản lý kế hoạch chăm sóc cá nhân hóa (Care Plan) và hỗ trợ kết nối bác sĩ chuyên khoa.
+
+Mỗi chỉ thị bao gồm hai phần: (1) **Chỉ thị Vai trò Lâm sàng (Clinical Role Prompt)** định hình hành vi ứng xử, giọng điệu thấu cảm; và (2) **Lớp bọc kỹ thuật (Technical System Wrapper)** ép buộc định dạng đầu ra (JSON/Schema) để đảm bảo tính ổn định khi kết nối với giao diện ứng dụng.
+
 
 Phụ lục này tổng hợp toàn văn các chỉ thị hệ thống (system prompts) và các khuôn mẫu gợi ý (prompt templates) định hình hành vi cho từng tác tử trong kiến trúc đa tác tử của hệ thống AiMed. Đường dẫn và tên các tệp mã nguồn được rút gọn chỉ giữ lại tên tệp thực tế để tăng tính độc lập khoa học.
 
-## E.I. Tác tử Điều phối và Sàng lọc (Supervisor / Triage Agent)
+## D.I. Tác tử Điều phối và Sàng lọc (Supervisor / Triage Agent)
 
 ### 1. Bộ định tuyến ngữ nghĩa (Semantic Router)
 * **Vị trí định nghĩa (tên tệp mã nguồn):** `triage_router.py`
@@ -94,7 +106,7 @@ Phụ lục này tổng hợp toàn văn các chỉ thị hệ thống (system p
   ]
   ```
 
-## E.II. Tác tử Tâm lý (Psychological Agent — CBT và Bạn tâm giao)
+## D.II. Tác tử Tâm lý (Psychological Agent — CBT và Bạn tâm giao)
 
 ### 1. Tác tử Tâm lý Trị liệu (Therapy Agent Node)
 * **Vị trí định nghĩa (tên tệp mã nguồn):** `graph.py`
@@ -206,7 +218,7 @@ Phụ lục này tổng hợp toàn văn các chỉ thị hệ thống (system p
   Nếu có dấu hiệu nguy cơ cao: ưu tiên an toàn, khuyến nghị liên hệ người thân/bác sĩ.
   ```
 
-## E.III. Tác tử Y khoa (Medical Agent — GraphRAG và tra cứu)
+## D.III. Tác tử Y khoa (Medical Agent — GraphRAG và tra cứu)
 
 ### 1. Tác tử Dược phẩm (Medication Agent Node)
 * **Vị trí định nghĩa (tên tệp mã nguồn):** `graph.py`
@@ -356,7 +368,7 @@ Phụ lục này tổng hợp toàn văn các chỉ thị hệ thống (system p
   Ưu tiên cảnh báo tương tác/chống chỉ định và dấu hiệu cần đi khám.
   ```
 
-## E.IV. Các tác tử hỗ trợ khác (Auxiliary Agents)
+## D.IV. Các tác tử hỗ trợ khác (Auxiliary Agents)
 
 ### 1. Tác tử Kế hoạch Chăm sóc (Care Plan Agent)
 * **Vị trí định nghĩa (tên tệp mã nguồn):** `graph.py` và `prompt-config.json`

@@ -85,39 +85,39 @@ Sự thành công của một hệ thống y tế số không chỉ phụ thuộ
 Trang chủ đóng vai trò là điểm chạm đầu tiên để định hình niềm tin của người bệnh đối với hệ thống y tế số. Giao diện được thiết kế theo phong cách hiện đại với nền tối sâu, kết hợp các thẻ dịch vụ bo góc mềm mại phát ánh sáng neon mờ. Cổng thông tin phân bổ trực quan bốn tính năng cốt lõi: Tư vấn AI chuyên sâu, Sàng lọc nhanh sức khỏe, Trị liệu chánh niệm chắt lọc, và Tra cứu kết nối bác sĩ. Các hiệu ứng chuyển động vi mô (micro-animations) khi di chuột được nhúng vào các thẻ nhằm gia tăng tính định hướng hành vi.
 
 ![Giao diện Trang chủ](/C:/Users/LIGHTKING/.gemini/antigravity-ide/brain/34de9344-84c2-4e68-99d4-eccd012c529f/landing_page_1782496144886.png)
-Hình 22 Giao diện cổng chào hiện đại với phong cách Dark Mode cao cấp, tích hợp các thẻ giới thiệu tính năng chính và các micro-animation mượt mà.
+Hình 22: Giao diện Trang chủ và Cổng chào của hệ thống AiMed.
 
 Khung chat là trung tâm tương tác giữa bệnh nhân và hệ thống đa tác tử LangGraph. Giao diện được quy hoạch thành cấu trúc ba phân vùng độc lập: thanh biên trái quản lý lịch sử các cuộc hội thoại; khung chat ở giữa là nơi diễn ra hội thoại trực tiếp (Frontend tự động biên dịch cấu trúc JSON trả về từ backend để hiển thị các dạng bong bóng chat khác nhau tùy thuộc vào tác tử đang trả lời); thanh biên phải hiển thị các công cụ bổ trợ động như thanh trạng thái của các bài tập thở hoặc widget phát nhạc sóng não. Hệ thống tích hợp khả năng tự động kết xuất (render) các thẻ hành động trực tiếp vào luồng tin nhắn (ví dụ: gợi ý nút bấm chuyển tuyến, thẻ lựa chọn trắc nghiệm nhanh), giúp tối ưu hóa thao tác của bệnh nhân.
 
 ![Khung Chat Tư vấn AI](/C:/Users/LIGHTKING/.gemini/antigravity-ide/brain/34de9344-84c2-4e68-99d4-eccd012c529f/chat_page_1782496158778.png)
-Hình 23 Khung trò chuyện đa tác tử thời gian thực với thanh lịch sử bên trái, khung chat chính ở giữa, sidebar công cụ bên phải và các thẻ hành vi (actions) được render tự động.
+Hình 23: Khung trò chuyện đa tác tử của hệ thống AiMed.
 
 4.4.2.	Hiện thực hóa lộ trình can thiệp chăm sóc từng bước (stepped care)
 Trang sàng lọc là nơi số hóa các bài trắc lượng tâm thần học chuẩn lâm sàng như PHQ-9 (đo mức độ trầm cảm) và GAD-7 (đo mức độ lo âu). Giao diện loại bỏ biểu mẫu văn bản nhập thô dễ gây nhàm chán và áp lực, thay thế bằng các câu hỏi dạng thẻ chọn lựa trực quan hoặc thanh trượt điều hướng (slider). Ngay khi người dùng hoàn thành câu hỏi cuối cùng, hệ thống sẽ thực hiện tính toán điểm số cục bộ và hiển thị kết quả phân tầng nguy cơ y tế trực quan dưới dạng biểu đồ màu sắc, kèm theo các đề xuất tự chăm sóc phù hợp theo đúng mô hình Stepped Care.
 
 ![Giao diện Sàng lọc sức khỏe](/C:/Users/LIGHTKING/.gemini/antigravity-ide/brain/34de9344-84c2-4e68-99d4-eccd012c529f/screening_page_1782496170046.png)
-Hình 24 Trang thực hiện bài trắc nghiệm tâm lý chuẩn (PHQ-9, GAD-7) với thiết kế trực quan dạng câu hỏi trượt hoặc thẻ chọn lựa, hiển thị kết quả phân tầng ngay lập tức.
+Hình 24: Giao diện khảo sát sàng lọc tâm lý (PHQ-9/GAD-7).
 
 Đối với bệnh nhân được phân loại ở Cấp độ 1 và Cấp độ 2 của mô hình Stepped Care, hệ thống sẽ điều hướng họ vào Phòng trị liệu tâm lý tĩnh. Giao diện này cung cấp hai nhóm công cụ can thiệp lâm sàng: bài tập hít thở nhịp sinh học (thở 4-7-8, thở hộp Box Breathing) thông qua một vòng tròn giãn nở động theo thời gian thực để bệnh nhân điều hòa hệ thần kinh phó giao cảm; kết hợp cùng thư viện âm thanh thư giãn chứa sóng não Alpha và Delta nhằm giải tỏa tình trạng căng thẳng cấp tính.
 
 ![Phòng Trị liệu Tâm lý](/C:/Users/LIGHTKING/.gemini/antigravity-ide/brain/34de9344-84c2-4e68-99d4-eccd012c529f/therapy_page_1782496218587.png)
-Hình 25 Không gian trị liệu chánh niệm tự lực bao gồm bài tập hít thở điều hòa phó giao cảm và thư viện nhạc thư giãn sóng não.
+Hình 25: Giao diện không gian trị liệu chánh niệm tự lực.
 
 Bảng điều khiển kế hoạch chăm sóc cá nhân hóa (Care Plan Dashboard) giúp bệnh nhân thiết lập và giám sát các thói quen sinh hoạt phục hồi sức khỏe hằng ngày thông qua checklist công việc được AI cá nhân hóa (ví dụ: uống thuốc huyết áp đúng giờ, thực đơn giảm cân cho người tiểu đường tuýp 2). Hệ thống tích hợp công cụ vẽ biểu đồ sinh hiệu (huyết áp, nhịp tim) để bệnh nhân ghi chép và tự theo dõi xu hướng biến thiên sức khỏe thể chất lâu dài.
 
 ![Bảng Kế hoạch chăm sóc](/C:/Users/LIGHTKING/.gemini/antigravity-ide/brain/34de9344-84c2-4e68-99d4-eccd012c529f/care_plan_page_1782496246446.png)
-Hình 26 Bảng điều khiển cá nhân hóa cho phép lập checklist sinh hoạt và theo dõi các chỉ số sinh hiệu dưới dạng biểu đồ trực quan.
+Hình 26: Bảng điều khiển kế hoạch chăm sóc cá nhân hóa.
 
 Trong kịch bản kết quả sàng lọc chỉ ra nhu cầu cấp thiết về can thiệp y tế chuyên sâu, luồng trải nghiệm của bệnh nhân sẽ mở rộng đến hệ thống tìm kiếm và kết nối bác sĩ. Giao diện chuyển tuyến này cung cấp bộ lọc đa chiều theo chuyên ngành (tâm thần học, tim mạch, da liễu) và vị trí địa lý thực tế. Người dùng truy cập trực tiếp thông tin về trình độ chuyên môn, đối chiếu các đánh giá lâm sàng và hoàn tất quy trình đặt lịch hẹn khám ngay trên nền tảng mà không cần qua các bước trung gian.
 
 ![Thư mục Bác sĩ & Đặt lịch](/C:/Users/LIGHTKING/.gemini/antigravity-ide/brain/34de9344-84c2-4e68-99d4-eccd012c529f/doctor_referral_page_1782496233962.png)
-Hình 27 Hệ thống kết nối bác sĩ chuyên khoa với các bộ lọc địa lý, thông tin chuyên môn và chức năng đặt lịch hẹn khám trực tiếp.
+Hình 27: Giao diện tìm kiếm và kết nối bác sĩ.
 
 4.4.3.	Giám sát hệ thống và vận hành (LLMOps)
 Để đảm bảo tính minh bạch và khả năng kiểm soát chất lượng vận hành của hệ thống đa tác tử, AiMed trang bị một trang quản trị (Admin Dashboard) dành riêng cho quản trị viên và đội ngũ kỹ thuật. Bảng điều khiển tích hợp công cụ trực quan hóa thời gian thực các chỉ số đo đạc hiệu năng bao gồm: tổng số lượng yêu cầu API, độ trễ phản hồi trung vị và chi phí sử dụng token của các mô hình ngôn ngữ lớn. Bên cạnh đó, hệ thống cung cấp sơ đồ truy vết (Traces) chi tiết đường đi của các tác tử LangGraph và hoạt động truy vấn GraphRAG, giúp kỹ sư phát hiện nhanh các điểm nghẽn tính toán hoặc lỗi cú pháp để kịp thời hiệu chỉnh cấu hình.
 
 ![Dashboard Quản trị LLMOps](/C:/Users/LIGHTKING/.gemini/antigravity-ide/brain/34de9344-84c2-4e68-99d4-eccd012c529f/admin_dashboard_page_1782496260742.png)
-Hình 28 Giao diện dành cho admin hiển thị các chỉ số vận hành thời gian thực (latency, token costs, Routing Accuracy) và vết truy xuất luồng LangGraph/GraphRAG.
+Hình 28: Giao diện quản trị LLMOps dành cho quản trị viên.
 
 
 4. 5.	TIỂU KẾT CHƯƠNG 4
