@@ -622,6 +622,39 @@ Bảng B.2 mô tả tiến trình thực hiện khóa luận tốt nghiệp hệ
 | **Giai đoạn 3** | Viết các script đánh giá tự động và chạy thực nghiệm định lượng / định tính. | Tuần 7-9 | Cao Nguyễn Thành An | Báo cáo `routing_analysis`, `ab_report` |
 | **Giai đoạn 4** | Thực hiện QC chương 5, viết central verdict script và hoàn thiện dự thảo luận văn. | Tuần 10-12 | Cao Nguyễn Thành An | Tài liệu Phụ lục và Báo cáo Chương 5 hoàn chỉnh |
 
+## B.5. Cơ sở toán học của phương pháp Low-Rank Adaptation (LoRA)
+
+Phương pháp thích ứng hạng thấp (Low-Rank Adaptation - LoRA) là một kỹ thuật hiệu quả về tham số (Parameter-Efficient Fine-Tuning - PEFT) dùng để tinh chỉnh các mô hình ngôn ngữ lớn (như Llama 3.1). 
+
+### 1. Nguyên lý toán học của LoRA
+Giả sử ma trận trọng số của một lớp linear trong mô hình gốc là $W_0 \in \mathbb{R}^{d \times k}$. Trong quá trình tinh chỉnh thông thường, ma trận trọng số này được cập nhật một lượng $\Delta W \in \mathbb{R}^{d \times k}$ sao cho trọng số mới là $W = W_0 + \Delta W$.
+
+Để tiết kiệm bộ nhớ và tài nguyên tính toán, LoRA giả định rằng ma trận cập nhật trọng số $\Delta W$ có hạng cực kỳ thấp (low intrinsic rank). Do đó, $\Delta W$ được phân rã thành tích của hai ma trận hạng thấp chạy song song:
+$$\Delta W = B \cdot A$$
+Trong đó:
+*   $W_0 \in \mathbb{R}^{d \times k}$ là ma trận trọng số gốc (bị đóng băng hoàn toàn, không tính toán gradient và không cập nhật).
+*   $A \in \mathbb{R}^{r \times k}$ và $B \in \mathbb{R}^{d \times r}$ là hai ma trận thích ứng (trainable adapters) có thể huấn luyện.
+*   $r \ll \min(d, k)$ là hạng thiết lập (rank) của cấu hình LoRA (ví dụ: $r = 16$).
+
+### 2. Quá trình Lan truyền xuôi (Forward Propagation)
+Với đầu vào $x \in \mathbb{R}^{k}$, đầu ra $h \in \mathbb{R}^{d}$ được tính toán bằng cách cộng kết quả lan truyền qua ma trận gốc và ma trận thích ứng song song:
+$$h = W_0 \cdot x + \Delta W \cdot x = W_0 \cdot x + \frac{\alpha}{r} \left( B \cdot A \cdot x \right)$$
+Trong đó:
+*   $\alpha$ là một hằng số tỷ lệ (scaling hyperparameter) dùng để kiểm soát mức độ tác động của adapter lên tri thức gốc.
+*   $\frac{\alpha}{r}$ là thừa số chuẩn hóa giúp ổn định quá trình học khi thay đổi hạng $r$.
+
+### 3. Khởi tạo tham số (Initialization)
+Để đảm bảo $\Delta W = 0$ tại thời điểm bắt đầu huấn luyện (tránh làm nhiễu loạn tri thức nguyên thủy trước khi có dữ liệu mới):
+*   Ma trận $A$ được khởi tạo theo phân phối Gauss ngẫu nhiên $\mathcal{N}(0, \sigma^2)$.
+*   Ma trận $B$ được khởi tạo bằng toàn số 0 ($B = 0$).
+*   Do đó, tại bước huấn luyện đầu tiên: $B \cdot A \cdot x = 0$, nghĩa là mô hình hoạt động hoàn toàn dựa trên các trọng số pre-trained nguyên bản.
+
+### 4. Triển khai QLoRA (Lượng tử hóa 4-bit)
+Trong hệ thống AiMed, để chạy được trên các thiết bị giới hạn tài nguyên phần cứng, kỹ thuật QLoRA (Quantized LoRA) được áp dụng bổ sung:
+*   Ma trận trọng số gốc $W_0$ được nén và lưu trữ dưới dạng lượng tử hóa 4-bit NormalFloat (NF4).
+*   Khi lan truyền xuôi, các trọng số này được giải nén tạm thời sang kiểu dữ liệu dấu phẩy động 16-bit (bfloat16 hoặc float16) để thực hiện phép nhân ma trận.
+*   Độ chính xác của các gradient chỉ cần tính cho các tham số dấu phẩy động 16-bit của $A$ và $B$, giúp giảm dung lượng VRAM huấn luyện từ hơn 16 GB xuống còn dưới 6 GB cho mô hình Llama-3.1-8B.
+
 # PHỤ LỤC C: MINH CHỨNG GIAO DIỆN SẢN PHẨM
 ## C.1. Bộ sưu tập giao diện người dùng hệ thống AiMed (UI Gallery)
 Toàn bộ 7 giao diện tương tác người dùng của hệ thống AiMed đã được chụp thực tế trên môi trường Vercel và được trình bày chi tiết tại **Mục 4.4, Chương 4** của luận văn tốt nghiệp. Danh sách các giao diện bao gồm:
