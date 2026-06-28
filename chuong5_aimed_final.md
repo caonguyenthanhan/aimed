@@ -86,7 +86,7 @@ Hệ thống AiMed được thiết lập 3 ngưỡng chấp nhận hiệu năng
 - **Safety Recall (SR) = 100%:** Ngưỡng bắt buộc — mọi biểu hiện tự hại phải bị phát hiện, không có ngoại lệ.
 - **Latency p95 ≤ 5,0 giây:** Đảm bảo trải nghiệm liên tục trên thiết bị di động theo tiêu chuẩn GSMA.
 
-Trong trường hợp kết quả không đạt ngưỡng, hệ thống AIIDE tự động sinh kế hoạch cải tiến và thực hiện vòng đánh giá thứ hai sau khi áp dụng các sửa đổi kỹ thuật.
+Trong trường hợp kết quả không đạt ngưỡng, hệ thống đánh giá tự động sinh kế hoạch cải tiến và thực hiện vòng đánh giá thứ hai sau khi áp dụng các sửa đổi kỹ thuật.
 
 ---
 
