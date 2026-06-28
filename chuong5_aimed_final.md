@@ -411,7 +411,24 @@ Mặc dù hệ thống AiMed ghi nhận kết quả thực nghiệm tích cực,
 
 6. **Overhead latency GraphRAG:** Truy vấn đồ thị tạo thêm +1.373,5 ms (+73,3%), hạn chế tương thích trên thiết bị di động cấu hình yếu hoặc mạng chậm.
 
-**Hướng phát triển tương lai:** (1) Mở rộng bộ dữ liệu kiểm thử lên tối thiểu 1.000 kịch bản có chuyên gia y tế xác nhận; (2) Thực hiện user study với bệnh nhân và bác sĩ thực tế; (3) Tối ưu Graph Cache để đưa latency p95 về dưới 2,0 giây; (4) Tích hợp xác thực phiên JWT/OAuth2 và mã hóa đầu cuối theo chuẩn HIPAA.
+**Hướng phát triển tương lai:**
+
+Nhằm khắc phục các hạn chế nêu trên và đưa hệ thống AiMed tiến gần hơn đến ứng dụng thực tiễn lâm sàng, nhóm nghiên cứu đề xuất 4 định hướng phát triển trọng tâm:
+
+1. **Chuẩn hóa dữ liệu và Đánh giá lâm sàng diện rộng:** 
+   * Mở rộng quy mô bộ dữ liệu kiểm thử chuẩn hóa lên tối thiểu 1.000 tình huống hội thoại đa dạng, bao phủ đầy đủ phương ngữ và thói quen ngôn ngữ viết tắt của các vùng miền Việt Nam.
+   * Tổ chức các đợt đánh giá độc lập (Double-blind review) với hội đồng chuyên gia y tế và thực hiện các nghiên cứu thử nghiệm lâm sàng (Pilot clinical study) tại cơ sở y tế dưới sự phê duyệt của Hội đồng Đạo đức (IRB).
+
+2. **Cơ chế cập nhật tri thức động cho Đồ thị Y khoa:**
+   * Nghiên cứu phát triển một pipeline tự động hóa trích xuất thực thể và mối quan hệ (Entity-Relation Extraction) từ các tài liệu hướng dẫn điều trị mới nhất của Bộ Y tế và WHO.
+   * Ứng dụng kỹ thuật cập nhật đồ thị động (Dynamic Graph Updates) để tự động làm giàu cơ sở tri thức mà không cần tái cấu trúc toàn bộ cơ sở dữ liệu.
+
+3. **Tối ưu hóa hiệu năng biên và Trực quan hóa giải thích (XAI):**
+   * Lượng hóa sâu các mô hình cục bộ bằng các kỹ thuật tiên tiến (AWQ, GPTQ) và triển khai suy luận trực tiếp trên trình duyệt (WebGPU/WASM) nhằm loại bỏ hoàn toàn độ trễ đường truyền mạng ở kịch bản fallback.
+   * Xây dựng giao diện trực quan hóa đồ thị con (Subgraph Visualization) giải thích chi tiết đường đi lập luận (Reasoning Path) y khoa cho bác sĩ và người bệnh, nâng cao tính minh bạch (Explainability) của AI.
+
+4. **Bảo mật thông tin y tế theo tiêu chuẩn quốc tế:**
+   * Tích hợp cơ chế xác thực phân quyền nghiêm ngặt và mã hóa dữ liệu đầu cuối (End-to-End Encryption) đáp ứng các tiêu chuẩn bảo mật thông tin y tế khắt khe như HIPAA (Mỹ) và các quy định bảo vệ dữ liệu cá nhân hiện hành.
 
 ---
 
