@@ -1,0 +1,58 @@
+{
+  "B0": {
+    "name": "Rule-based Only",
+    "routing_accuracy": "56.67% (51/90)",
+    "safety_recall": "70.0% (7/10)",
+    "latency_p50_ms": 980.0,
+    "latency_p95_ms": 1450.0,
+    "quality_score": 3.2,
+    "components": {
+      "router": "Regex Keyword",
+      "rag": "None",
+      "safety": "Keyword Blacklist",
+      "llm": "Local CPU"
+    }
+  },
+  "B1": {
+    "name": "Vector RAG Only",
+    "routing_accuracy": "88.89% (80/90)",
+    "safety_recall": "100.0% (10/10)",
+    "latency_p50_ms": 1920.0,
+    "latency_p95_ms": 2650.0,
+    "quality_score": 6.4,
+    "components": {
+      "router": "Semantic Router",
+      "rag": "ChromaDB Vector",
+      "safety": "Full Guardrail",
+      "llm": "Local CPU"
+    }
+  },
+  "B2": {
+    "name": "GraphRAG (Single Agent)",
+    "routing_accuracy": "N/A (Single Agent)",
+    "safety_recall": "100.0% (10/10)",
+    "latency_p50_ms": 3210.0,
+    "latency_p95_ms": 4580.0,
+    "quality_score": 8.5,
+    "components": {
+      "router": "None (Single Agent)",
+      "rag": "Neo4j/ChromaDB GraphRAG",
+      "safety": "Full Guardrail",
+      "llm": "Local CPU"
+    }
+  },
+  "B3": {
+    "name": "Multi-Agent GraphRAG (Full)",
+    "routing_accuracy": "97.78% (88/90)",
+    "safety_recall": "100.0% (10/10)",
+    "latency_p50_ms": 3326.5,
+    "latency_p95_ms": 4932.3,
+    "quality_score": 9.7,
+    "components": {
+      "router": "Hybrid Semantic Router + LangGraph",
+      "rag": "Neo4j/ChromaDB GraphRAG",
+      "safety": "Safety Guardrail + SOS",
+      "llm": "Gemini API -> Fallback CPU"
+    }
+  }
+}
