@@ -54,7 +54,7 @@ Sự khác biệt về khả năng lập luận giữa hai hệ thống được
 *   **So sánh ngữ cảnh truy xuất (Context):**
     *   *Vector RAG:* Trích xuất các đoạn văn mô tả chứng đau bụng quanh rốn và gợi ý thuốc giảm đau chung.
     *   *GraphRAG:* Liên kết chuỗi triệu chứng: `[Đau quanh rốn] -> [Di chuyển hố chậu phải] -> [Viêm ruột thừa cấp]` và thuộc tính an toàn `[Thuốc giảm đau] -CHỈ_ĐỊNH_SAI-> [Viêm ruột thừa]` (do che lấp triệu chứng khám ngoại khoa).
-*   **So sánh phản hồi (Response):** Vector RAG khuyên người dùng có thể uống thuốc giảm đau và tự theo dõi tại nhà. GraphRAG nhận diện dấu hiệu viêm ruột thừa cấp, yêu cầu người dùng đi cấp cứu ngoại khoa ngay lập tức và tuyệt đối không uống thuốc giảm đau để tránh ruột thừa bị vỡ gây viêm phúc mạc nguy hiểm.
+*   **So sánh phản hồi (Response):** Vector RAG khuyên người dùng có thể uống thuốc giảm đau và tự theo dõi tại nhà. GraphRAG nhận diện dấu hiệu viêm ruột thừa cấp, yêu cầu người dùng đi cấp cứu ngoại khoa ngay lập tức và khuyến cáo nghiêm ngặt không uống thuốc giảm đau để tránh ruột thừa bị vỡ gây viêm phúc mạc nguy hiểm.
 
 ---
 

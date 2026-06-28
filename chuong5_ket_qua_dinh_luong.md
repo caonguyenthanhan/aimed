@@ -23,7 +23,7 @@ Trong phạm vi bộ kiểm thử 100 câu hỏi chuẩn hóa được xây dự
 | **Default (Kỳ vọng)** | 0 | 0 | 0 | 0 | 0 | **15** |
 
 Phân tích hiệu năng định tuyến theo từng phân hệ cụ thể chỉ ra:
-*   **Phân hệ đạt hiệu năng tốt nhất:** Phân hệ *Doctor Referral* và *Default* đạt tỷ lệ chính xác tuyệt đối **100.0% (15/15 ca)**. Điều này cho thấy các biểu thức chính quy đại diện cho ý định đặt lịch khám, tìm bác sĩ hoặc xã giao thông thường có độ bao phủ rất tốt đối với từ khóa đặc trưng. Tiếp sau là phân hệ *Medication* đạt **93.3%** (14/15 ca đúng).
+*   **Phân hệ đạt hiệu năng tốt nhất:** Phân hệ *Doctor Referral* và *Default* đạt tỷ lệ chính xác tối đa **100.0% (15/15 ca)**. Điều này cho thấy các biểu thức chính quy đại diện cho ý định đặt lịch khám, tìm bác sĩ hoặc xã giao thông thường có độ bao phủ rất tốt đối với từ khóa đặc trưng. Tiếp sau là phân hệ *Medication* đạt **93.3%** (14/15 ca đúng).
 *   **Phân hệ đạt hiệu năng yếu nhất:** Phân hệ *Care Plan* chỉ đạt **36.84%** (7/19 ca đúng), do các yêu cầu về chế độ dinh dưỡng và vận động dễ bị nhầm lẫn lan tỏa sang các nhóm khác như `therapy` (4 ca) và `default` (4 ca). Phân hệ *Triage* cũng chỉ đạt mức trung bình **53.33%** (8/15 ca đúng), đây là một cảnh báo an toàn y tế đáng lưu ý.
 
 ##### Phân tích lỗi định tuyến điển hình (Error Analysis):

@@ -1,16 +1,16 @@
 ### 5.4. Nghiên cứu cắt bỏ thành phần (Ablation Study)
 
-#### 5.4.1. Mục tiêu thử nghiệm triệt tiêu thành phần
+#### 5.4.1. Mục tiêu thử nghiệm cắt bỏ thành phần
 Nghiên cứu cắt bỏ thành phần (Ablation Study) được thực hiện nhằm đánh giá và chứng minh đóng góp của từng module đối với hiệu năng tổng thể của hệ sinh thái y tế số AiMed. Việc này cho phép làm rõ vai trò độc lập của từng cấu trúc công nghệ đối với khả năng định tuyến, an toàn thông tin và chất lượng câu trả lời. 
 
-Thử nghiệm triệt tiêu tập trung giải quyết ba câu hỏi nghiên cứu (Research Questions) cốt lõi sau:
+Thử nghiệm cắt bỏ tập trung giải quyết ba câu hỏi nghiên cứu (Research Questions) cốt lõi sau:
 *   **RQ1 (Đóng góp của Đa tác tử):** Kiến trúc điều phối đa tác tử chuyên khoa (Multi-Agent Orchestration) đóng góp bao nhiêu phần trăm chất lượng và hiệu năng định tuyến so với kiến trúc đơn tác tử (B2: Single-Agent GraphRAG)?
 *   **RQ2 (Đóng góp của GraphRAG):** Công nghệ đồ thị tri thức kết hợp (GraphRAG) đóng góp bao nhiêu điểm chất lượng lâm sàng so với công nghệ truy xuất vector truyền thống (B1: Vector RAG)?
 *   **RQ3 (Đóng góp của Định tuyến Ngữ nghĩa):** Bộ định tuyến ngữ nghĩa (Semantic Router) đóng góp bao nhiêu phần trăm độ chính xác định tuyến so với bộ định tuyến cứng bằng biểu thức chính quy (B0: Rule-based Routing)?
 
 ---
 
-#### 5.4.2. Bảng kết quả thử nghiệm triệt tiêu thành phần
+#### 5.4.2. Bảng kết quả thử nghiệm cắt bỏ thành phần
 Kết quả đo đạc định lượng của 4 cấu hình thực nghiệm (B0, B1, B2, B3) trên 100 ca kiểm thử chuẩn hóa được tổng hợp tại Bảng 5.6.
 
 ##### Bảng 5.6: Bảng so sánh các chỉ số thực nghiệm cắt bỏ thành phần trên AiMed

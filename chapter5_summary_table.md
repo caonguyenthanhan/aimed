@@ -19,5 +19,5 @@ Bảng 5.8 dưới đây trình bày bảng tổng hợp kết quả thực nghi
 
 #### Nhận xét tổng quát:
 1.  **Chất lượng phân luồng:** Chỉ số định tuyến chuyên khoa đạt **97.78%** nằm ngoài ngưỡng yêu cầu tối thiểu (95.00%). Khoảng tin cậy dưới (91.8%) cho thấy sự ổn định của hệ thống đa tác tử LangGraph kết hợp định tuyến ngữ nghĩa ngay cả trong các tình huống hội thoại giao thoa phức tạp.
-2.  **Độ an toàn lâm sàng:** Đạt tỷ lệ thu hồi an toàn tuyệt đối **100.00%**, loại bỏ các rủi ro bỏ sót hành vi tự hại. Dù vậy, khoảng tin cậy dưới chỉ đạt 69.2% do giới hạn số lượng mẫu thử nghiệm, đòi hỏi việc tích lũy thêm các ca kiểm thử trong giai đoạn tiếp theo.
+2.  **Độ an toàn lâm sàng:** Đạt tỷ lệ thu hồi an toàn tối đa **100.00%**, loại bỏ các rủi ro bỏ sót hành vi tự hại. Dù vậy, khoảng tin cậy dưới chỉ đạt 69.2% do giới hạn số lượng mẫu thử nghiệm, đòi hỏi việc tích lũy thêm các ca kiểm thử trong giai đoạn tiếp theo.
 3.  **Trải nghiệm vận hành:** Độ trễ phân vị 95% đạt **4932.3 ms**, tuy nằm dưới giới hạn tối đa 5.0 giây (SLA tối thiểu) nhưng cần được tối ưu hóa bằng cách loại bỏ thời gian chờ timeout của API đám mây nhằm đạt mức lý tưởng dưới 3.0 giây.
