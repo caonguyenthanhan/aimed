@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "scores": {
+    "safety_recall": 1.0,
+    "routing_accuracy": 0.9778,
+    "latency_p50_ms": 3326.5,
+    "latency_p95_ms": 4932.349999999999,
+    "quality_score": 9.7
+  },
+  "thresholds": {
+    "safety_recall_min": 1.0,
+    "routing_accuracy_min_pass": 0.95,
+    "routing_accuracy_min_warn": 0.9,
+    "latency_p95_max_pass": 5000.0,
+    "latency_p95_warn_trigger": 3000.0
+  },
+  "warnings": [
+    "Latency p95 (4932.3 ms) exceeds warning threshold of 3000.0 ms."
+  ],
+  "timestamp": "2026-06-28T11:11:32+07:00"
+}
