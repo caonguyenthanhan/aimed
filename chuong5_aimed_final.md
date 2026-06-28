@@ -42,7 +42,7 @@
 
 ### 5.1.2. Bộ dữ liệu kiểm thử
 
-Bộ dữ liệu kiểm thử **`test_cases_v2.json`** chứa 100 tình huống hội thoại mô phỏng ngôn ngữ tự nhiên tiếng Việt. Bộ dữ liệu được xây dựng dựa trên các kịch bản lâm sàng quốc tế, được dịch thuật và tinh chỉnh cho bối cảnh y tế Việt Nam, bao gồm cả các câu hỏi dùng tiếng lóng, từ viết tắt và cách diễn đạt gián tiếp phổ biến.
+Bộ dữ liệu kiểm thử chuẩn hóa chứa 100 tình huống hội thoại mô phỏng ngôn ngữ tự nhiên tiếng Việt. Bộ dữ liệu được xây dựng dựa trên các kịch bản lâm sàng quốc tế, được dịch thuật và tinh chỉnh cho bối cảnh y tế Việt Nam, bao gồm cả các câu hỏi dùng tiếng lóng, từ viết tắt và cách diễn đạt gián tiếp phổ biến.
 
 > 📎 **Xem toàn bộ 100 kịch bản tại Phụ lục A.1 — Bảng 28** — bảng chi tiết với ID, câu hỏi, tác tử kỳ vọng và ghi chú lâm sàng cho từng ca.
 
@@ -63,7 +63,7 @@ Bộ dữ liệu kiểm thử **`test_cases_v2.json`** chứa 100 tình huống 
 
 ### 5.1.3. Tiêu chí đánh giá
 
-Chất lượng câu trả lời được đánh giá qua 5 chiều độc lập định nghĩa trong **`rubric_v1.json`**:
+Chất lượng câu trả lời được đánh giá qua 5 chiều độc lập định nghĩa trong bộ tiêu chí đánh giá chuẩn hóa:
 
 - **FAITHFULNESS (0–2):** Mức độ bám sát dữ liệu y khoa được truy xuất từ đồ thị/vector, hạn chế ảo giác thông tin.
 - **CITATION\_CORRECTNESS (0–1):** Câu trả lời có nêu cơ sở y học chính thống (Dược thư, WHO, Bộ Y tế) không.
@@ -189,7 +189,7 @@ Phân hệ Doctor Referral và Default đạt 100%. Medication đạt 93,3% (14/
 
 ### 5.3.1. Thiết kế thử nghiệm A/B
 
-Nhóm chọn lọc **20 kịch bản lâm sàng đặc thù** từ `test_cases_v2.json`:
+Nhóm nghiên cứu chọn lọc **20 kịch bản lâm sàng đặc thù** từ bộ dữ liệu kiểm thử chuẩn hóa:
 - 10 ca dược lý (đòi hỏi phân tích tương tác đa chiều giữa dược chất)
 - 5 ca sàng lọc cấp cứu (đòi hỏi xâu chuỗi triệu chứng → xếp loại khẩn cấp)
 - 5 ca hỗ trợ tâm lý (đòi hỏi hiểu cơ chế tâm lý và phác đồ can thiệp)
@@ -423,7 +423,7 @@ Mặc dù hệ thống AiMed ghi nhận kết quả thực nghiệm tích cực,
 
 ### 2. Bộ dữ liệu kiểm thử chuẩn hóa tiếng Việt cho y khoa và tâm lý lâm sàng
 
-Nghiên cứu đóng góp bộ dữ liệu kiểm thử **`test_cases_v2.json`** gồm 100 kịch bản ngôn ngữ tự nhiên phân chia thành 7 phân tầng y học, bao gồm sàng lọc cấp cứu, hỗ trợ trị liệu nhận thức hành vi (CBT) và dược lý học, kèm các ca thử nghiệm xâm nhập nguy hại (Red-Teaming). Đây là tài nguyên tham chiếu có giá trị cho các nghiên cứu tiếp theo đánh giá hệ thống AI y tế tiếng Việt.
+Nghiên cứu đóng góp bộ dữ liệu kiểm thử chuẩn hóa gồm 100 kịch bản ngôn ngữ tự nhiên phân chia thành 7 phân tầng y học, bao gồm sàng lọc cấp cứu, hỗ trợ trị liệu nhận thức hành vi (CBT) và dược lý học, kèm các ca thử nghiệm xâm nhập nguy hại (Red-Teaming). Đây là tài nguyên tham chiếu có giá trị cho các nghiên cứu tiếp theo đánh giá hệ thống AI y tế tiếng Việt.
 
 > 📎 **Toàn bộ 100 kịch bản tại Phụ lục A.1.**
 
