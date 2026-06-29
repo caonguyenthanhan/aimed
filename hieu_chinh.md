@@ -13,31 +13,34 @@ Dưới đây là phần nội dung văn bản hiệu chỉnh cho phần Tiểu 
 ### Sơ đồ Mermaid (Hình 1.7) của hệ thống AiMed:
 
 ```mermaid
-flowchart TD
+flowchart LR
     %% Định nghĩa phong cách hiển thị màu sắc trực quan
-    classDef main fill:#E6F2FF,stroke:#0066CC,stroke-width:3px,font-weight:bold,color:#003366,font-size:13px;
-    classDef tech fill:#F9F0FF,stroke:#800080,stroke-width:2px,font-weight:bold,color:#4B0082,font-size:12px;
-    classDef med fill:#FFF0F0,stroke:#FF0000,stroke-width:2px,font-weight:bold,color:#8B0000,font-size:12px;
+    classDef root fill:#dae8fc,stroke:#6c8ebf,stroke-width:3px,color:#000,font-weight:bold,font-size:13px;
+    classDef level1 fill:#d5e8d4,stroke:#82b366,stroke-width:2px,color:#000,font-weight:bold,font-size:12px;
+    classDef level2 fill:#fff2cc,stroke:#d6b656,stroke-width:1.5px,color:#000,font-size:11px;
 
-    %% Các nút Trụ cột
-    P1["TRỤ CỘT 1: PHẦN CỨNG LAI<br/>(Hybrid GPU-CPU Fallback)<br/>• GPU Cloud chính & CPU Local dự phòng<br/>• Tự động chuyển tải phục hồi dưới 2,0s"]:::tech
-    
-    P2["TRỤ CỘT 2: ĐA TÁC TỬ KIỂM SOÁT<br/>(Multi-Agent Routing)<br/>• Phân loại ý định bằng Semantic Router<br/>• Tách biệt Medical & Psychology Agent"]:::tech
-    
-    Central["HỆ THỐNG Y TẾ SỐ AIMED<br/>(Giao thoa Y học & Công nghệ)"]:::main
-    
-    P3["TRỤ CỘT 3: CHĂM SÓC PHÂN TẦNG<br/>(Stepped Care & Sàng lọc)<br/>• Số hóa trắc nghiệm PHQ-9/GAD-7 ngầm<br/>• 4 Cấp can thiệp & SOS Mode ở biên"]:::med
-    
-    P4["TRỤ CỘT 4: BẢO CHỨNG TRI THỨC<br/>(Neo4j/Memgraph GraphRAG)<br/>• Đồ thị tri thức y khoa tiếng Việt<br/>• Evidence Subgraph chống ảo giác"]:::med
+    %% Nút gốc
+    Root["HỆ THỐNG Y TẾ SỐ AIMED<br/>(Kiến trúc Đóng góp Công nghệ)"]:::root
 
-    %% Định hình bố cục đối xứng 2x2 giao thoa qua tâm
-    P1 <--> P2
-    P3 <--> P4
+    %% Các nhánh chính (Level 1)
+    N1["1. Cấu trúc Truy vấn<br/>(Hybrid RAG Strategy)"]:::level1
+    N2["2. Quản trị Các Bộ phận AI<br/>(Multi-Agent Orchestration)"]:::level1
+    N3["3. Chuẩn hóa Theo Tiêu chuẩn<br/>(Semantic Integration)"]:::level1
+    N4["4. Giao diện Tương tác Chuyên sâu<br/>(Context-Aware UI/UX)"]:::level1
+
+    Root --> N1
+    Root --> N2
+    Root --> N3
+    Root --> N4
+
+    %% Các chi tiết dạng danh sách gộp (Giúp chữ to và bố cục đứng cực kỳ gọn trong Word)
+    N1 --> N1_detail["• Kết hợp cơ sở dữ liệu Vector (Vector DB)<br/>• Tối ưu hóa Semantic Search & Lexical Search<br/>• Tích hợp tri thức đồ thị (GraphRAG y khoa)"]:::level2
     
-    P1 <--> Central
-    P2 <--> Central
-    P3 <--> Central
-    P4 <--> Central
+    N2 --> N2_detail["• Phân chia tác vụ cho từng tác tử chuyên biệt<br/>• Phối hợp Agent giải quyết vấn đề phức tạp<br/>• Ứng dụng LLM Frameworks (LangGraph, LlamaIndex)"]:::level2
+    
+    N3 --> N3_detail["• Trích xuất thực thể y tế (Symptom, Medication...)<br/>• Đồng bộ hóa từ vựng chuẩn y khoa (ICD-10, Drug)<br/>• Đảm bảo tính bảo mật và an toàn thông tin"]:::level2
+    
+    N4 --> N4_detail["• Hiển thị luồng suy luận AI (Explainability)<br/>• Thiết kế UI/UX sát với luồng nghiệp vụ y tế<br/>• Trải nghiệm phản hồi theo thời gian thực (Streaming)"]:::level2
 ```
 
 ---
