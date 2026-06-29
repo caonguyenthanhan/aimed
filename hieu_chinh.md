@@ -24,9 +24,9 @@ flowchart LR
 
     %% Các nhánh chính (Level 1)
     N1["1. Cấu trúc Truy vấn<br/>(Hybrid RAG Strategy)"]:::level1
-    N2["2. Quản trị Các Bộ phận AI<br/>(Multi-Agent Orchestration)"]:::level1
-    N3["3. Chuẩn hóa Theo Tiêu chuẩn<br/>(Semantic Integration)"]:::level1
-    N4["4. Giao diện Tương tác Chuyên sâu<br/>(Context-Aware UI/UX)"]:::level1
+    N2["2. Quản trị Bộ phận AI<br/>(Multi-Agent System)"]:::level1
+    N3["3. Chuẩn hóa Ngữ nghĩa<br/>(Semantic Integration)"]:::level1
+    N4["4. Giao diện Tương tác<br/>(Context-Aware UI/UX)"]:::level1
 
     Root --> N1
     Root --> N2
@@ -36,11 +36,11 @@ flowchart LR
     %% Các chi tiết dạng danh sách gộp (Giúp chữ to và bố cục đứng cực kỳ gọn trong Word)
     N1 --> N1_detail["• Kết hợp cơ sở dữ liệu Vector (Vector DB)<br/>• Tối ưu hóa Semantic Search & Lexical Search<br/>• Tích hợp tri thức đồ thị (GraphRAG y khoa)"]:::level2
     
-    N2 --> N2_detail["• Phân chia tác vụ cho từng tác tử chuyên biệt<br/>• Phối hợp Agent giải quyết vấn đề phức tạp<br/>• Ứng dụng LLM Frameworks (LangGraph, LlamaIndex)"]:::level2
+    N2 --> N2_detail["• Phân chia tác vụ cho các tác tử chuyên biệt<br/>• Phối hợp Agent giải quyết vấn đề phức tạp<br/>• Ứng dụng khung LLM (LangGraph & LlamaIndex)"]:::level2
     
-    N3 --> N3_detail["• Trích xuất thực thể y tế (Symptom, Medication...)<br/>• Đồng bộ hóa từ vựng chuẩn y khoa (ICD-10, Drug)<br/>• Đảm bảo tính bảo mật và an toàn thông tin"]:::level2
+    N3 --> N3_detail["• Trích xuất thực thể y tế (Symptom, Drug...)<br/>• Đồng bộ từ vựng chuẩn y khoa (ICD-10, Drug)<br/>• Đảm bảo tính bảo mật và an toàn dữ liệu"]:::level2
     
-    N4 --> N4_detail["• Hiển thị luồng suy luận AI (Explainability)<br/>• Thiết kế UI/UX sát với luồng nghiệp vụ y tế<br/>• Trải nghiệm phản hồi theo thời gian thực (Streaming)"]:::level2
+    N4 --> N4_detail["• Hiển thị luồng suy luận AI (Explainability)<br/>• Thiết kế UI/UX sát với nghiệp vụ lâm sàng<br/>• Trải nghiệm phản hồi dạng dòng (Streaming)"]:::level2
 ```
 
 ---
