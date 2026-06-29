@@ -13,37 +13,21 @@ Dưới đây là phần nội dung văn bản hiệu chỉnh cho phần Tiểu 
 ### Sơ đồ Mermaid (Hình 1.7) của hệ thống AiMed:
 
 ```mermaid
-flowchart LR
-    %% Định nghĩa phong cách hiển thị
-    classDef main fill:#E6F2FF,stroke:#0066CC,stroke-width:3px,font-weight:bold,color:#003366;
-    classDef cat fill:#F2F2F2,stroke:#555555,stroke-width:2px,font-weight:bold,color:#333333;
-    classDef tech fill:#F9F0FF,stroke:#800080,stroke-width:2px,font-weight:bold,color:#4B0082;
-    classDef med fill:#FFF0F0,stroke:#FF0000,stroke-width:2px,font-weight:bold,color:#8B0000;
-    classDef node fill:#FFFFFF,stroke:#333333,stroke-width:1.5px,font-size:12px;
+flowchart TD
+    %% Định nghĩa phong cách hiển thị với kích thước chữ lớn
+    classDef tech fill:#F9F0FF,stroke:#800080,stroke-width:2.5px,font-weight:bold,color:#4B0082;
+    classDef med fill:#FFF0F0,stroke:#FF0000,stroke-width:2.5px,font-weight:bold,color:#8B0000;
 
-    %% Nút trung tâm
-    Central["HỆ THỐNG Y TẾ SỐ AIMED"]:::main
-
-    %% Phân hệ
-    Central --> Tech["PHÂN HỆ CÔNG NGHỆ<br/>(Hạ tầng & Định tuyến)"]:::cat
-    Central --> Med["PHÂN HỆ Y HỌC LÂM SÀNG<br/>(Tri thức & Trị liệu)"]:::cat
-
-    %% Trụ cột Công nghệ
-    Tech --> P1["Trụ cột 1: Phần cứng lai<br/>(Hybrid GPU-CPU Fallback)"]:::tech
-    Tech --> P2["Trụ cột 2: Luồng Đa tác tử<br/>(Multi-Agent Routing)"]:::tech
-
-    %% Trụ cột Y học
-    Med --> P3["Trụ cột 3: Chăm sóc phân tầng<br/>(Stepped Care & Sàng lọc)"]:::med
-    Med --> P4["Trụ cột 4: Bảo chứng tri thức<br/>(Neo4j/Memgraph GraphRAG)"]:::med
-
-    %% Chi tiết dạng danh sách gộp (Giúp chữ to và bố cục đứng cực kỳ gọn trong Word)
-    P1 --> P1_detail["• GPU Cloud (Primary) làm lõi xử lý chính<br/>• CPU Local (Fallback) chạy offline qua Llama.cpp<br/>• Tự động ngắt phục hồi (SLA) dưới 2,0 giây"]:::node
+    P1["TRỤ CỘT 1: KIẾN TRÚC PHẦN CỨNG LAI (HYBRID GPU-CPU FALLBACK)<br/>• GPU Cloud (Primary) làm lõi xử lý chính, hiệu năng cao, độ trễ thấp.<br/>• CPU Local (Fallback) chạy hoàn toàn offline qua Llama.cpp & Llama-3.1-8B.<br/>• Tự động chuyển tải và phục hồi dịch vụ (SLA) dưới 2,0 giây khi có sự cố mạng."]:::tech
     
-    P2 --> P2_detail["• Định tuyến ngữ nghĩa (Semantic Router) ở biên<br/>• Tách biệt Medical Agent & Psychology Agent<br/>• Triệt tiêu hoàn toàn xung đột ngữ cảnh"]:::node
+    P2["TRỤ CỘT 2: LUỒNG ĐA TÁC TỬ KIỂM SOÁT (MULTI-AGENT ROUTING)<br/>• Sử dụng Semantic Router ở biên để định tuyến ý định người dùng tức thì.<br/>• Tách biệt phân tích của Tác tử Y khoa và giao tiếp của Tác tử Tâm lý.<br/>• Triệt tiêu hiện tượng xung đột ngữ cảnh trong cùng một phiên xử lý."]:::tech
     
-    P3 --> P3_detail["• Sàng lọc ngầm chỉ số PHQ-9 & GAD-7<br/>• 4 Cấp độ can thiệp cá nhân hóa thích ứng<br/>• SOS Emergency Mode ngắt khẩn cấp ở biên"]:::node
+    P3["TRỤ CỘT 3: MÔ HÌNH CHĂM SÓC PHÂN TẦNG (STEPPED CARE & SÀNG LỌC)<br/>• Số hóa và tích hợp trắc nghiệm PHQ-9 & GAD-7 ngầm vào cuộc trò chuyện.<br/>• Tự động hóa lộ trình can thiệp cá nhân hóa thích ứng theo 4 cấp độ trị liệu.<br/>• SOS Emergency Mode ngắt khẩn cấp ở biên, hiển thị hotline 115 cứu hộ."]:::med
     
-    P4 --> P4_detail["• Cơ sở dữ liệu tri thức y khoa đồ thị tiếng Việt<br/>• Bóc tách bằng chứng (Evidence Subgraph) y khoa<br/>• Chống ảo giác (Anti-hallucination) nghiêm ngặt"]:::node
+    P4["TRỤ CỘT 4: RÀNG BUỘC CHỨNG CỨ Y KHOA (NEO4J/MEMGRAPH GRAPHRAG)<br/>• Xây dựng đồ thị mạng lưới tri thức y khoa tiếng Việt làm cơ sở dữ liệu nền.<br/>• Bóc tách và tiêm bằng chứng ngữ cảnh (Evidence Subgraph) trực tiếp vào prompt.<br/>• Cơ chế chống ảo giác y khoa (Anti-hallucination) dựa trên ràng buộc chứng cứ."]:::med
+
+    %% Kết nối luồng đứng dọc
+    P1 ==> P2 ==> P3 ==> P4
 ```
 
 ---
