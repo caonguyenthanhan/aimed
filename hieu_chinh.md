@@ -13,61 +13,37 @@ Dưới đây là phần nội dung văn bản hiệu chỉnh cho phần Tiểu 
 ### Sơ đồ Mermaid (Hình 1.7) của hệ thống AiMed:
 
 ```mermaid
-flowchart TD
-    %% Định nghĩa các lớp phong cách hiển thị
+flowchart LR
+    %% Định nghĩa phong cách hiển thị
     classDef main fill:#E6F2FF,stroke:#0066CC,stroke-width:3px,font-weight:bold,color:#003366;
+    classDef cat fill:#F2F2F2,stroke:#555555,stroke-width:2px,font-weight:bold,color:#333333;
     classDef tech fill:#F9F0FF,stroke:#800080,stroke-width:2px,font-weight:bold,color:#4B0082;
     classDef med fill:#FFF0F0,stroke:#FF0000,stroke-width:2px,font-weight:bold,color:#8B0000;
-    classDef node fill:#FFFFFF,stroke:#333333,stroke-width:1px,font-size:12px;
+    classDef node fill:#FFFFFF,stroke:#333333,stroke-width:1.5px,font-size:12px;
 
-    %% Nút gốc trung tâm
-    Central["HỆ THỐNG Y TẾ SỐ AIMED<br/>(Giao thoa Y học & Công nghệ)"]:::main
+    %% Nút trung tâm
+    Central["HỆ THỐNG Y TẾ SỐ AIMED"]:::main
 
-    %% Trụ cột 1: Kiến trúc phần cứng lai
-    P1["TRỤ CỘT 1<br/>Kiến trúc Phần cứng lai<br/>(Hybrid GPU-CPU Fallback)"]:::tech
-    P1_1["GPU Cloud (Primary)<br/>Xử lý tác vụ nặng, độ trễ thấp"]:::node
-    P1_2["CPU Local (Fallback)<br/>Đảm bảo dịch vụ chạy offline"]:::node
-    P1_3["Chống chịu lỗi (SLA)<br/>Chuyển tải tự động dưới 2s"]:::node
+    %% Phân hệ
+    Central --> Tech["PHÂN HỆ CÔNG NGHỆ<br/>(Hạ tầng & Định tuyến)"]:::cat
+    Central --> Med["PHÂN HỆ Y HỌC LÂM SÀNG<br/>(Tri thức & Trị liệu)"]:::cat
 
-    %% Trụ cột 2: Định tuyến đa tác tử
-    P2["TRỤ CỘT 2<br/>Luồng Đa tác tử kiểm soát<br/>(Multi-Agent Routing)"]:::tech
-    P2_1["Semantic Router<br/>Phân loại ý định ở local"]:::node
-    P2_2["Medical Agent<br/>Truy vấn thông tin bệnh lý"]:::node
-    P2_3["Psychology Agent<br/>Trò chuyện đồng cảm, nâng đỡ"]:::node
+    %% Trụ cột Công nghệ
+    Tech --> P1["Trụ cột 1: Phần cứng lai<br/>(Hybrid GPU-CPU Fallback)"]:::tech
+    Tech --> P2["Trụ cột 2: Luồng Đa tác tử<br/>(Multi-Agent Routing)"]:::tech
 
-    %% Trụ cột 3: Chăm sóc phân tầng
-    P3["TRỤ CỘT 3<br/>Mô hình Chăm sóc Phân tầng<br/>(Stepped Care & Sàng lọc ngầm)"]:::med
-    P3_1["Sàng lọc tự động<br/>Tích hợp PHQ-9 & GAD-7 ngầm"]:::node
-    P3_2["Can thiệp cá nhân hóa<br/>4 Cấp độ hỗ trợ thích ứng"]:::node
-    P3_3["SOS Emergency Mode<br/>Chốt chặn an toàn y khoa biên"]:::node
+    %% Trụ cột Y học
+    Med --> P3["Trụ cột 3: Chăm sóc phân tầng<br/>(Stepped Care & Sàng lọc)"]:::med
+    Med --> P4["Trụ cột 4: Bảo chứng tri thức<br/>(Neo4j/Memgraph GraphRAG)"]:::med
 
-    %% Trụ cột 4: Ràng buộc y khoa GraphRAG
-    P4["TRỤ CỘT 4<br/>Đảm bảo chứng cứ y khoa<br/>(Neo4j/Memgraph GraphRAG)"]:::med
-    P4_1["Knowledge Graph<br/>Đồ thị tri thức y khoa tiếng Việt"]:::node
-    P4_2["Evidence Subgraph<br/>Bóc tách mối quan hệ đa chiều"]:::node
-    P4_3["Anti-Hallucination<br/>Nội suy ràng buộc bằng chứng"]:::node
-
-    %% Thiết lập liên kết liên sơ đồ
-    Central --> P1
-    Central --> P2
-    Central --> P3
-    Central --> P4
-
-    P1 --> P1_1
-    P1 --> P1_2
-    P1 --> P1_3
-
-    P2 --> P2_1
-    P2 --> P2_2
-    P2 --> P2_3
-
-    P3 --> P3_1
-    P3 --> P3_2
-    P3 --> P3_3
-
-    P4 --> P4_1
-    P4 --> P4_2
-    P4 --> P4_3
+    %% Chi tiết dạng danh sách gộp (Giúp chữ to và bố cục đứng cực kỳ gọn trong Word)
+    P1 --> P1_detail["• GPU Cloud (Primary) làm lõi xử lý chính<br/>• CPU Local (Fallback) chạy offline qua Llama.cpp<br/>• Tự động ngắt phục hồi (SLA) dưới 2,0 giây"]:::node
+    
+    P2 --> P2_detail["• Định tuyến ngữ nghĩa (Semantic Router) ở biên<br/>• Tách biệt Medical Agent & Psychology Agent<br/>• Triệt tiêu hoàn toàn xung đột ngữ cảnh"]:::node
+    
+    P3 --> P3_detail["• Sàng lọc ngầm chỉ số PHQ-9 & GAD-7<br/>• 4 Cấp độ can thiệp cá nhân hóa thích ứng<br/>• SOS Emergency Mode ngắt khẩn cấp ở biên"]:::node
+    
+    P4 --> P4_detail["• Cơ sở dữ liệu tri thức y khoa đồ thị tiếng Việt<br/>• Bóc tách bằng chứng (Evidence Subgraph) y khoa<br/>• Chống ảo giác (Anti-hallucination) nghiêm ngặt"]:::node
 ```
 
 ---
