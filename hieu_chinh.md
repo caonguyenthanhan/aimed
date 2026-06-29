@@ -14,20 +14,30 @@ Dưới đây là phần nội dung văn bản hiệu chỉnh cho phần Tiểu 
 
 ```mermaid
 flowchart TD
-    %% Định nghĩa phong cách hiển thị với kích thước chữ lớn
-    classDef tech fill:#F9F0FF,stroke:#800080,stroke-width:2.5px,font-weight:bold,color:#4B0082;
-    classDef med fill:#FFF0F0,stroke:#FF0000,stroke-width:2.5px,font-weight:bold,color:#8B0000;
+    %% Định nghĩa phong cách hiển thị màu sắc trực quan
+    classDef main fill:#E6F2FF,stroke:#0066CC,stroke-width:3px,font-weight:bold,color:#003366,font-size:13px;
+    classDef tech fill:#F9F0FF,stroke:#800080,stroke-width:2px,font-weight:bold,color:#4B0082,font-size:12px;
+    classDef med fill:#FFF0F0,stroke:#FF0000,stroke-width:2px,font-weight:bold,color:#8B0000,font-size:12px;
 
-    P1["TRỤ CỘT 1: KIẾN TRÚC PHẦN CỨNG LAI (HYBRID GPU-CPU FALLBACK)<br/>• GPU Cloud (Primary) làm lõi xử lý chính, hiệu năng cao, độ trễ thấp.<br/>• CPU Local (Fallback) chạy hoàn toàn offline qua Llama.cpp & Llama-3.1-8B.<br/>• Tự động chuyển tải và phục hồi dịch vụ (SLA) dưới 2,0 giây khi có sự cố mạng."]:::tech
+    %% Các nút Trụ cột
+    P1["TRỤ CỘT 1: PHẦN CỨNG LAI<br/>(Hybrid GPU-CPU Fallback)<br/>• GPU Cloud chính & CPU Local dự phòng<br/>• Tự động chuyển tải phục hồi dưới 2,0s"]:::tech
     
-    P2["TRỤ CỘT 2: LUỒNG ĐA TÁC TỬ KIỂM SOÁT (MULTI-AGENT ROUTING)<br/>• Sử dụng Semantic Router ở biên để định tuyến ý định người dùng tức thì.<br/>• Tách biệt phân tích của Tác tử Y khoa và giao tiếp của Tác tử Tâm lý.<br/>• Triệt tiêu hiện tượng xung đột ngữ cảnh trong cùng một phiên xử lý."]:::tech
+    P2["TRỤ CỘT 2: ĐA TÁC TỬ KIỂM SOÁT<br/>(Multi-Agent Routing)<br/>• Phân loại ý định bằng Semantic Router<br/>• Tách biệt Medical & Psychology Agent"]:::tech
     
-    P3["TRỤ CỘT 3: MÔ HÌNH CHĂM SÓC PHÂN TẦNG (STEPPED CARE & SÀNG LỌC)<br/>• Số hóa và tích hợp trắc nghiệm PHQ-9 & GAD-7 ngầm vào cuộc trò chuyện.<br/>• Tự động hóa lộ trình can thiệp cá nhân hóa thích ứng theo 4 cấp độ trị liệu.<br/>• SOS Emergency Mode ngắt khẩn cấp ở biên, hiển thị hotline 115 cứu hộ."]:::med
+    Central["HỆ THỐNG Y TẾ SỐ AIMED<br/>(Giao thoa Y học & Công nghệ)"]:::main
     
-    P4["TRỤ CỘT 4: RÀNG BUỘC CHỨNG CỨ Y KHOA (NEO4J/MEMGRAPH GRAPHRAG)<br/>• Xây dựng đồ thị mạng lưới tri thức y khoa tiếng Việt làm cơ sở dữ liệu nền.<br/>• Bóc tách và tiêm bằng chứng ngữ cảnh (Evidence Subgraph) trực tiếp vào prompt.<br/>• Cơ chế chống ảo giác y khoa (Anti-hallucination) dựa trên ràng buộc chứng cứ."]:::med
+    P3["TRỤ CỘT 3: CHĂM SÓC PHÂN TẦNG<br/>(Stepped Care & Sàng lọc)<br/>• Số hóa trắc nghiệm PHQ-9/GAD-7 ngầm<br/>• 4 Cấp can thiệp & SOS Mode ở biên"]:::med
+    
+    P4["TRỤ CỘT 4: BẢO CHỨNG TRI THỨC<br/>(Neo4j/Memgraph GraphRAG)<br/>• Đồ thị tri thức y khoa tiếng Việt<br/>• Evidence Subgraph chống ảo giác"]:::med
 
-    %% Kết nối luồng đứng dọc
-    P1 ==> P2 ==> P3 ==> P4
+    %% Định hình bố cục đối xứng 2x2 giao thoa qua tâm
+    P1 <--> P2
+    P3 <--> P4
+    
+    P1 <--> Central
+    P2 <--> Central
+    P3 <--> Central
+    P4 <--> Central
 ```
 
 ---
