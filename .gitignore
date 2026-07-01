@@ -103,3 +103,27 @@ Neo4j-*.txt
 /_models/
 aimed-log-export-*.json
 .worktrees/
+
+# Ignore all markdown files globally in the repository
+*.md
+/chuong*.md
+/phu_luc*.md
+/hieu_chinh.md
+/kich_ban_truoc_hoi_dong.md
+/ablation_*.md
+/ab_report.md
+/actor_ecosystem_specification.md
+/chapter5_*.md
+/final_verdict.md
+/verdict_summary.md
+/thesis_improvement_plan.md
+/Appendix_System_Prompts.md
+/AB_Test_Result.md
+/ablation_table.md
+/ablation_hypothesis.md
+/routing_analysis.md
+/safety_improvement_plan.md
+/lessons.md
+/todo.md
+/agent_checklist.md
+
