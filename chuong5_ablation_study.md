@@ -11,9 +11,9 @@ Thử nghiệm cắt bỏ tập trung giải quyết ba câu hỏi nghiên cứu
 ---
 
 #### 5.4.2. Bảng kết quả thử nghiệm cắt bỏ thành phần
-Kết quả đo đạc định lượng của 4 cấu hình thực nghiệm (B0, B1, B2, B3) trên 100 ca kiểm thử chuẩn hóa được tổng hợp tại Bảng 5.6.
+Kết quả đo đạc định lượng của 4 cấu hình thực nghiệm (B0, B1, B2, B3) trên 100 ca kiểm thử chuẩn hóa được tổng hợp tại Bảng 5.8.
 
-##### Bảng 5.6: Bảng so sánh các chỉ số thực nghiệm cắt bỏ thành phần trên AiMed
+##### Bảng 5.8: Bảng so sánh các chỉ số thực nghiệm cắt bỏ thành phần trên AiMed
 
 | Chỉ số Đánh giá | B0: Rule-based | B1: Vector RAG | B2: GraphRAG | B3: Multi-Agent GraphRAG |
 | :--- | :---: | :---: | :---: | :---: |

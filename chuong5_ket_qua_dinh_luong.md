@@ -9,9 +9,9 @@ Trong phạm vi bộ kiểm thử 100 câu hỏi chuẩn hóa được xây dự
 
 Áp dụng phương pháp tính khoảng tin cậy Wilson Score ở mức ý nghĩa 95% (CI95), khoảng biến thiên của độ chính xác định tuyến nằm trong khoảng **[64.6%, 82.3%]**. Kết quả này phản ánh năng lực phân luồng ở mức trung bình khá trong điều kiện hệ thống tự động kích hoạt cơ chế dự phòng Heuristic dựa trên từ khóa khi API đám mây bị gián đoạn.
 
-Để làm rõ sự nhầm lẫn giữa các tác tử chuyên khoa, Ma trận nhầm lẫn (Confusion Matrix) được tổng hợp chi tiết tại Bảng 5.3.
+Để làm rõ sự nhầm lẫn giữa các tác tử chuyên khoa, Ma trận nhầm lẫn (Confusion Matrix) được tổng hợp chi tiết tại Bảng 5.5.
 
-##### Bảng 5.3: Ma trận nhầm lẫn định tuyến hệ thống AiMed
+##### Bảng 5.5: Ma trận nhầm lẫn định tuyến hệ thống AiMed
 
 | Phân hệ thực tế (Actual) | Triage | Therapy | Medication | Doctor Referral | Care Plan | Default |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -29,29 +29,29 @@ Phân tích hiệu năng định tuyến theo từng phân hệ cụ thể chỉ
 ##### Phân tích lỗi định tuyến điển hình (Error Analysis):
 Để làm rõ nguyên nhân nhầm lẫn, hai trường hợp lỗi điển hình đã được trích xuất và phân tích cụ thể:
 1.  **Trường hợp 1 (ID: TC007 - Phân hệ Triage):**
-    *   *Nội dung yêu cầu:* "Tôi bị ngã rách sâu ở bắp chân, máu chảy xối xả cầm không được."
-    *   *Nhãn kỳ vọng (Expected):* `triage` (Sàng lọc cấp cứu).
-    *   *Nhãn thực tế (Actual):* `default` (Hỏi đáp thông thường).
-    *   *Nguyên nhân:* Cụm từ khẩn cấp "máu chảy xối xả" bị đảo ngược so với từ khóa chuẩn "chảy máu" có trong bộ lọc Regex tĩnh, dẫn đến việc bộ phân luồng Heuristic bỏ sót và chuyển tiếp yêu cầu sang agent mặc định.
+	*   *Nội dung yêu cầu:* "Tôi bị ngã rách sâu ở bắp chân, máu chảy xối xả cầm không được."
+	*   *Nhãn kỳ vọng (Expected):* `triage` (Sàng lọc cấp cứu).
+	*   *Nhãn thực tế (Actual):* `default` (Hỏi đáp thông thường).
+	*   *Nguyên nhân:* Cụm từ khẩn cấp "máu chảy xối xả" bị đảo ngược so với từ khóa chuẩn "chảy máu" có trong bộ lọc Regex tĩnh, dẫn đến việc bộ phân luồng Heuristic bỏ sót và chuyển tiếp yêu cầu sang agent mặc định.
 2.  **Trường hợp 2 (ID: TC011 - Phân hệ Triage):**
-    *   *Nội dung yêu cầu:* "Tôi vừa uống thuốc huyết áp Amlodipine được 10 phút thì tức ngực dữ dội, thở rít."
-    *   *Nhãn kỳ vọng (Expected):* `triage` (Sàng lọc cấp cứu).
-    *   *Nhãn thực tế (Actual):* `medication` (Tra cứu thuốc).
-    *   *Nguyên nhân:* Câu hỏi chứa từ khóa hỗn hợp giữa dược phẩm ("Amlodipine", "uống") và triệu chứng cấp cứu ("tức ngực", "thở rít"). Lớp Heuristic định tuyến đã ưu tiên nhận diện từ khóa thuốc và đẩy sang `medication`, bỏ sót tính khẩn cấp của bệnh lý.
+	*   *Nội dung yêu cầu:* "Tôi vừa uống thuốc huyết áp Amlodipine được 10 phút thì tức ngực dữ dội, thở rít."
+	*   *Nhãn kỳ vọng (Expected):* `triage` (Sàng lọc cấp cứu).
+	*   *Nhãn thực tế (Actual):* `medication` (Tra cứu thuốc).
+	*   *Nguyên nhân:* Câu hỏi chứa từ khóa hỗn hợp giữa dược phẩm ("Amlodipine", "uống") và triệu chứng cấp cứu ("tức ngực", "thở rít"). Lớp Heuristic định tuyến đã ưu tiên nhận diện từ khóa thuốc và đẩy sang `medication`, bỏ sót tính khẩn cấp của bệnh lý.
 
 ---
 
 #### 5.2.2. Khả năng bảo vệ của Safety Guardrail (Safety Recall)
 Đối với 10 ca kiểm thử thuộc nhóm nguy hại (is_dangerous=true), kết quả ban đầu ghi nhận hệ thống đã ngăn chặn thành công **7/10 ca**, đạt tỷ lệ **70.0%**. Do số lượng mẫu kiểm thử nhỏ (n=10), khoảng tin cậy Wilson 95% dao động khá rộng ở mức **[39.7%, 89.2%]**. Số lượng ca an toàn bị chặn oan (False Positive Rate) được kiểm soát ở mức **0.0%** (0/90 ca an toàn bị chặn).
 
-Sau khi tiến hành bổ sung cơ chế khử dấu tiếng Việt (`stripAccents`) và cập nhật biểu thức chính quy động đối với các ca ngụy trang y tế (như hỏi về liều thuốc ngủ nguy kịch hoặc uống quá liều viên sủi/paracetamol), hệ thống đã được đánh giá lại qua đợt kiểm thử xâm nhập (Red-Teaming) bổ sung 10 ca nguy hại biến tướng. Kết quả đo đạc ghi nhận tỷ lệ chặn đứng đạt mức tối đa **100.0%** (10/10 ca nguy hại bị phát hiện và kích hoạt refusenik hoặc điều hướng SOS khẩn cấp), trong khi tỷ lệ chặn oan vẫn duy trì ổn định ở mức 0.0% (FPR = 0%).
+Sau khi tiến hành bổ dung cơ chế khử dấu tiếng Việt (`stripAccents`) và cập nhật biểu thức chính quy động đối với các ca ngụy trang y tế (như hỏi về liều thuốc ngủ nguy kịch hoặc uống quá liều viên sủi/paracetamol), hệ thống đã được đánh giá lại qua đợt kiểm thử xâm nhập (Red-Teaming) bổ sung 10 ca nguy hại biến tướng. Kết quả đo đạc ghi nhận tỷ lệ chặn đứng đạt mức tối đa **100.0%** (10/10 ca nguy hại bị phát hiện và kích hoạt refusenik hoặc điều hướng SOS khẩn cấp), trong khi tỷ lệ chặn oan vẫn duy trì ổn định ở mức 0.0% (FPR = 0%).
 
 ---
 
 #### 5.2.3. Hiệu năng thời gian phản hồi (Latency)
-Hiệu năng thời gian phản hồi của hệ thống AiMed được thực hiện đo đạc độc lập qua ba kịch bản tải khác nhau nhằm đánh giá độ trễ ở các trạng thái vận hành của máy chủ. Kết quả chi tiết được trình bày tại Bảng 5.4.
+Hiệu năng thời gian phản hồi của hệ thống AiMed được thực hiện đo đạc độc lập qua ba kịch bản tải khác nhau nhằm đánh giá độ trễ ở các trạng thái vận hành của máy chủ. Kết quả chi tiết được trình bày tại Bảng 5.6.
 
-##### Bảng 5.4: Chỉ số độ trễ phản hồi hệ thống AiMed qua các kịch bản tải
+##### Bảng 5.6: Chỉ số độ trễ phản hồi hệ thống AiMed qua các kịch bản tải
 
 | Chỉ số thời gian phản hồi (ms) | Kịch bản A: Warm Start | Kịch bản B: Cold Start | Kịch bản C: Concurrent Load |
 | :--- | :---: | :---: | :---: |

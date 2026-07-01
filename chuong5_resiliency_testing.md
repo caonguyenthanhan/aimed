@@ -43,9 +43,9 @@ Nhật ký thực nghiệm cho thấy ngay khi phát hiện cổng kết nối G
 ---
 
 #### 5.5.3. Đánh giá khả năng chịu lỗi của các phân hệ
-Khả năng chịu lỗi và hành vi duy trì chất lượng dịch vụ của hệ thống được tổng hợp tại Bảng 5.7.
+Khả năng chịu lỗi và hành vi duy trì chất lượng dịch vụ của hệ thống được tổng hợp tại Bảng 5.9.
 
-##### Bảng 5.7: Đánh giá khả năng chịu lỗi và duy trì dịch vụ của AiMed
+##### Bảng 5.9: Đánh giá khả năng chịu lỗi và duy trì dịch vụ của AiMed
 
 | Tình huống lỗi | Hành vi phản ứng hệ thống | Thời gian phục hồi | Chất lượng dịch vụ duy trì |
 | :--- | :--- | :---: | :---: |

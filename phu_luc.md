@@ -1054,62 +1054,79 @@ sequenceDiagram
 
 Hệ thống AiMed sử dụng cấu trúc lưu trữ lai (Hybrid Storage): Cơ sở dữ liệu đồ thị (Neo4j/Memgraph) lưu trữ tri thức y khoa lâm sàng, trong khi cơ sở dữ liệu quan hệ (SQLite/PostgreSQL) quản lý dữ liệu vận hành của người dùng.
 
-### 1. Bảng `device_profiles` (Hồ sơ thiết bị người dùng)
-*   **device_id** (Primary Key, UUID): Định danh duy nhất cho từng thiết bị cài đặt ứng dụng.
-*   **device_name** (VARCHAR): Tên thiết bị do người dùng đặt hoặc tự động nhận diện từ User-Agent.
-*   **device_type** (ENUM): Loại thiết bị (`web`, `mobile`, `tablet`).
-*   **user_id** (Foreign Key, Nullable): Khóa liên kết tài khoản người dùng (nếu có đăng nhập).
+### 1. Bảng `app_chat_sessions` (Phiên hội thoại người dùng)
+*   **session_id** (TEXT PRIMARY KEY): Định danh duy nhất cho từng phiên chat của người bệnh.
+*   **kind** (TEXT NOT NULL DEFAULT 'unknown'): Phân loại phiên (`consultation` - tư vấn y tế chuyên khoa, `friend` - chitchat/trò chuyện hỗ trợ, `speech_stream` - luồng giọng nói).
+*   **created_at** (TIMESTAMPTZ): Mốc thời gian khởi tạo phiên hội thoại.
+*   **updated_at** (TIMESTAMPTZ): Mốc thời gian cập nhật nội dung gần nhất.
+
+### 2. Bảng `app_chat_messages` (Tin nhắn chi tiết trong phiên)
+*   **id** (BIGSERIAL PRIMARY KEY): Định danh tự tăng duy nhất cho từng tin nhắn.
+*   **session_id** (TEXT NOT NULL REFERENCES app_chat_sessions(session_id) ON DELETE CASCADE): Khóa ngoại kết nối phiên hội thoại tương ứng.
+*   **role** (TEXT NOT NULL): Vai trò gửi tin nhắn (`user` - câu hỏi của người bệnh, `assistant` - phản hồi từ trợ lý AI).
+*   **content** (TEXT NOT NULL DEFAULT ''): Toàn văn nội dung tin nhắn.
+*   **created_at** (TIMESTAMPTZ): Thời điểm tin nhắn được gửi đi.
+
+### 3. Bảng `device_profiles` (Hồ sơ thiết bị người dùng)
+*   **device_id** (VARCHAR PRIMARY KEY): Định danh duy nhất cho từng thiết bị cài đặt ứng dụng.
+*   **device_name** (VARCHAR): Tên thiết bị (ví dụ: Chrome Web, iPhone Mobile).
+*   **device_type** (VARCHAR): Loại thiết bị (`web`, `mobile`, `tablet`).
+*   **user_id** (VARCHAR, Nullable): Khóa liên kết tài khoản người dùng (nếu có đăng nhập).
 *   **last_synced** (TIMESTAMP): Mốc thời gian đồng bộ dữ liệu gần nhất.
 *   **is_active** (BOOLEAN): Trạng thái hoạt động của thiết bị.
+*   **created_at**, **updated_at** (TIMESTAMP): Thời gian tạo và cập nhật hồ sơ thiết bị.
 
-### 2. Bảng `sync_queue` (Hàng đợi đồng bộ hóa dữ liệu)
-*   **id** (Primary Key, INTEGER AUTOINCREMENT): Định danh duy nhất cho sự kiện đồng bộ.
-*   **device_id** (Foreign Key): Định danh thiết bị phát sinh thay đổi.
-*   **user_id** (Foreign Key, Nullable): Liên kết người dùng.
-*   **entity_type** (ENUM): Loại thực thể thay đổi (`chat_session`, `chat_message`, `user_state`).
+### 4. Bảng `sync_queue` (Hàng đợi đồng bộ hóa dữ liệu)
+*   **id** (VARCHAR PRIMARY KEY): Định danh duy nhất cho sự kiện đồng bộ.
+*   **device_id** (VARCHAR NOT NULL REFERENCES device_profiles(device_id)): Định danh thiết bị phát sinh thay đổi.
+*   **user_id** (VARCHAR, Nullable): Liên kết tài khoản người dùng để đồng bộ chéo.
+*   **entity_type** (VARCHAR): Loại thực thể thay đổi (`chat_message`, `agent_suggestion`, `content_recommendation`, `appointment`).
 *   **entity_id** (VARCHAR): Khóa định danh của thực thể bị thay đổi.
-*   **action** (ENUM): Hành động thay đổi (`create`, `update`, `delete`).
+*   **action** (VARCHAR): Hành động thay đổi (`create`, `update`, `delete`).
 *   **device_timestamp** (TIMESTAMP): Thời gian thay đổi ghi nhận tại thiết bị.
-*   **synced_at** (TIMESTAMP, Nullable): Thời gian đồng bộ lên server thành công.
+*   **synced_at** (TIMESTAMP): Thời gian đồng bộ lên server thành công.
 
-### 3. Bảng `agent_suggestions` (Lịch sử đề xuất Tác tử tự động)
-*   **id** (Primary Key, INTEGER): Định danh bản ghi đề xuất.
-*   **conversation_id** (Foreign Key): Liên kết đến phiên hội thoại hiện tại.
+### 5. Bảng `agent_suggestions` (Lịch sử đề xuất Tác tử tự động)
+*   **id** (VARCHAR PRIMARY KEY): Định danh bản ghi đề xuất.
+*   **conversation_id** (VARCHAR NOT NULL): Liên kết đến phiên hội thoại hiện tại.
 *   **agent_id** (VARCHAR): Mã định danh tác tử được đề xuất (ví dụ: `therapy`, `medication`).
 *   **reason** (TEXT): Lý do hệ thống đề xuất tác tử này (phân tích từ nội dung chat).
 *   **suggested_at** (TIMESTAMP): Thời điểm đưa ra đề xuất.
-*   **user_selected** (ENUM, Nullable): Phản hồi của người dùng đối với đề xuất (`embed` - mở trực tiếp, `link` - nhấp xem, `ignored` - bỏ qua).
+*   **user_selected** (VARCHAR, Nullable): Phản hồi của người dùng đối với đề xuất (`embed` - mở trực tiếp, `link` - nhấp xem, `ignored` - bỏ qua).
 
-### 4. Bảng `content_recommendations` (Nhật ký gợi ý nội dung bổ trợ)
-*   **id** (Primary Key, INTEGER): Định danh duy nhất.
-*   **conversation_id** (Foreign Key): Liên kết đến phiên hội thoại.
-*   **content_type** (ENUM): Loại nội dung đề xuất (`youtube_video`, `mindfulness_audio`, `article`).
+### 6. Bảng `content_recommendations` (Nhật ký gợi ý nội dung bổ trợ)
+*   **id** (VARCHAR PRIMARY KEY): Định danh duy nhất.
+*   **conversation_id** (VARCHAR NOT NULL): Liên kết đến phiên hội thoại.
+*   **content_type** (VARCHAR): Loại nội dung đề xuất (`youtube_video`, `mindfulness_audio`, `article`).
 *   **external_id** (VARCHAR): Định danh của nội dung trên nền tảng gốc (ví dụ: YouTube Video ID).
 *   **title** (VARCHAR): Tiêu đề nội dung.
 *   **url** (VARCHAR): Đường dẫn liên kết trực tiếp.
-*   **mood_tags** (JSON / TEXT): Các nhãn trạng thái cảm xúc tương thích với nội dung (ví dụ: `["stress", "anxiety"]`).
+*   **mood_tags** (JSONB): Các nhãn trạng thái cảm xúc tương thích với nội dung (ví dụ: `["stress", "anxiety"]`).
 *   **recommended_at** (TIMESTAMP): Thời điểm gợi ý.
-*   **user_feedback** (ENUM, Nullable): Đánh giá của người dùng (`helpful`, `not_helpful`, `saved`).
+*   **user_feedback** (VARCHAR, Nullable): Đánh giá của người dùng (`helpful`, `not_helpful`, `saved`).
 
-### 5. Bảng `medical_appointments` (Thông tin đặt lịch khám)
-*   **id** (Primary Key, INTEGER): Định danh lịch khám.
-*   **user_id** (Foreign Key, Nullable): Tài khoản đặt lịch.
-*   **device_id** (Foreign Key): Thiết bị thực hiện đặt lịch.
-*   **doctor_id** (Foreign Key): Bác sĩ chuyên khoa được đặt lịch hẹn.
-*   **doctor_name** (VARCHAR): Tên bác sĩ.
-*   **specialist_type** (VARCHAR): Chuyên khoa khám.
-*   **appointment_date** (DATE): Ngày khám.
-*   **appointment_time** (TIME): Giờ khám.
-*   **reason** (TEXT): Lý do khám / Triệu chứng lâm sàng sơ bộ.
-*   **status** (ENUM): Trạng thái lịch khám (`pending`, `confirmed`, `completed`, `cancelled`).
-*   **created_at**, **updated_at** (TIMESTAMP).
+### 7. Bảng `doctor_profiles` (Hồ sơ thông tin bác sĩ)
+*   **doctor_id** (TEXT PRIMARY KEY): Định danh duy nhất của bác sĩ chuyên khoa trên hệ thống.
+*   **public_json** (JSONB NOT NULL DEFAULT '{}'): Lưu trữ thông tin công khai dưới dạng JSON (Họ tên, danh hiệu, các chuyên khoa, phòng khám...).
+*   **private_json** (JSONB NOT NULL DEFAULT '{}'): Các thiết lập tài khoản riêng tư của bác sĩ.
+*   **updated_at** (TIMESTAMPTZ): Mốc thời gian cập nhật thông tin bác sĩ.
 
-### 6. Bảng `user_states` (Trạng thái và điểm sàng lọc sức khỏe bệnh nhân)
-*   **id** (Primary Key, INTEGER): Định danh.
-*   **device_id** (Foreign Key): Thiết bị ghi nhận chỉ số.
-*   **phq9_score** (INTEGER, Nullable): Điểm số đánh giá trầm cảm PHQ-9.
-*   **gad7_score** (INTEGER, Nullable): Điểm số đánh giá lo âu GAD-7.
-*   **systolic_bp** (INTEGER, Nullable): Chỉ số huyết áp tâm thu (mmHg).
-*   **diastolic_bp** (INTEGER, Nullable): Chỉ số huyết áp tâm trương (mmHg).
-*   **heart_rate** (INTEGER, Nullable): Chỉ số nhịp tim (nhịp/phút).
-*   **last_updated** (TIMESTAMP): Mốc thời gian ghi nhận cuối cùng.
+### 8. Bảng `doctor_appointments` (Thông tin đặt lịch hẹn khám bác sĩ)
+*   **id** (TEXT PRIMARY KEY): Định danh duy nhất của lịch hẹn khám.
+*   **doctor_id** (TEXT NOT NULL REFERENCES doctor_profiles(doctor_id)): Bác sĩ chuyên khoa tiếp nhận đặt lịch hẹn.
+*   **patient_id** (TEXT, Nullable): Khóa tài khoản người bệnh thực hiện đặt lịch.
+*   **patient_name** (TEXT NOT NULL): Họ và tên của bệnh nhân đến khám.
+*   **contact** (JSONB NOT NULL DEFAULT '{}'): Thông tin liên hệ bệnh nhân (số điện thoại, địa chỉ, email).
+*   **scheduled_at** (TIMESTAMPTZ NOT NULL): Ngày giờ khám lâm sàng đã lên lịch.
+*   **reason** (TEXT NOT NULL): Lý do đi khám bệnh / Triệu chứng lâm sàng sơ bộ.
+*   **status** (TEXT NOT NULL DEFAULT 'pending'): Trạng thái lịch khám (`pending` - đang chờ, `confirmed` - đã xác nhận, `completed` - đã khám xong, `cancelled` - đã hủy).
+*   **created_at** (TIMESTAMPTZ): Thời điểm ghi nhận lịch hẹn trên hệ thống.
+
+### 9. Bảng `app_user_state` (Trạng thái và điểm sàng lọc sức khỏe bệnh nhân)
+*   **owner_id** (TEXT NOT NULL): Định danh chủ sở hữu dữ liệu sức khỏe (định dạng `device:<device_id>` hoặc mã định danh user).
+*   **namespace** (TEXT NOT NULL): Phân nhóm trạng thái (ví dụ: `screening` cho khảo sát thang đo, `vitals` cho chỉ số sinh tồn).
+*   **key** (TEXT NOT NULL): Khóa định danh của chỉ số đo lường cụ thể (ví dụ: `phq9`, `gad7`, `blood_pressure`, `heart_rate`).
+*   **value** (JSONB NOT NULL): Giá trị dữ liệu động lưu dưới dạng JSON (điểm số khảo sát, huyết áp tâm thu/tâm trương, nhịp tim...).
+*   **created_at** (TIMESTAMPTZ): Thời gian ghi nhận trạng thái ban đầu.
+*   **updated_at** (TIMESTAMPTZ): Thời gian cập nhật trạng thái gần nhất.
+*   *Khóa chính:* PRIMARY KEY (owner_id, namespace, key).
