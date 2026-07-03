@@ -73,7 +73,7 @@ export function checkText(text: string): SafetyHit[] {
   
   // Check for indirect/helper patterns (e.g. asking for a friend).
   // These should not be blocked so the assistant can provide resources to help.
-  const isIndirect = /\b(giup ban|khuyen ban|cho ban|ban toi|ban cua toi|giup nguoi ban)\b/i.test(plainText)
+  const isIndirect = /\b(giup ban|khuyen ban|cho ban|ban toi|ban cua toi|giup nguoi ban)\b/i.test(plainText) && !/\bban than\b/i.test(plainText)
   
   const hits: SafetyHit[] = []
   

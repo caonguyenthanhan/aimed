@@ -487,7 +487,7 @@ export async function POST(req: NextRequest) {
       const out = await fetchJsonWithRetry<GraphStatusResult>(
         url,
         { method: "GET", headers: apiKey ? { "x-api-key": apiKey } : undefined },
-        { tool: name, attempts: 3 }
+        { tool: name, attempts: 1 }
       )
       if (!out.ok) {
         const reason = mapGraphFailureReason({
@@ -552,7 +552,7 @@ export async function POST(req: NextRequest) {
           headers: { "Content-Type": "application/json", ...(apiKey ? { "x-api-key": apiKey } : {}) },
           body,
         },
-        { tool: name, attempts: 3 }
+        { tool: name, attempts: 1 }
       )
       if (!out.ok) {
         const graphReason = mapGraphFailureReason({

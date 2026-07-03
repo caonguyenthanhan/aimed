@@ -114,7 +114,7 @@ export class GeminiService {
         temperature: 0.85,
         topK: 40,
         topP: 0.9,
-        maxOutputTokens: 1400,
+        maxOutputTokens: 4096,
         stopSequences: []
       }
     }
@@ -468,10 +468,10 @@ Trả lời bằng tiếng Việt:`
   // Cấu hình generation cho nội dung y tế
   private getGenerationConfig() {
     return {
-      temperature: 0.3, // Giảm tính ngẫu nhi��n cho độ chính xác cao
+      temperature: 0.3, // Giảm tính ngẫu nhiên cho độ chính xác cao
       topK: 40,
       topP: 0.8,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 4096,
       stopSequences: []
     }
   }

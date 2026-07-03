@@ -105,6 +105,9 @@ export async function getEmbedding(text: string): Promise<number[]> {
         const json = await res.json();
         const emb = json?.data?.[0]?.embedding;
         if (Array.isArray(emb) && emb.length > 0) return emb;
+      } else {
+        const txt = await res.text();
+        console.error(`[Embedding Error] FOZA API returned status ${res.status}: ${txt}`);
       }
     } catch (e) {
       console.error("[Embedding Error] Next.js FOZA embedding failed, falling back:", e);
@@ -114,12 +117,12 @@ export async function getEmbedding(text: string): Promise<number[]> {
   if (geminiKey) {
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${geminiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:embedContent?key=${geminiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "models/text-embedding-004",
+            model: "models/gemini-embedding-2",
             content: { parts: [{ text }] },
           }),
         }
@@ -128,6 +131,9 @@ export async function getEmbedding(text: string): Promise<number[]> {
         const json = await res.json();
         const emb = json?.embedding?.values;
         if (Array.isArray(emb) && emb.length > 0) return emb;
+      } else {
+        const txt = await res.text();
+        console.error(`[Embedding Error] Gemini API returned status ${res.status}: ${txt}`);
       }
     } catch (e) {
       console.error("[Embedding Error] Next.js Gemini embedding failed, falling back:", e);
@@ -159,6 +165,53 @@ async function ensureSpecialtyEmbeddings(): Promise<void> {
   }
 }
 
+function getKeywordProfiles(text: string): Map<AgentProfileId, number> {
+  const normalized = text.toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "d");
+  
+  const boosts = new Map<AgentProfileId, number>();
+  
+  // 1. Triage
+  if (/\b(115|911|bat tinh|ngat|co giat|yeu liet|meo mieng|ngong|tho rit|khong tho duoc|ho ra mau|non ra mau|loi xuong|gay xuong|cap cuu|khan cap|uong nham)\b/i.test(normalized)) {
+    boosts.set("triage", 0.35);
+  } else if (/\b(dau nguc|tuc nguc|kho tho|mat thi luc|chay mau|dau bung|yeu nua nguoi|yeu tay chan|te liet|te nua nguoi|kho noi|dau dau du doi|dau dau kinh khung|dau dau chua tung thay|bong nuoc soi|vet thuong sau|mat mau|dau quan bung|te cung|non|oi|mo mat|mo di|sot cao|sot ret run|me sang|nuot nham|nuoc tay|ngo doc)\b/i.test(normalized)) {
+    boosts.set("triage", 0.20);
+  }
+  
+  // 2. Doctor Referral
+  if (/\b(dat hen|dat lich|hen kham|gap bac si|phong kham|benh vien|vien tim|nha khoa|kham mat|kham san|kham phu|kham nam|kham nhi|dia chi)\b/i.test(normalized)) {
+    boosts.set("doctor_referral", 0.35);
+  } else if (/\b(bac si|kham benh|dieu tri|o dau|kham)\b/i.test(normalized)) {
+    boosts.set("doctor_referral", 0.20);
+  }
+  
+  // 3. Therapy
+  if (/\b(tram cam|tu sat|tu hai|tri lieu tam ly|cbt|mindfulness|hoang loan|am anh cuong che|khoc nuc no)\b/i.test(normalized)) {
+    boosts.set("therapy", 0.35);
+  } else if (/\b(lo au|mat ngu|tri lieu|tam ly|cang thang|stress|buon ba|khoc|co don|trong rong|suy sup|kiet suc|tu ti|gian du|cai nhau|kiem soat con gian|lo lang|u uat|tam trang|tinh than|tieu cuc|suy nghi|thay doi that thuong)\b/i.test(normalized)) {
+    boosts.set("therapy", 0.20);
+  }
+  
+  // 4. Medication
+  if (/\b(ibuprofen|paracetamol|aspirin|statin|metformin|amoxicillin|omeprazole|lisinopril|amlodipine|cetirizine|orlistat|astrazeneca|vac-xin|vaccine|panadol|efferalgan|prospan|salonpas|coldi|siro|men vi sinh|men tieu hoa|tranh thai)\b/i.test(normalized)) {
+    boosts.set("medication", 0.35);
+  } else if (/\b(thuoc|uong|vien|tiem|khang sinh|giam dau|dau gio)\b/i.test(normalized)) {
+    boosts.set("medication", 0.20);
+  }
+  
+  // 5. Care Plan
+  if (/\b(ke hoach|lo trinh|lich trinh|giam can|tang can|routine|che do an|tap luyen|thuc don|thoi khoa bieu|cai sua|an dam|tra thao moc|gian co|gut|kieng|hai san|nac cut|meo chua|bo mat|an gi de|yoga)\b/i.test(normalized)) {
+    boosts.set("care_plan", 0.35);
+  } else if (/\b(theo doi|ngu du giac|uong nuoc|duong huyet|dinh duong|sinh hoat|thien dinh|moi mat|thoi quen|bai tap|cham soc|da mat|di bo|thuc pham|loi song|lanh manh|giac ngu|the duc|sinh mo|tieu hoa)\b/i.test(normalized)) {
+    boosts.set("care_plan", 0.20);
+  }
+  
+  return boosts;
+}
+
 export async function semanticRoute(
   message: string,
   history: Array<{ role: string; content: string }> = []
@@ -179,11 +232,11 @@ export async function semanticRoute(
   await ensureSpecialtyEmbeddings();
   const queryEmb = await getEmbedding(message);
   
-  const threshTriage = parseFloat(process.env.SEMANTIC_THRESHOLD_TRIAGE || "0.72");
-  const threshMedication = parseFloat(process.env.SEMANTIC_THRESHOLD_MEDICATION || "0.75");
-  const threshTherapy = parseFloat(process.env.SEMANTIC_THRESHOLD_THERAPY || "0.78");
-  const threshDoctor = parseFloat(process.env.SEMANTIC_THRESHOLD_DOCTOR || "0.75");
-  const threshPlan = parseFloat(process.env.SEMANTIC_THRESHOLD_PLAN || "0.70");
+  const threshTriage = parseFloat(process.env.SEMANTIC_THRESHOLD_TRIAGE || "0.60");
+  const threshMedication = parseFloat(process.env.SEMANTIC_THRESHOLD_MEDICATION || "0.60");
+  const threshTherapy = parseFloat(process.env.SEMANTIC_THRESHOLD_THERAPY || "0.60");
+  const threshDoctor = parseFloat(process.env.SEMANTIC_THRESHOLD_DOCTOR || "0.60");
+  const threshPlan = parseFloat(process.env.SEMANTIC_THRESHOLD_PLAN || "0.64");
   
   const thresholds: Record<AgentProfileId, number> = {
     triage: threshTriage,
@@ -203,10 +256,14 @@ export async function semanticRoute(
     default: 1,
   };
 
+  const matchedKeywords = getKeywordProfiles(message);
+
   const scores: IntentScore[] = Object.keys(SPECIALTY_DESCRIPTIONS).map((id) => {
     const profileId = id as AgentProfileId;
     const specialtyEmb = SPECIALTY_EMBEDDINGS[profileId];
-    const score = cosineSimilarity(queryEmb, specialtyEmb);
+    let score = cosineSimilarity(queryEmb, specialtyEmb);
+    const boost = matchedKeywords.get(profileId) ?? 0.0;
+    score += boost;
     return {
       profileId,
       score,
@@ -224,7 +281,8 @@ export async function semanticRoute(
 
   let chosen = ranked[0];
   for (const score of ranked) {
-    const t = thresholds[score.profileId] ?? 0.0;
+    const isKeywordMatch = matchedKeywords.has(score.profileId);
+    const t = isKeywordMatch ? 0.0 : (thresholds[score.profileId] ?? 0.0);
     if (score.score >= t) {
       chosen = score;
       break;
@@ -261,26 +319,32 @@ export async function detectIntentFlags(
   await ensureSpecialtyEmbeddings();
   const queryEmb = await getEmbedding(message);
   
-  const threshTriage = parseFloat(process.env.SEMANTIC_THRESHOLD_TRIAGE || "0.72");
-  const threshMedication = parseFloat(process.env.SEMANTIC_THRESHOLD_MEDICATION || "0.75");
-  const threshTherapy = parseFloat(process.env.SEMANTIC_THRESHOLD_THERAPY || "0.78");
-  const threshDoctor = parseFloat(process.env.SEMANTIC_THRESHOLD_DOCTOR || "0.75");
-  const threshPlan = parseFloat(process.env.SEMANTIC_THRESHOLD_PLAN || "0.70");
+  const threshTriage = parseFloat(process.env.SEMANTIC_THRESHOLD_TRIAGE || "0.60");
+  const threshMedication = parseFloat(process.env.SEMANTIC_THRESHOLD_MEDICATION || "0.60");
+  const threshTherapy = parseFloat(process.env.SEMANTIC_THRESHOLD_THERAPY || "0.60");
+  const threshDoctor = parseFloat(process.env.SEMANTIC_THRESHOLD_DOCTOR || "0.60");
+  const threshPlan = parseFloat(process.env.SEMANTIC_THRESHOLD_PLAN || "0.64");
+
+  const matchedKeywords = getKeywordProfiles(message);
 
   const scores: Record<AgentProfileId, number> = {} as any;
   for (const [id, emb] of Object.entries(SPECIALTY_EMBEDDINGS)) {
-    scores[id as AgentProfileId] = cosineSimilarity(queryEmb, emb);
+    const profileId = id as AgentProfileId;
+    let score = cosineSimilarity(queryEmb, emb);
+    const boost = matchedKeywords.get(profileId) ?? 0.0;
+    score += boost;
+    scores[profileId] = score;
   }
 
   const lower = message.toLowerCase();
   const wantsGraph = /graph|evidence|đồ thị|bằng chứng/i.test(lower);
 
   return {
-    triage: (scores["triage"] ?? 0) >= threshTriage,
-    therapy: (scores["therapy"] ?? 0) >= threshTherapy,
-    medication: (scores["medication"] ?? 0) >= threshMedication,
-    plan: (scores["care_plan"] ?? 0) >= threshPlan,
-    doctor: (scores["doctor_referral"] ?? 0) >= threshDoctor,
+    triage: matchedKeywords.has("triage") || (scores["triage"] ?? 0) >= threshTriage,
+    therapy: matchedKeywords.has("therapy") || (scores["therapy"] ?? 0) >= threshTherapy,
+    medication: matchedKeywords.has("medication") || (scores["medication"] ?? 0) >= threshMedication,
+    plan: matchedKeywords.has("care_plan") || (scores["care_plan"] ?? 0) >= threshPlan,
+    doctor: matchedKeywords.has("doctor_referral") || (scores["doctor_referral"] ?? 0) >= threshDoctor,
     wantsGraph,
     source: "semantic_router_v2",
   };
