@@ -23,7 +23,7 @@ type NavItem = {
 }
 
 type ToolItem = NavItem & {
-  icon: React.ComponentType<{ size?: number; className?: string }>
+  icon: React.ComponentType<{ size?: number | string; className?: string }>
 }
 
 function NavPill({ href, label, active }: NavItem & { active: boolean }) {

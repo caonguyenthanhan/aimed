@@ -146,4 +146,16 @@ describe("inferAgentProfileId() — backward compat", () => {
   it("doctor_referral for appointment", async () => {
     expect(await inferAgentProfileId("Tôi muốn đặt hẹn khám bác sĩ")).toBe("doctor_referral")
   })
+
+  it("triage priority override when taking medication has emergency symptoms (SUG003)", async () => {
+    expect(await inferAgentProfileId("uống thuốc xong bị tức ngực khó thở")).toBe("triage")
+  })
+
+  it("therapy for new mental health/OCD keywords (SUG002)", async () => {
+    expect(await inferAgentProfileId("dạo này tôi bị rửa tay liên tục, ám ảnh cưỡng chế")).toBe("therapy")
+  })
+
+  it("triage for accident/fracture keywords (SUG001)", async () => {
+    expect(await inferAgentProfileId("bị gãy xương sau tai nạn giao thông")).toBe("triage")
+  })
 })

@@ -99,7 +99,7 @@ const INJECTION_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
   { pattern: /<\|im_start\|>|<\|im_end\|>|<\|eot_id\|>/i, label: "special_tokens" },
 
   // Graph-specific injection (nếu attacker inject vào graph evidence)
-  { pattern: /GRAPH_EVIDENCE.*ignore/is, label: "graph_evidence_injection" },
+  { pattern: /GRAPH_EVIDENCE[\s\S]*ignore/i, label: "graph_evidence_injection" },
   { pattern: /AGENT_PROFILE.*=.*hack/i, label: "profile_override_injection" },
 ]
 

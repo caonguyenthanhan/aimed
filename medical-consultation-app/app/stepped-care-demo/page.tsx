@@ -135,7 +135,7 @@ export default function SteppedCareDemo() {
   ]
 
   // Messages per level
-  const chatHistories = {
+  const chatHistories: Record<number, Array<{ isUser: boolean; text: string; hasComponent?: string }>> = {
     1: [
       { isUser: true, text: "Tôi cảm thấy dạo này đầu óc căng thẳng, khó tập trung, có cách nào thư giãn đầu óc không?" },
       { isUser: false, text: "Chào bạn, tình trạng căng thẳng và khó tập trung rất phổ biến khi cơ thể mệt mỏi hoặc chịu áp lực kéo dài. Để hỗ trợ bạn lập tức, hệ thống khuyên bạn nên thực hiện bài tập thiền định ngắn (Mindfulness Meditation) giúp điều hòa nhịp thở và làm dịu hệ thần kinh.\n\nDưới đây là video hướng dẫn thiền thư giãn đầu óc mà bạn có thể thực hiện ngay tại nhà:", hasComponent: "youtube" }

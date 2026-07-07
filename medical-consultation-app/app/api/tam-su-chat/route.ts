@@ -189,6 +189,127 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const isFoza = provider === 'foza'
+    if (isFoza) {
+      const fozaToken = String(process.env.FOZA_TOKEN || '').trim()
+      const fozaModelName = String(process.env.LLM_MODEL_NAME || 'hoang/gpt-5.5').trim()
+      const baseUrl = String(process.env.FOZA_BASE_URL || 'https://api.foza.ai/v1').trim().replace(/\/$/, '')
+      
+      if (!fozaToken) {
+        return NextResponse.json({ error: 'Missing FOZA_TOKEN' }, { status: 500 })
+      }
+      
+      const startFoza = Date.now()
+      try {
+        const friendSystem = "Bạn là một người bạn thân, nói chuyện đời thường bằng tiếng Việt. Giọng điệu dịu dàng, ấm áp, thân thiện và sâu lắng. Nguyên tắc: ưu tiên lắng nghe và đồng cảm trước; không giảng đạo lý; không khuyên dạy ngay trừ khi người dùng hỏi rõ; phản hồi giống người thật; trả lời 2–5 đoạn ngắn có nhịp; hỏi lại tối đa 1 câu nhẹ để hiểu thêm cảm xúc."
+        
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${fozaToken}`
+          },
+          body: JSON.stringify({
+            model: fozaModelName,
+            messages: [
+              { role: 'system', content: friendSystem },
+              ...conversationHistory.map((m: any) => ({
+                role: m.role || (m.isUser ? 'user' : 'assistant'),
+                content: m.content || ''
+              })),
+              { role: 'user', content: userMessage }
+            ],
+            temperature,
+            max_tokens
+          })
+        })
+        
+        if (!response.ok) {
+          throw new Error(`Foza API returned ${response.status}: ${await response.text()}`)
+        }
+        
+        const data = await response.json()
+        const content = String(data?.choices?.[0]?.message?.content || '').trim()
+        if (!content) {
+          return NextResponse.json({ error: 'No content in Foza response' }, { status: 502 })
+        }
+        
+        const durationFoza = Date.now() - startFoza
+        const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+        try {
+          await persistChatTurn({
+            sessionId: sid,
+            kind: 'friend',
+            userText: userMessage,
+            assistantText: content
+          })
+        } catch {}
+        
+        const suggestionNeeded = detectSuggestionNeeded(userMessage, conversationHistory)
+        const mood = detectMood(userMessage, conversationHistory)
+        const includeMusic = shouldRecommendMusic(userMessage, conversationHistory)
+        const musicRecommendations = includeMusic ? (HEALING_MUSIC[mood] || HEALING_MUSIC.default) : undefined
+        
+        return NextResponse.json({
+          response: content,
+          metadata: {
+            timestamp: new Date().toISOString(),
+            mode: 'gpu',
+            fallback: false,
+            provider: 'foza',
+            duration_ms: durationFoza,
+            model: fozaModelName
+          },
+          conversation_id: sid,
+          suggestion: suggestionNeeded ? {
+            feature: suggestionNeeded.feature,
+            reason: suggestionNeeded.reason
+          } : undefined,
+          music: musicRecommendations ? {
+            mood,
+            recommendations: musicRecommendations,
+            message: mood !== 'default' 
+              ? `Mình gợi ý một vài bản nhạc để giúp bạn cảm thấy tốt hơn nhé:`
+              : `Đây là một số nhạc thư giãn cho bạn:`
+          } : undefined
+        })
+      } catch (error: any) {
+        console.error("[tam-su-chat] Foza API error:", error)
+        if (process.env.GEMINI_API_KEY) {
+          try {
+            const startGemini = Date.now()
+            const out = await geminiService.generateResponse(userMessage, 'psychological support')
+            const durationGemini = Date.now() - startGemini
+            const content = String(out || '').trim()
+            if (content) {
+              const sid = (typeof conversation_id === 'string' && conversation_id.trim()) ? conversation_id.trim() : crypto.randomUUID()
+              try {
+                await persistChatTurn({
+                  sessionId: sid,
+                  kind: 'friend',
+                  userText: userMessage,
+                  assistantText: content
+                })
+              } catch {}
+              return NextResponse.json({
+                response: content,
+                metadata: {
+                  timestamp: new Date().toISOString(),
+                  mode: 'gpu',
+                  fallback: true,
+                  provider: 'gemini',
+                  duration_ms: durationGemini,
+                  model: process.env.GEMINI_MODEL || 'gemini'
+                },
+                conversation_id: sid
+              })
+            }
+          } catch {}
+        }
+        return NextResponse.json({ error: 'Foza API failed and no fallback available', details: error?.message }, { status: 502 })
+      }
+    }
+
     if (useGemini) {
       if (!process.env.GEMINI_API_KEY) {
         return NextResponse.json({ error: 'Missing GEMINI_API_KEY' }, { status: 500 })

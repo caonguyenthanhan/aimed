@@ -140,10 +140,14 @@ export class GeminiService {
 
     const prompts = cfg?.prompts || {}
     const categoryBlock = prompts?.[opts.category] || {}
-    const template =
+    let template =
       (typeof categoryBlock?.[tier] === 'string' ? categoryBlock[tier] : null) ||
       (typeof categoryBlock?.default === 'string' ? categoryBlock.default : null) ||
       ''
+
+    if (!template && opts.category === 'friend') {
+      template = "Bạn là một người bạn thân thiết, chia sẻ tâm tư đời thường bằng tiếng Việt.\n\nVai trò: {{persona_block}}\n\nLịch sử hội thoại:\n{{history_block}}\n\nNgười dùng chia sẻ: {{question}}\n\nHãy phản hồi bằng tiếng Việt với giọng điệu dịu dàng, ấm áp, lắng nghe và đồng cảm sâu sắc. Trả lời ngắn gọn từ 2-4 câu."
+    }
 
     const personaText = String(opts.persona || '').trim()
     const personaBlock = personaText ? `VAI TRÒ: ${personaText}` : ''

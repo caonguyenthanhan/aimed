@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const subscriptions = await withPgClientRetry(async (client) => {
+    const { value: subscriptions } = await withPgClientRetry(async (client) => {
       // Check if table exists
       const tableCheck = await client.query(`
         SELECT EXISTS (

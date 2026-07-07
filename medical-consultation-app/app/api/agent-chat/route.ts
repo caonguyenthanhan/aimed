@@ -19,7 +19,7 @@ import { youtubeService } from "@/lib/youtube-service"
 import { getAgentProfile } from "@/lib/agent-profiles"
 import { buildSystemState, hasInternalDemoPass, isInternalDemoPass, normalizeRuntimeProvider, normalizeRuntimeTarget } from "@/lib/runtime-sync"
 // Phase 2: Semantic Router + Conversation Context
-import { semanticRoute, detectIntentFlags as semanticDetectIntentFlags, inferAgentProfileId as semanticInferProfileId } from "@/lib/semantic-router"
+import { semanticRoute, detectIntentFlags as semanticDetectIntentFlags, inferAgentProfileId as semanticInferProfileId, getHeuristicProfile } from "@/lib/semantic-router"
 import { buildContext, mergeContextWithGatewayMeta, serializeContext } from "@/lib/conversation-context"
 // Phase 3: Hallucination Guard
 import { sanitizeInput, guardGraphEvidence, formatEvidenceForPrompt, buildFallbackWarning } from "@/lib/hallucination-guard"
@@ -341,10 +341,28 @@ export async function POST(req: Request) {
 
     // Phase 2: Semantic Router — thay thế inline detectIntentFlags + inferAgentProfileId
     const t_router_start = Date.now()
-    const intentFlags = await semanticDetectIntentFlags(message, Array.isArray(messages) ? messages : [])
-    const agentProfileId = !requestedAgentId || requestedAgentId.toLowerCase() === "auto"
-      ? await semanticInferProfileId(message, Array.isArray(messages) ? messages : [])
-      : requestedAgentId
+    let intentFlags = { triage: false, therapy: false, medication: false, plan: false, doctor: false }
+    let agentProfileId = "default"
+    try {
+      intentFlags = await semanticDetectIntentFlags(message, Array.isArray(messages) ? messages : [])
+      agentProfileId = !requestedAgentId || requestedAgentId.toLowerCase() === "auto"
+        ? await semanticInferProfileId(message, Array.isArray(messages) ? messages : [])
+        : requestedAgentId
+    } catch (e: any) {
+      console.error("[agent-chat] semantic router failed, falling back to heuristic:", e)
+      agentProfileId = !requestedAgentId || requestedAgentId.toLowerCase() === "auto"
+        ? getHeuristicProfile(message)
+        : requestedAgentId
+      // Re-evaluate flags heuristically if router fails
+      const heuristicProfile = getHeuristicProfile(message)
+      intentFlags = {
+        triage: heuristicProfile === "triage",
+        therapy: heuristicProfile === "therapy",
+        medication: heuristicProfile === "medication",
+        plan: heuristicProfile === "care_plan",
+        doctor: heuristicProfile === "doctor_referral"
+      }
+    }
     agentProfileIdForError = agentProfileId
     const agentProfile = getAgentProfile(agentProfileId)
     router_latency_ms = Date.now() - t_router_start
@@ -1798,7 +1816,7 @@ export async function POST(req: Request) {
       if (agentProfile.id === "care_plan") {
         return [{ type: "ask_navigation", args: { feature: "ke-hoach", reason: "Đang bật chế độ Kế hoạch chăm sóc. Bạn muốn mở module Kế hoạch để tạo plan theo mục tiêu không?" } }]
       }
-      if (agentProfile.id === "doctor_referral" || agentProfile.id === "doctor") {
+      if (agentProfile.id === "doctor_referral") {
         return [{ type: "ask_navigation", args: { feature: "bac-si", reason: "Đang bật chế độ Bác sĩ & Đặt hẹn. Bạn muốn mở mục Bác sĩ để xem hồ sơ và đặt hẹn khám không?" } }]
       }
       return []

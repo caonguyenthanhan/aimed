@@ -42,39 +42,45 @@ function normalizeText(text: string): string {
     .replace(/đ/g, "d");
 }
 
-function getHeuristicVector(text: string): number[] {
+export function getHeuristicProfile(text: string): AgentProfileId {
   const normalized = normalizeText(text);
   
-  let index = 5; // default
-  
-  // Directly check if it is one of the specialty descriptions
-  if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.triage)) {
-    index = 0;
-  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.doctor_referral)) {
-    index = 1;
-  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.therapy)) {
-    index = 2;
-  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.medication)) {
-    index = 3;
-  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.care_plan)) {
-    index = 4;
-  } else if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.default)) {
-    index = 5;
-  } else {
-    // It's a query, use keywords
-    if (/\b(dau nguc|kho tho|yeu liet|noi kho|ngat|co giat|lu lan|chay mau|dau bung|cap cuu|115|911|khan cap|meo mieng|meo|ngong|yeu nua nguoi|yeu tay chan|te liet|te nua nguoi|kho noi|mat thi luc|dau dau du doi|dau dau kinh khung|dau dau chua tung thay|ho ra mau|bong nuoc soi|vet thuong sau|non ra mau|mat mau|dau quan bung|te cung|non|oi|mo mat|mo di)\b/i.test(normalized)) {
-      index = 0; // triage
-    } else if (/\b(bac si|dat hen|dat lich|hen kham|kham benh|gap bac si|phong kham|benh vien|vien tim|nha khoa|kham mat|kham san|kham phu|kham nam|kham nhi|dieu tri|o dau|kham|dia chi)\b/i.test(normalized)) {
-      index = 1; // doctor_referral
-    } else if (/\b(lo au|tram cam|mat ngu|hoang loan|tu hai|tu sat|tri lieu|tam ly|cbt|mindfulness|cang thang|stress|buon ba|khoc|co don|trong rong|suy sup|kiet suc|tu ti|gian du|cai nhau|kiem soat con gian|lo lang|u uat|tam trang|tinh than|tieu cuc|suy nghi)\b/i.test(normalized)) {
-      index = 2; // therapy
-    } else if (/\b(ibuprofen|paracetamol|aspirin|statin|metformin|amoxicillin|omeprazole|lisinopril|thuoc|uong|vien|tiem|khang sinh|giam dau|panadol|efferalgan|prospan|dau gio|salonpas|coldi|siro|men vi sinh|men tieu hoa)\b/i.test(normalized)) {
-      index = 3; // medication
-    } else if (/\b(ke hoach|lo trinh|theo doi|lich trinh|giam can|tang can|routine|che do an|tap luyen|thuc don|ngu du giac|uong nuoc|duong huyet|dinh duong|sinh hoat|thien dinh|moi mat|thoi quen|bai tap|cham soc|da mat|di bo|thuc pham|loi song|lanh manh)\b/i.test(normalized)) {
-      index = 4; // care_plan
-    }
-  }
+  if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.triage)) return "triage";
+  if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.doctor_referral)) return "doctor_referral";
+  if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.therapy)) return "therapy";
+  if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.medication)) return "medication";
+  if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.care_plan)) return "care_plan";
+  if (normalized === normalizeText(SPECIALTY_DESCRIPTIONS.default)) return "default";
 
+  if (/\b(dau nguc|tuc nguc|nhoi tim|nhoi nguc|kho tho|tho rit|nghen co|khong tho duoc|yeu liet|noi kho|ngat|ngat xiu|bi xiu|co giat|lu lan|chay mau|mau chay|chay xoi xa|mat mau|dau bung|dau quan bung|cap cuu|115|911|khan cap|meo mieng|meo|ngong|yeu nua nguoi|yeu tay chan|te liet|te nua nguoi|kho noi|mat thi luc|mu mat|khong nhin thay|dau dau du doi|dau dau kinh khung|dau dau chua tung thay|dau nhuc dau|ho ra mau|bong nuoc soi|vet thuong sau|non ra mau|oi ra mau|te cung|non|oi|mo mat|mo di|loi xuong|gay xuong|tai nan|chan thuong)\b/i.test(normalized)) {
+    return "triage";
+  }
+  if (/\b(bac si|dat hen|dat lich|hen kham|kham benh|gap bac si|phong kham|benh vien|vien tim|nha khoa|kham mat|kham san|kham phu|kham nam|kham nhi|dieu tri|o dau|kham|dia chi)\b/i.test(normalized)) {
+    return "doctor_referral";
+  }
+  if (/\b(lo au|tram cam|mat ngu|hoang loan|tu hai|tu sat|tri lieu|tam ly|cbt|mindfulness|cang thang|stress|buon ba|khoc|co don|trong rong|suy sup|kiet suc|tu ti|gian du|cai nhau|kiem soat con gian|lo lang|u uat|tam trang|tinh than|tieu cuc|suy nghi|am anh cuong che|ocd|rua tay|vo dung|ganh nang)\b/i.test(normalized)) {
+    return "therapy";
+  }
+  if (/\b(ibuprofen|paracetamol|aspirin|statin|metformin|amoxicillin|omeprazole|lisinopril|amlodipine|cetirizine|orlistat|astrazeneca|vac-xin|vaccine|panadol|efferalgan|prospan|salonpas|coldi|siro|men vi sinh|men tieu hoa|tranh thai|thuoc|uong|vien|tiem|khang sinh|giam dau|dau gio)\b/i.test(normalized)) {
+    return "medication";
+  }
+  if (/\b(ke hoach|lo trinh|theo doi|lich trinh|giam can|tang can|routine|che do an|tap luyen|thuc don|thoi khoa bieu|cai sua|an dam|tra thao moc|gian co|gut|kieng|hai san|nac cut|meo chua|bo mat|an gi de|yoga|ngu du giac|uong nuoc|duong huyet|dinh duong|sinh hoat|thien dinh|moi mat|thoi quen|bai tap|cham soc|da mat|di bo|thuc pham|loi song|lanh manh|giac ngu|the duc|sinh mo|tieu hoa)\b/i.test(normalized)) {
+    return "care_plan";
+  }
+  return "default";
+}
+
+function getHeuristicVector(text: string): number[] {
+  const profileId = getHeuristicProfile(text);
+  const indexMap: Record<AgentProfileId, number> = {
+    triage: 0,
+    doctor_referral: 1,
+    therapy: 2,
+    medication: 3,
+    care_plan: 4,
+    default: 5,
+  };
+  const index = indexMap[profileId] ?? 5;
   const vector = new Array(1536).fill(0);
   vector[index] = 1.0;
   return vector;
@@ -175,9 +181,9 @@ function getKeywordProfiles(text: string): Map<AgentProfileId, number> {
   const boosts = new Map<AgentProfileId, number>();
   
   // 1. Triage
-  if (/\b(115|911|bat tinh|ngat|co giat|yeu liet|meo mieng|ngong|tho rit|khong tho duoc|ho ra mau|non ra mau|loi xuong|gay xuong|cap cuu|khan cap|uong nham)\b/i.test(normalized)) {
+  if (/\b(115|911|bat tinh|ngat|ngat xiu|bi xiu|co giat|yeu liet|meo mieng|ngong|tho rit|khong tho duoc|ho ra mau|non ra mau|oi ra mau|loi xuong|gay xuong|tai nan|chan thuong|cap cuu|khan cap|uong nham)\b/i.test(normalized)) {
     boosts.set("triage", 0.35);
-  } else if (/\b(dau nguc|tuc nguc|kho tho|mat thi luc|chay mau|dau bung|yeu nua nguoi|yeu tay chan|te liet|te nua nguoi|kho noi|dau dau du doi|dau dau kinh khung|dau dau chua tung thay|bong nuoc soi|vet thuong sau|mat mau|dau quan bung|te cung|non|oi|mo mat|mo di|sot cao|sot ret run|me sang|nuot nham|nuoc tay|ngo doc)\b/i.test(normalized)) {
+  } else if (/\b(dau nguc|tuc nguc|nhoi tim|nhoi nguc|kho tho|nghen co|mat thi luc|mu mat|khong nhin thay|chay mau|mau chay|chay xoi xa|dau bung|yeu nua nguoi|yeu tay chan|te liet|te nua nguoi|kho noi|dau dau du doi|dau dau kinh khung|dau dau chua tung thay|dau nhuc dau|bong nuoc soi|vet thuong sau|mat mau|dau quan bung|te cung|non|oi|mo mat|mo di|sot cao|sot ret run|me sang|nuot nham|nuoc tay|ngo doc)\b/i.test(normalized)) {
     boosts.set("triage", 0.20);
   }
   
@@ -189,9 +195,9 @@ function getKeywordProfiles(text: string): Map<AgentProfileId, number> {
   }
   
   // 3. Therapy
-  if (/\b(tram cam|tu sat|tu hai|tri lieu tam ly|cbt|mindfulness|hoang loan|am anh cuong che|khoc nuc no)\b/i.test(normalized)) {
+  if (/\b(tram cam|tu sat|tu hai|tri lieu tam ly|cbt|mindfulness|hoang loan|am anh cuong che|ocd|rua tay|khoc nuc no)\b/i.test(normalized)) {
     boosts.set("therapy", 0.35);
-  } else if (/\b(lo au|mat ngu|tri lieu|tam ly|cang thang|stress|buon ba|khoc|co don|trong rong|suy sup|kiet suc|tu ti|gian du|cai nhau|kiem soat con gian|lo lang|u uat|tam trang|tinh than|tieu cuc|suy nghi|thay doi that thuong)\b/i.test(normalized)) {
+  } else if (/\b(lo au|mat ngu|tri lieu|tam ly|cang thang|stress|buon ba|khoc|co don|trong rong|suy sup|kiet suc|tu ti|gian du|cai nhau|kiem soat con gian|lo lang|u uat|tam trang|tinh than|tieu cuc|suy nghi|thay doi that thuong|vo dung|ganh nang)\b/i.test(normalized)) {
     boosts.set("therapy", 0.20);
   }
   
@@ -271,9 +277,15 @@ export async function semanticRoute(
     };
   });
 
-  // Sorting
+  // Sorting with triage priority override
   const ranked = [...scores].sort((a, b) => {
-    if (Math.abs(a.score - b.score) > 0.01) return b.score - a.score;
+    const scoreDiff = b.score - a.score;
+    // If the difference is small (< 0.15) and one of them is triage with a keyword match, prioritize triage
+    if (Math.abs(scoreDiff) < 0.15 && matchedKeywords.has("triage")) {
+      if (a.profileId === "triage") return -1;
+      if (b.profileId === "triage") return 1;
+    }
+    if (Math.abs(scoreDiff) > 0.01) return scoreDiff;
     const pa = priorities[a.profileId] ?? 0;
     const pb = priorities[b.profileId] ?? 0;
     return pb - pa;
