@@ -124,7 +124,24 @@ export async function POST(request: NextRequest) {
     const auth = request.headers.get('authorization') || ''
 
     const userMessage: string = String(bodyIn?.message || bodyIn?.prompt || bodyIn?.question || '').trim()
-    const conversationHistory: any[] = Array.isArray(bodyIn?.conversationHistory) ? bodyIn.conversationHistory : (Array.isArray(bodyIn?.messages) ? bodyIn.messages.filter((m: any) => m?.role === 'assistant').slice(-10) : [])
+    let conversationHistory: any[] = []
+    if (Array.isArray(bodyIn?.conversationHistory)) {
+      conversationHistory = bodyIn.conversationHistory
+    } else if (Array.isArray(bodyIn?.messages)) {
+      const rawMsgs = bodyIn.messages
+      if (rawMsgs.length > 0 && rawMsgs[rawMsgs.length - 1]?.role === 'user') {
+        conversationHistory = rawMsgs.slice(0, -1)
+      } else {
+        conversationHistory = rawMsgs
+      }
+    }
+    conversationHistory = conversationHistory
+      .map((m: any) => ({
+        role: String(m?.role || '').toLowerCase() === 'assistant' ? 'assistant' : 'user',
+        content: String(m?.content || m?.text || '').trim()
+      }))
+      .filter(m => m.content)
+      .slice(-10)
     const conversation_id: string | null = typeof bodyIn?.conversation_id === 'string' ? bodyIn.conversation_id : null
     const user_id: string | null = typeof bodyIn?.user_id === 'string' ? bodyIn.user_id : null
     const selectedModel = (typeof bodyIn?.model === 'string' ? String(bodyIn.model).toLowerCase() : 'flash')
