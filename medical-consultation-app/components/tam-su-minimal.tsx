@@ -622,11 +622,9 @@ export function TamSuMinimal({ initialConversationId }: { initialConversationId?
 
   return (
     <div
-      className="relative flex overflow-hidden bg-gradient-to-br from-background via-background to-secondary/45"
+      className="relative flex flex-1 min-h-0 w-full h-full overflow-hidden bg-gradient-to-br from-background via-background to-secondary/45"
       style={{
-        paddingTop: headerPad,
         paddingBottom: mobileBottomInset,
-        height: `calc(100dvh - ${headerPad})`,
         boxSizing: "border-box",
       }}
     >

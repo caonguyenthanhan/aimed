@@ -14,7 +14,7 @@ export default function TamSuPage() {
     }
   }, [])
   return (
-    <div suppressHydrationWarning>
+    <div suppressHydrationWarning className="flex flex-col flex-1 min-h-0 h-full w-full">
       <ClientErrorBoundary>
         <TamSuMinimal initialConversationId={id} />
       </ClientErrorBoundary>
