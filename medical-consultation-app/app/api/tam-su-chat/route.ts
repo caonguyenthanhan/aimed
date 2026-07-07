@@ -134,7 +134,8 @@ export async function POST(request: NextRequest) {
     const temperature = Number.isFinite(temperatureIn) ? Math.max(0.2, Math.min(1.2, temperatureIn)) : 0.85
     const max_tokens = Number.isFinite(maxTokensIn) ? Math.max(256, Math.min(1536, Math.trunc(maxTokensIn))) : 1100
     const provider = (typeof bodyIn?.provider === 'string' ? String(bodyIn.provider).trim().toLowerCase() : '') || (process.env.LLM_PROVIDER || '').trim().toLowerCase()
-    const useGemini = provider === 'gemini' || selectedModel === 'gemini'
+    const isSafeMode = process.env.DEMO_SAFE_MODE === "1"
+    const useGemini = isSafeMode || provider === 'gemini' || selectedModel === 'gemini'
 
     if (!userMessage) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
