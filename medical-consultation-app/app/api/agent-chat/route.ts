@@ -281,10 +281,11 @@ export async function POST(req: Request) {
       const n = Number.parseInt(String(v ?? "").trim(), 10)
       return Number.isFinite(n) && n > 0 ? n : def
     }
+    const isSafeMode = process.env.DEMO_SAFE_MODE === "1"
     const agentOverallTimeoutMs = toInt(process.env.AGENT_CHAT_TIMEOUT_MS, 45000)
     const agentLocalTimeoutMs = toInt(process.env.AGENT_CHAT_LOCAL_TIMEOUT_MS, 20000)
     const agentGeminiTimeoutMs = toInt(process.env.AGENT_CHAT_GEMINI_TIMEOUT_MS, 20000)
-    const agentMcpTimeoutMs = toInt(process.env.AGENT_CHAT_MCP_TOOL_TIMEOUT_MS, 8000)
+    const agentMcpTimeoutMs = isSafeMode ? 2500 : toInt(process.env.AGENT_CHAT_MCP_TOOL_TIMEOUT_MS, 8000)
     const agentMcpMaxCalls = toInt(process.env.AGENT_CHAT_MCP_MAX_CALLS, 3)
     const deadline = started + agentOverallTimeoutMs
     const remainingMs = () => Math.max(0, deadline - Date.now())
@@ -325,7 +326,7 @@ export async function POST(req: Request) {
     const configuredAgentProvider =
       (typeof body?.provider === "string" && String(body.provider).trim() ? String(body.provider).trim() : "") ||
       String(process.env.AGENT_PROVIDER || "").trim()
-    const agentProvider = String(configuredAgentProvider || "").trim().toLowerCase()
+    const agentProvider = isSafeMode ? "gemini" : String(configuredAgentProvider || "").trim().toLowerCase()
     const requestedProvider = agentProvider || "auto"
     let rootCause: string | undefined
     let graphReason: string | undefined
@@ -782,6 +783,7 @@ export async function POST(req: Request) {
     }
 
     const runOpenAiJsonAgent = async (url: string, model: string) => {
+      if (process.env.DEMO_SAFE_MODE === "1") return null
       const left = remainingMs()
       if (left <= 0) return null
       const isGpu = url.includes("gpu") || (typeof gpuUrl === "string" && url === gpuUrl)

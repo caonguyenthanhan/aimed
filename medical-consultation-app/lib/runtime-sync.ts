@@ -94,7 +94,7 @@ export const resolveInternalDemoPass = (configured?: string | null) => {
     return inlineValue || null
   }
   if (typeof process === "undefined" || !process?.env) return null
-  const fromEnv = String(process.env.INTERNAL_DEMO_PASS || "").trim()
+  const fromEnv = String(process.env.INTERNAL_DEMO_PASS || process.env.AGENT_KEY_PASS || "").trim()
   return fromEnv || null
 }
 
