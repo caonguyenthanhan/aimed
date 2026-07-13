@@ -278,7 +278,9 @@
 
       try {
         // Query to check status
-        const statusRes = await fetch(`${baseUrl}/v1/graph/status`);
+        const statusRes = await fetch(`${baseUrl}/v1/graph/status`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         if (!statusRes.ok) throw new Error("Backend offline");
         const statusData = await statusRes.json();
         
@@ -290,7 +292,10 @@
         // Query all nodes
         const nodesRes = await fetch(`${baseUrl}/v1/graph/evidence`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
+          },
           body: JSON.stringify({
             cypher_query: "MATCH (n:Entity) RETURN id(n) AS id, n.name AS name, labels(n) AS labels LIMIT 200"
           })
@@ -303,7 +308,10 @@
         // Query all edges
         const edgesRes = await fetch(`${baseUrl}/v1/graph/evidence`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
+          },
           body: JSON.stringify({
             cypher_query: "MATCH (n:Entity)-[r]->(m:Entity) RETURN id(n) AS source_id, n.name AS source, type(r) AS rel, id(m) AS target_id, m.name AS target LIMIT 300"
           })

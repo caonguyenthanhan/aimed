@@ -414,13 +414,7 @@ app = FastAPI(title="Local LLaMA Chat API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000", "http://127.0.0.1:3000",
-        "http://localhost:3001", "http://127.0.0.1:3001",
-        "http://localhost:3002", "http://127.0.0.1:3002",
-        "http://localhost:3033", "http://127.0.0.1:3033",
-        "http://localhost:3034", "http://127.0.0.1:3034"
-    ],
+    allow_origin_regex="https://.*\\.vercel\\.app|http://localhost:.*|http://127\\.0\\.0\\.1:.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -2331,7 +2325,7 @@ async def health_lookup(req: HealthLookupRequest):
 @app.get("/v1/benh")
 async def list_benh(q: Optional[str] = None):
     try:
-        p = os.path.join(os.path.dirname(__file__), "data", "benh.json")
+        p = os.path.join(DATA_DIR, "json", "benh.json")
         if not os.path.exists(p):
             return {"items": []}
         with open(p, "r", encoding="utf-8") as f:
@@ -2348,7 +2342,7 @@ async def list_benh(q: Optional[str] = None):
 @app.get("/v1/thuoc")
 async def list_thuoc(q: Optional[str] = None):
     try:
-        p = os.path.join(os.path.dirname(__file__), "data", "thuoc.json")
+        p = os.path.join(DATA_DIR, "json", "thuoc.json")
         if not os.path.exists(p):
             return {"items": []}
         with open(p, "r", encoding="utf-8") as f:
