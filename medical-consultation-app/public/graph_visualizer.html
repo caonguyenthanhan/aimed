@@ -229,7 +229,7 @@
 
     // Mapping colors based on Labels
     function getNodeColorAndShadow(labels) {
-      if (!labels) return { color: '#0ea5e9', shadowColor: 'rgba(14, 165, 233, 0.3)' };
+      if (!labels) return { color: '#0ea5e9', shadowColor: 'rgba(14, 165, 233, 0.3)', border: '#0891b2' };
       
       const lbls = labels.map(l => l.toLowerCase());
       if (lbls.includes('psychology')) {
@@ -239,14 +239,14 @@
           border: '#db2777'
         };
       }
-      if (lbls.includes('dượcchất') || lbls.includes('thuốc') || lbls.includes('medicine')) {
+      if (lbls.includes('dượcchất') || lbls.includes('thuốc') || lbls.includes('medicine') || lbls.includes('drug') || lbls.includes('chemical')) {
         return { 
           color: '#8b5cf6', // Violet
           shadowColor: 'rgba(139, 92, 246, 0.4)',
           border: '#7c3aed'
         };
       }
-      if (lbls.includes('triệuchứng') || lbls.includes('bệnh') || lbls.includes('symptom')) {
+      if (lbls.includes('triệuchứng') || lbls.includes('bệnh') || lbls.includes('symptom') || lbls.includes('disease') || lbls.includes('diagnosis') || lbls.includes('adr') || lbls.includes('complication')) {
         return { 
           color: '#f59e0b', // Amber/Orange
           shadowColor: 'rgba(245, 158, 11, 0.4)',
@@ -271,10 +271,9 @@
       const welcome = document.getElementById('welcome-overlay');
       const spinner = document.getElementById('loading-spinner');
 
-      
-      loader.classList.remove('hidden');
-      welcome.classList.add('hidden');
-      spinner.classList.remove('hidden');
+      if (loader) loader.classList.remove('hidden');
+      if (welcome) welcome.classList.add('hidden');
+      if (spinner) spinner.classList.remove('hidden');
 
       try {
         // Query to check status
@@ -289,7 +288,7 @@
           ? "font-semibold text-emerald-400" 
           : "font-semibold text-red-400";
 
-        // Query all edges and endpoints in a single request to guarantee connectivity
+        // Query all edges and endpoints in a single request aligned with Memgraph schema
         const edgesRes = await fetch(`${baseUrl}/v1/graph/evidence`, {
           method: 'POST',
           headers: { 
@@ -297,7 +296,7 @@
             'ngrok-skip-browser-warning': 'true'
           },
           body: JSON.stringify({
-            cypher_query: "MATCH (n:Entity)-[r]->(m:Entity) RETURN id(n) AS source_id, n.name AS source, labels(n) AS source_labels, type(r) AS rel, id(m) AS target_id, m.name AS target, labels(m) AS target_labels LIMIT 150"
+            cypher_query: "MATCH (n:__Entity__)-[r]->(m:__Entity__) RETURN id(n) AS source_id, n.text AS source, [n.type] AS source_labels, r.relationship AS rel, id(m) AS target_id, m.text AS target, [m.type] AS target_labels LIMIT 150"
           })
         });
         if (!edgesRes.ok) throw new Error("Failed to fetch graph relationships");
