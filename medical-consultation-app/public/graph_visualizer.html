@@ -261,10 +261,16 @@
     }
 
     async function loadGraphData() {
-      const baseUrl = document.getElementById('api-url').value.trim().replace(/\/$/, "");
+      let rawUrl = document.getElementById('api-url').value.trim();
+      // Auto-sanitize ngrok url: remove spaces and port 8000
+      if (rawUrl.includes('ngrok-free.dev')) {
+        rawUrl = rawUrl.replace(/\s+/g, '').replace(/:8000$/, '').replace(/:8000\/$/, '');
+      }
+      const baseUrl = rawUrl.replace(/\/$/, "");
       const loader = document.getElementById('graph-loader');
       const welcome = document.getElementById('welcome-overlay');
       const spinner = document.getElementById('loading-spinner');
+
       
       loader.classList.remove('hidden');
       welcome.classList.add('hidden');
