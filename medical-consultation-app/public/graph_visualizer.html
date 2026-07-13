@@ -289,23 +289,7 @@
           ? "font-semibold text-emerald-400" 
           : "font-semibold text-red-400";
 
-        // Query all nodes
-        const nodesRes = await fetch(`${baseUrl}/v1/graph/evidence`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'ngrok-skip-browser-warning': 'true'
-          },
-          body: JSON.stringify({
-            cypher_query: "MATCH (n:Entity) RETURN id(n) AS id, n.name AS name, labels(n) AS labels LIMIT 200"
-          })
-        });
-        
-        if (!nodesRes.ok) throw new Error("Failed to fetch nodes");
-        const nodesData = await nodesRes.json();
-        const rawNodes = nodesData.records || [];
-
-        // Query all edges
+        // Query all edges and endpoints in a single request to guarantee connectivity
         const edgesRes = await fetch(`${baseUrl}/v1/graph/evidence`, {
           method: 'POST',
           headers: { 
@@ -313,15 +297,36 @@
             'ngrok-skip-browser-warning': 'true'
           },
           body: JSON.stringify({
-            cypher_query: "MATCH (n:Entity)-[r]->(m:Entity) RETURN id(n) AS source_id, n.name AS source, type(r) AS rel, id(m) AS target_id, m.name AS target LIMIT 300"
+            cypher_query: "MATCH (n:Entity)-[r]->(m:Entity) RETURN id(n) AS source_id, n.name AS source, labels(n) AS source_labels, type(r) AS rel, id(m) AS target_id, m.name AS target, labels(m) AS target_labels LIMIT 150"
           })
         });
-        if (!edgesRes.ok) throw new Error("Failed to fetch edges");
+        if (!edgesRes.ok) throw new Error("Failed to fetch graph relationships");
         const edgesData = await edgesRes.json();
         const rawEdges = edgesData.records || [];
 
+        // Extract unique nodes from relationships to ensure every node is connected
+        const nodeMap = new Map();
+        rawEdges.forEach(edge => {
+          if (!nodeMap.has(edge.source_id)) {
+            nodeMap.set(edge.source_id, {
+              id: edge.source_id,
+              name: edge.source,
+              labels: edge.source_labels || ['Entity']
+            });
+          }
+          if (!nodeMap.has(edge.target_id)) {
+            nodeMap.set(edge.target_id, {
+              id: edge.target_id,
+              name: edge.target,
+              labels: edge.target_labels || ['Entity']
+            });
+          }
+        });
+
+        const uniqueNodes = Array.from(nodeMap.values());
+
         // Process Vis.js Nodes
-        allNodes = rawNodes.map(node => {
+        allNodes = uniqueNodes.map(node => {
           const cfg = getNodeColorAndShadow(node.labels);
           return {
             id: node.id,
