@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AiMed - Bộ Trực Quan Hóa Đồ Thị Tri Thức</title>
+  
+  <!-- TailwindCSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vis.js Standalone CDN -->
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <!-- Google Fonts Outfit -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: #0b0f19;
+      color: #f3f4f6;
+    }
+    #network-container {
+      width: 100%;
+      height: calc(100vh - 80px);
+      background-color: #0b0f19;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+      background-size: 24px 24px;
+    }
+    /* Glassmorphism panel styling */
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    /* Vis network tooltip styling override */
+    div.vis-tooltip {
+      background-color: #1f2937 !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      color: #f3f4f6 !important;
+      font-family: 'Outfit', sans-serif !important;
+      padding: 8px 12px !important;
+      border-radius: 8px !important;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
+    }
+  </style>
+</head>
+<body class="overflow-hidden">
+
+  <!-- Header -->
+  <header class="h-20 w-full glass-panel border-b px-6 flex items-center justify-between z-50 relative">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">AiMed Knowledge Graph</h1>
+        <p class="text-xs text-gray-400">Bộ Trực Quan Hóa Đồ Thị Tri Thức Lâm Sàng Real-time</p>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="flex items-center space-x-4">
+      <div class="flex flex-col">
+        <label class="text-[10px] text-gray-400 font-semibold mb-1">API BACKEND URL</label>
+        <input 
+          id="api-url" 
+          type="text" 
+          value="http://localhost:8000" 
+          placeholder="http://localhost:8000"
+          class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-1 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 w-64 transition-all"
+        />
+      </div>
+      
+      <button 
+        id="btn-load"
+        onclick="loadGraphData()" 
+        class="h-10 px-5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium text-sm transition-all shadow-md shadow-cyan-500/10 flex items-center space-x-2"
+      >
+        <span>Tải Dữ Liệu Thật</span>
+        <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="relative w-full h-full flex">
+    
+    <!-- Left Sidebar: Legends & Search -->
+    <div class="w-80 h-[calc(100vh-80px)] glass-panel border-r p-5 flex flex-col justify-between z-40 relative">
+      <div class="space-y-6">
+        <!-- Search -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-2">Tìm kiếm Thực Thể</h3>
+          <input 
+            id="search-input" 
+            type="text" 
+            placeholder="Nhập tên thực thể..." 
+            oninput="filterGraph()"
+            class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-cyan-500 transition-all"
+          />
+        </div>
+
+        <!-- Legend -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">Chú Giải Nhãn Đồ Thị</h3>
+          <div class="space-y-2.5">
+            <div class="flex items-center space-x-3">
+              <span class="w-4 h-4 rounded-full bg-emerald-500 border border-emerald-400 shadow-sm shadow-emerald-500/20"></span>
+              <span class="text-sm text-gray-300">Psychology (Tâm lý học)</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <span class="w-4 h-4 rounded-full bg-violet-500 border border-violet-400 shadow-sm shadow-violet-500/20"></span>
+              <span class="text-sm text-gray-300">DượcChất / Thuốc (Medicine)</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <span class="w-4 h-4 rounded-full bg-amber-500 border border-amber-400 shadow-sm shadow-amber-500/20"></span>
+              <span class="text-sm text-gray-300">TriệuChứng / Bệnh</span>
+            </div>
+            <div class="flex items-center space-x-3">
+              <span class="w-4 h-4 rounded-full bg-sky-500 border border-sky-400 shadow-sm shadow-sky-500/20"></span>
+              <span class="text-sm text-gray-300">Thực thể mặc định (Entity)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Relationships Info -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-2">Các Mối Quan Hệ (Edges)</h3>
+          <div class="max-h-40 overflow-y-auto pr-1 text-xs text-gray-400 space-y-1.5" id="relations-list">
+            <!-- Populated on load -->
+            <p class="italic text-gray-500">Chưa có dữ liệu quan hệ được tải.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graph Statistics -->
+      <div class="pt-4 border-t border-gray-800 text-xs text-gray-400 space-y-1">
+        <div class="flex justify-between">
+          <span>Tổng số Nodes:</span>
+          <span id="stat-nodes" class="font-semibold text-cyan-400">0</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Tổng số Edges:</span>
+          <span id="stat-edges" class="font-semibold text-cyan-400">0</span>
+        </div>
+        <div class="flex justify-between">
+          <span>Trạng thái kết nối DB:</span>
+          <span id="stat-status" class="font-semibold text-red-400">Disconnected</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vis.js Graph Canvas -->
+    <div id="network-container" class="flex-1 relative">
+      <!-- Loading overlay -->
+      <div id="graph-loader" class="absolute inset-0 flex items-center justify-center bg-gray-950/80 z-30 hidden">
+        <div class="text-center space-y-4">
+          <div class="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p class="text-sm text-cyan-400 font-medium">Đang tải cấu trúc đồ thị thực tế từ cơ sở dữ liệu...</p>
+        </div>
+      </div>
+      
+      <!-- Welcome overlay -->
+      <div id="welcome-overlay" class="absolute inset-0 flex items-center justify-center z-20 bg-gray-950/60 backdrop-blur-sm">
+        <div class="text-center max-w-md p-8 glass-panel rounded-2xl shadow-xl">
+          <div class="w-16 h-16 rounded-full bg-cyan-500/10 flex items-center justify-center mx-auto mb-4 border border-cyan-500/30">
+            <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <h2 class="text-xl font-semibold mb-2">Kết Nối Đồ Thị Y Khoa / Tâm Lý</h2>
+          <p class="text-sm text-gray-400 mb-6">Trang web này sẽ gọi API thực tế của dự án để dựng mô hình đồ thị tri thức 2D có khả năng tương tác đầy đủ.</p>
+          <button 
+            onclick="loadGraphData()" 
+            class="w-full h-11 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 font-medium text-sm transition-all"
+          >
+            Bắt đầu tải Đồ thị
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar: Node detail info panel -->
+    <div id="detail-panel" class="absolute top-4 right-4 w-80 glass-panel rounded-xl p-5 shadow-2xl z-40 transform translate-x-96 transition-transform duration-300">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
+        <h3 class="font-semibold text-gray-200" id="panel-title">Chi Tiết Thực Thể</h3>
+        <button onclick="closeDetailPanel()" class="text-gray-400 hover:text-gray-200">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">TÊN THỰC THỂ</span>
+          <p class="text-lg font-bold text-cyan-400" id="node-detail-name">-</p>
+        </div>
+        <div>
+          <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">NHÃN ĐỒ THỊ (LABELS)</span>
+          <div class="flex flex-wrap gap-1.5 mt-1" id="node-detail-labels">
+            <!-- Labels -->
+          </div>
+        </div>
+        <div>
+          <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">ID HỆ THỐNG</span>
+          <p class="text-sm font-mono text-gray-300" id="node-detail-id">-</p>
+        </div>
+        <div>
+          <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-1">CÁC LIÊN KẾT LIÊN QUAN</span>
+          <ul class="text-xs text-gray-300 space-y-2 mt-1 max-h-48 overflow-y-auto pr-1" id="node-detail-links">
+            <!-- Linked edges -->
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let network = null;
+    let allNodes = [];
+    let allEdges = [];
+    let nodesDataSet = null;
+    let edgesDataSet = null;
+
+    // Mapping colors based on Labels
+    function getNodeColorAndShadow(labels) {
+      if (!labels) return { color: '#0ea5e9', shadowColor: 'rgba(14, 165, 233, 0.3)' };
+      
+      const lbls = labels.map(l => l.toLowerCase());
+      if (lbls.includes('psychology')) {
+        return { 
+          color: '#ec4899', // Pink
+          shadowColor: 'rgba(236, 72, 153, 0.4)',
+          border: '#db2777'
+        };
+      }
+      if (lbls.includes('dượcchất') || lbls.includes('thuốc') || lbls.includes('medicine')) {
+        return { 
+          color: '#8b5cf6', // Violet
+          shadowColor: 'rgba(139, 92, 246, 0.4)',
+          border: '#7c3aed'
+        };
+      }
+      if (lbls.includes('triệuchứng') || lbls.includes('bệnh') || lbls.includes('symptom')) {
+        return { 
+          color: '#f59e0b', // Amber/Orange
+          shadowColor: 'rgba(245, 158, 11, 0.4)',
+          border: '#d97706'
+        };
+      }
+      return { 
+        color: '#06b6d4', // Cyan (Default)
+        shadowColor: 'rgba(6, 182, 212, 0.3)',
+        border: '#0891b2'
+      };
+    }
+
+    async function loadGraphData() {
+      const baseUrl = document.getElementById('api-url').value.trim().replace(/\/$/, "");
+      const loader = document.getElementById('graph-loader');
+      const welcome = document.getElementById('welcome-overlay');
+      const spinner = document.getElementById('loading-spinner');
+      
+      loader.classList.remove('hidden');
+      welcome.classList.add('hidden');
+      spinner.classList.remove('hidden');
+
+      try {
+        // Query to check status
+        const statusRes = await fetch(`${baseUrl}/v1/graph/status`);
+        if (!statusRes.ok) throw new Error("Backend offline");
+        const statusData = await statusRes.json();
+        
+        document.getElementById('stat-status').innerText = statusData.connected ? "Connected" : "Disconnected";
+        document.getElementById('stat-status').className = statusData.connected 
+          ? "font-semibold text-emerald-400" 
+          : "font-semibold text-red-400";
+
+        // Query all nodes
+        const nodesRes = await fetch(`${baseUrl}/v1/graph/evidence`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cypher_query: "MATCH (n:Entity) RETURN id(n) AS id, n.name AS name, labels(n) AS labels LIMIT 200"
+          })
+        });
+        
+        if (!nodesRes.ok) throw new Error("Failed to fetch nodes");
+        const nodesData = await nodesRes.json();
+        const rawNodes = nodesData.records || [];
+
+        // Query all edges
+        const edgesRes = await fetch(`${baseUrl}/v1/graph/evidence`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cypher_query: "MATCH (n:Entity)-[r]->(m:Entity) RETURN id(n) AS source_id, n.name AS source, type(r) AS rel, id(m) AS target_id, m.name AS target LIMIT 300"
+          })
+        });
+        if (!edgesRes.ok) throw new Error("Failed to fetch edges");
+        const edgesData = await edgesRes.json();
+        const rawEdges = edgesData.records || [];
+
+        // Process Vis.js Nodes
+        allNodes = rawNodes.map(node => {
+          const cfg = getNodeColorAndShadow(node.labels);
+          return {
+            id: node.id,
+            label: node.name,
+            labels: node.labels,
+            title: `<b>Thực thể:</b> ${node.name}<br><b>Nhãn:</b> ${node.labels.join(', ')}`,
+            color: {
+              background: cfg.color,
+              border: cfg.border,
+              highlight: {
+                background: '#38bdf8',
+                border: '#0284c7'
+              }
+            },
+            font: { color: '#ffffff', size: 13, face: 'Outfit' },
+            shadow: {
+              enabled: true,
+              color: cfg.shadowColor,
+              size: 15,
+              x: 0,
+              y: 0
+            },
+            borderWidth: 2,
+            size: 25
+          };
+        });
+
+        // Process Vis.js Edges
+        allEdges = rawEdges.map((edge, index) => {
+          return {
+            id: `edge-${index}`,
+            from: edge.source_id,
+            to: edge.target_id,
+            label: edge.rel,
+            font: { color: '#9ca3af', size: 10, align: 'horizontal', face: 'Outfit', background: '#0b0f19' },
+            arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+            color: { color: 'rgba(255, 255, 255, 0.15)', highlight: '#38bdf8' },
+            width: 1.5,
+            smooth: { type: 'cubicBezier', roundness: 0.3 },
+            title: `${edge.source} ➔ [${edge.rel}] ➔ ${edge.target}`
+          };
+        });
+
+        // Update stats
+        document.getElementById('stat-nodes').innerText = allNodes.length;
+        document.getElementById('stat-edges').innerText = allEdges.length;
+
+        // Render Sidebar Edges List
+        const relationsList = document.getElementById('relations-list');
+        relationsList.innerHTML = '';
+        if (allEdges.length === 0) {
+          relationsList.innerHTML = '<p class="italic text-gray-500">Đồ thị rỗng hoặc không có quan hệ.</p>';
+        } else {
+          rawEdges.forEach(edge => {
+            const el = document.createElement('div');
+            el.className = 'py-1 border-b border-gray-900 flex justify-between space-x-1 hover:text-cyan-400 cursor-pointer transition-all';
+            el.innerHTML = `<span class="truncate max-w-[80px]" title="${edge.source}">${edge.source}</span> <span class="text-cyan-500 text-[10px] font-mono">[${edge.rel}]</span> <span class="truncate max-w-[80px] text-right" title="${edge.target}">${edge.target}</span>`;
+            el.onclick = () => highlightRelation(edge.source_id, edge.target_id);
+            relationsList.appendChild(el);
+          });
+        }
+
+        // Draw Network
+        drawNetwork();
+
+      } catch (err) {
+        console.error("Error loading graph:", err);
+        alert(`Không thể kết nối đến cơ sở dữ liệu đồ thị tại ${baseUrl}.\nVui lòng đảm bảo backend FastAPI đang chạy và có kết nối đến Memgraph/Neo4j!`);
+        document.getElementById('stat-status').innerText = "Offline Error";
+        document.getElementById('stat-status').className = "font-semibold text-red-400";
+        welcome.classList.remove('hidden');
+      } finally {
+        loader.classList.add('hidden');
+        spinner.classList.add('hidden');
+      }
+    }
+
+    function drawNetwork() {
+      const container = document.getElementById('network-container');
+      
+      nodesDataSet = new vis.DataSet(allNodes);
+      edgesDataSet = new vis.DataSet(allEdges);
+
+      const data = {
+        nodes: nodesDataSet,
+        edges: edgesDataSet
+      };
+
+      const options = {
+        nodes: {
+          shape: 'dot'
+        },
+        physics: {
+          stabilization: true,
+          barnesHut: {
+            gravitationalConstant: -3000,
+            centralGravity: 0.3,
+            springLength: 95,
+            springConstant: 0.04,
+            damping: 0.09,
+            avoidOverlap: 0.2
+          }
+        },
+        interaction: {
+          hover: true,
+          tooltipDelay: 100,
+          hideEdgesOnDrag: false
+        }
+      };
+
+      network = new vis.Network(container, data, options);
+
+      // Event handlers
+      network.on("click", function (params) {
+        if (params.nodes.length > 0) {
+          const nodeId = params.nodes[0];
+          showNodeDetails(nodeId);
+        } else {
+          closeDetailPanel();
+        }
+      });
+    }
+
+    function showNodeDetails(nodeId) {
+      const node = allNodes.find(n => n.id === nodeId);
+      if (!node) return;
+
+      document.getElementById('node-detail-name').innerText = node.label;
+      document.getElementById('node-detail-id').innerText = node.id;
+      
+      const labelsContainer = document.getElementById('node-detail-labels');
+      labelsContainer.innerHTML = '';
+      node.labels.forEach(lbl => {
+        const span = document.createElement('span');
+        span.className = 'px-2 py-0.5 rounded text-[10px] font-semibold bg-cyan-950 text-cyan-300 border border-cyan-800';
+        span.innerText = lbl;
+        labelsContainer.appendChild(span);
+      });
+
+      // Find links
+      const linksContainer = document.getElementById('node-detail-links');
+      linksContainer.innerHTML = '';
+      const linkedEdges = allEdges.filter(e => e.from === nodeId || e.to === nodeId);
+      
+      if (linkedEdges.length === 0) {
+        linksContainer.innerHTML = '<li class="italic text-gray-500">Không có mối liên kết trực tiếp nào.</li>';
+      } else {
+        linkedEdges.forEach(e => {
+          const sourceNodeName = allNodes.find(n => n.id === e.from)?.label || "Unknown";
+          const targetNodeName = allNodes.find(n => n.id === e.to)?.label || "Unknown";
+          const li = document.createElement('li');
+          li.className = 'bg-gray-900/50 p-2 rounded border border-gray-800 hover:border-cyan-800 transition-all cursor-pointer';
+          li.innerHTML = `<span class="text-cyan-400 font-semibold">${sourceNodeName}</span> ➔ <span class="text-gray-400">[${e.label}]</span> ➔ <span class="text-cyan-400 font-semibold">${targetNodeName}</span>`;
+          li.onclick = () => highlightRelation(e.from, e.to);
+          linksContainer.appendChild(li);
+        });
+      }
+
+      const panel = document.getElementById('detail-panel');
+      panel.classList.remove('translate-x-96');
+    }
+
+    function closeDetailPanel() {
+      const panel = document.getElementById('detail-panel');
+      panel.classList.add('translate-x-96');
+    }
+
+    function highlightRelation(fromId, toId) {
+      if (!network) return;
+      network.selectNodes([fromId, toId]);
+      network.focus(fromId, {
+        scale: 1.2,
+        animation: {
+          duration: 1000,
+          easingFunction: 'easeInOutQuad'
+        }
+      });
+      showNodeDetails(fromId);
+    }
+
+    function filterGraph() {
+      const query = document.getElementById('search-input').value.toLowerCase().trim();
+      if (!nodesDataSet) return;
+
+      if (!query) {
+        // Reset view
+        nodesDataSet.update(allNodes);
+        return;
+      }
+
+      const filtered = allNodes.map(node => {
+        const isMatch = node.label.toLowerCase().includes(query) || 
+                        node.labels.some(l => l.toLowerCase().includes(query));
+        return {
+          ...node,
+          color: isMatch ? node.color : { background: 'rgba(31, 41, 55, 0.2)', border: 'rgba(75, 85, 99, 0.2)' },
+          font: { color: isMatch ? '#ffffff' : 'rgba(156, 163, 175, 0.2)', size: 13, face: 'Outfit' },
+          shadow: { enabled: isMatch }
+        };
+      });
+
+      nodesDataSet.update(filtered);
+    }
+  </script>
+</body>
+</html>
