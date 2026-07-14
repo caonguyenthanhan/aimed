@@ -919,10 +919,33 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         })(),
       }
 
-      const response = await fetch(agentMode ? "/api/agent-chat" : "/api/llm-chat", {
+      let fetchUrl = agentMode ? "/api/agent-chat" : "/api/llm-chat"
+      let fetchHeaders: Record<string, string> = authToken ? { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` } : { "Content-Type": "application/json" }
+      let fetchBody = agentMode 
+        ? JSON.stringify({ message: text, messages: historySnapshot, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", access_pass, delivery_mode, agent_id: "auto" })
+        : JSON.stringify(payload)
+
+      // Dynamic Client-side routing to 64GB Server Ngrok if configured in localStorage
+      const customBackendUrl = typeof window !== "undefined" ? localStorage.getItem("aimed-backend-url") : null
+      if (agentMode && customBackendUrl) {
+        const sanitizedBackend = customBackendUrl.replace(/\/$/, "")
+        const isLive = delivery_mode === "live"
+        fetchUrl = `${sanitizedBackend}${isLive ? "/v1/agent-chat/stream" : "/v1/agent-chat"}`
+        fetchHeaders = { "Content-Type": "application/json" }
+        fetchBody = JSON.stringify({
+          message: text,
+          conversation_id: ensuredId || conversationId || undefined,
+          user_id: userId || undefined,
+          agent_id: "auto",
+          include_tools: true,
+          stream: isLive
+        })
+      }
+
+      const response = await fetch(fetchUrl, {
         method: "POST",
-        headers: authToken ? { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` } : { "Content-Type": "application/json" },
-        body: JSON.stringify(agentMode ? { message: text, messages: historySnapshot, conversation_id: ensuredId || conversationId, tier: selectedModel, category: "consultation", access_pass, delivery_mode, agent_id: "auto" } : payload),
+        headers: fetchHeaders,
+        body: fetchBody,
       })
       if (!response.ok) {
         const errorText = await response.text()
@@ -1059,7 +1082,8 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
       } else {
         let liveTextToDeliver = aiResponse || deliverList.map((x) => x.content).join("\n\n")
         const convForIntro = String(ensuredId || conversationId || "").trim()
-        const shouldShowAgentIntro = agentMode && (agentIntroShownForConvRef.current !== (convForIntro || "__unknown__"))
+        const isSafetyOrSos = !!(md?.blocked || md?.sos || (data as any)?.metadata?.blocked || (data as any)?.metadata?.sos)
+        const shouldShowAgentIntro = agentMode && !isSafetyOrSos && (agentIntroShownForConvRef.current !== (convForIntro || "__unknown__"))
         if (shouldShowAgentIntro) {
           const introText = buildAgentIntroText(md, (md as any)?.llm_context || (md as any)?.debug_context)
           if (delivery_mode === "live") {
@@ -1952,14 +1976,16 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
 
   useEffect(() => {
     if (authToken && initialConversationId && !initRef.current.opened) {
+      if (conversationId === initialConversationId) return
       initRef.current.opened = true
       openConversation(initialConversationId)
       setTimeout(() => { initRef.current.opened = false }, 500)
     }
-  }, [authToken, initialConversationId])
+  }, [authToken, initialConversationId, conversationId])
 
   useEffect(() => {
     if (!authToken && initialConversationId) {
+      if (conversationId === initialConversationId) return
       try {
         if (typeof window !== 'undefined') {
           const raw = localStorage.getItem(`conv_messages_${initialConversationId}`)
@@ -1974,7 +2000,7 @@ export function ChatInterface({ initialConversationId }: { initialConversationId
         }
       } catch {}
     }
-  }, [authToken, initialConversationId])
+  }, [authToken, initialConversationId, conversationId])
 
   useEffect(() => {
     if (!authToken) {

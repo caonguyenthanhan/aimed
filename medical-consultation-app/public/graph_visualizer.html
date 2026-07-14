@@ -267,6 +267,9 @@
         rawUrl = rawUrl.replace(/\s+/g, '').replace(/:8000$/, '').replace(/:8000\/$/, '');
       }
       const baseUrl = rawUrl.replace(/\/$/, "");
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aimed-backend-url', baseUrl);
+      }
       const loader = document.getElementById('graph-loader');
       const welcome = document.getElementById('welcome-overlay');
       const spinner = document.getElementById('loading-spinner');
